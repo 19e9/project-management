@@ -1,0 +1,141 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+  }
+  body {
+    @apply bg-white text-ink-900 font-sans;
+  }
+  ::selection {
+    @apply bg-brand-200/60 text-brand-900;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white;
+  }
+  h1, h2, h3, h4 {
+    @apply tracking-tight font-display;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold
+           transition duration-200 ease-out-quint focus-visible:outline-none disabled:opacity-50
+           disabled:cursor-not-allowed select-none whitespace-nowrap;
+  }
+  .btn-primary {
+    @apply btn bg-ink-900 text-white shadow-soft hover:bg-ink-800 active:translate-y-px;
+  }
+  .btn-brand {
+    @apply btn text-white shadow-lift bg-brand-600 hover:bg-brand-700
+           hover:-translate-y-0.5 active:translate-y-0;
+  }
+  .btn-gradient {
+    @apply btn relative overflow-hidden text-white shadow-lift
+           bg-brand-gradient hover:opacity-95 hover:-translate-y-0.5;
+  }
+  .btn-secondary {
+    @apply btn border border-ink-200 bg-white text-ink-800 hover:bg-ink-50
+           hover:border-ink-300;
+  }
+  .btn-ghost {
+    @apply btn text-ink-700 hover:bg-ink-100;
+  }
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+
+  /* Inputs */
+  .input {
+    @apply block w-full rounded-xl border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900
+           placeholder-ink-400 shadow-soft transition
+           focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15;
+  }
+  .input-lg { @apply px-4 py-3 text-[15px]; }
+  .input-error {
+    @apply border-danger-500/60 focus:border-danger-500 focus:ring-danger-500/15;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink-800;
+  }
+  .helper { @apply mt-1.5 text-xs text-ink-500; }
+  .error  { @apply mt-1.5 text-xs text-danger-600; }
+
+  /* Surfaces */
+  .card {
+    @apply rounded-2xl border border-ink-200 bg-white shadow-card;
+  }
+  .card-hover {
+    @apply transition duration-300 ease-out-quint hover:-translate-y-1
+           hover:shadow-[0_18px_40px_-18px_rgba(15,23,42,0.18)];
+  }
+  .glass {
+    @apply rounded-2xl border border-white/40 bg-white/70 backdrop-blur-md shadow-card;
+  }
+
+  /* Badges + chips */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .badge-soft   { @apply badge bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100; }
+  .badge-accent { @apply badge bg-accent-50 text-accent-700 ring-1 ring-inset ring-accent-100; }
+  .badge-success{ @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-100; }
+
+  .pill-divider {
+    @apply mx-2 inline-block h-1 w-1 rounded-full bg-ink-300 align-middle;
+  }
+
+  /* Section primitives */
+  .section { @apply py-20 md:py-28; }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-ink-200 bg-white/80 px-3 py-1
+           text-xs font-medium uppercase tracking-wider text-ink-600 backdrop-blur-sm;
+  }
+  .h-display {
+    @apply text-4xl font-bold tracking-tight md:text-6xl;
+    letter-spacing: -0.025em;
+  }
+  .text-balance { text-wrap: balance; }
+  .text-pretty  { text-wrap: pretty;  }
+
+  /* Typography helpers */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(120deg, #4f46e5 0%, #7c3aed 40%, #06b6d4 100%);
+  }
+
+  /* Decorative grid backdrop */
+  .bg-grid {
+    background-image: var(--tw-bg-grid, none);
+  }
+
+  /* Skeleton */
+  .skeleton {
+    @apply rounded-md bg-ink-100 relative overflow-hidden;
+    background-image: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.7) 50%, transparent 100%);
+    background-size: 1000px 100%;
+    @apply animate-shimmer;
+  }
+}
+
+@layer utilities {
+  .mask-fade-b {
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  }
+  .mask-fade-r {
+    -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+            mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { scrollbar-width: none; }
+}

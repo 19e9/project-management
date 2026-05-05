@@ -1,0 +1,733 @@
+import { Link } from 'react-router-dom';
+import { Navbar } from '../components/marketing/Navbar';
+import { Footer } from '../components/marketing/Footer';
+import { HeroMockup } from '../components/marketing/HeroMockup';
+import {
+  IconArrowRight,
+  IconBolt,
+  IconChart,
+  IconCheck,
+  IconGantt,
+  IconLayers,
+  IconRoute,
+  IconShield,
+  IconStar,
+  IconTree,
+  IconUsers,
+} from '../components/ui/Icons';
+
+export default function LandingPage() {
+  return (
+    <div className="bg-white">
+      <Navbar />
+      <Hero />
+      <LogoCloud />
+      <Features />
+      <HowItWorks />
+      <DeepFeatures />
+      <Pricing />
+      <SocialProof />
+      <FinalCta />
+      <Footer />
+    </div>
+  );
+}
+
+/* ---------- HERO ---------- */
+function Hero() {
+  return (
+    <section className="relative overflow-hidden">
+      {/* background */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-radial-fade"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[640px] opacity-[0.35]"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, rgba(15,23,42,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.06) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+          maskImage:
+            'radial-gradient(ellipse 70% 60% at 50% 0%, black 50%, transparent 80%)',
+        }}
+        aria-hidden
+      />
+
+      <div className="container relative pb-12 pt-14 md:pb-20 md:pt-20">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="eyebrow animate-fade-in-up">
+            <span className="grid h-1.5 w-1.5 place-items-center rounded-full bg-emerald-500" />
+            New · Critical Path engine v1.0
+            <Link to="/pricing" className="text-brand-700 hover:underline">
+              See what's new →
+            </Link>
+          </span>
+
+          <h1 className="h-display mt-6 text-balance animate-fade-in-up [animation-delay:80ms]">
+            Plan, schedule and ship.
+            <br />
+            <span className="gradient-text">With real planning power.</span>
+          </h1>
+
+          <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-ink-600 animate-fade-in-up [animation-delay:160ms]">
+            PlanForge is the modern alternative to Jira and Microsoft Project. Gantt, WBS,
+            dependency-aware scheduling and a built-in <strong className="text-ink-900">Critical Path</strong> engine — all in one calm, fast workspace.
+          </p>
+
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3 animate-fade-in-up [animation-delay:240ms]">
+            <Link to="/register" className="btn-brand btn-lg">
+              Start free
+              <IconArrowRight className="h-4 w-4" />
+            </Link>
+            <Link to="/pricing" className="btn-secondary btn-lg">
+              See pricing
+            </Link>
+          </div>
+
+          <p className="mt-3 text-xs text-ink-500 animate-fade-in-up [animation-delay:320ms]">
+            No credit card required · Free up to 10 members & 3 projects
+          </p>
+        </div>
+
+        {/* Mockup */}
+        <div className="relative mx-auto mt-14 max-w-6xl animate-fade-in-up [animation-delay:400ms]">
+          <HeroMockup />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- LOGO CLOUD ---------- */
+function LogoCloud() {
+  const names = ['NorthBuild', 'Helix Labs', 'Outpost', 'Mariner', 'Quanta', 'Aether'];
+  return (
+    <section className="border-y border-ink-200/70 bg-ink-50/40 py-10">
+      <div className="container">
+        <p className="text-center text-xs font-semibold uppercase tracking-widest text-ink-500">
+          Trusted by modern teams shipping ambitious work
+        </p>
+        <div className="mt-6 grid grid-cols-2 items-center gap-x-10 gap-y-6 sm:grid-cols-3 md:grid-cols-6">
+          {names.map((n) => (
+            <div
+              key={n}
+              className="flex items-center justify-center text-base font-semibold tracking-tight text-ink-400 transition hover:text-ink-700"
+            >
+              <span className="mr-2 inline-block h-2 w-2 rounded-full bg-current opacity-60" />
+              {n}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- FEATURES ---------- */
+const FEATURES = [
+  {
+    icon: IconGantt,
+    title: 'Gantt that respects dependencies',
+    body: 'Drag bars to reschedule. Successors update instantly. Lag, lead and FS dependencies — without spreadsheets.',
+    color: 'from-brand-500/15 to-brand-500/0 text-brand-700',
+  },
+  {
+    icon: IconRoute,
+    title: 'Built-in Critical Path Method',
+    body: 'A real CPM engine highlights tasks with zero slack. Forward and backward pass, ES/EF/LS/LF — all live.',
+    color: 'from-rose-500/15 to-rose-500/0 text-rose-700',
+  },
+  {
+    icon: IconTree,
+    title: 'Work Breakdown the way PMs think',
+    body: 'Hierarchical WBS with codes, rollups and clean tree views. From program down to deliverable.',
+    color: 'from-accent-500/15 to-accent-500/0 text-accent-700',
+  },
+  {
+    icon: IconUsers,
+    title: 'Resource histogram',
+    body: 'See over-allocation per teammate, per day. Smooth conflicts before they become slips.',
+    color: 'from-violet-500/15 to-violet-500/0 text-violet-700',
+  },
+  {
+    icon: IconChart,
+    title: 'Analytics built-in',
+    body: 'Burndown, completion, status breakdown. No plugins. No CSV exports. Just answers.',
+    color: 'from-emerald-500/15 to-emerald-500/0 text-emerald-700',
+  },
+  {
+    icon: IconShield,
+    title: 'Multi-tenant from day one',
+    body: 'Workspaces, RBAC and plan-based feature gates. Scales from startup to enterprise.',
+    color: 'from-amber-500/15 to-amber-500/0 text-amber-700',
+  },
+];
+
+function Features() {
+  return (
+    <section id="features" className="section">
+      <div className="container">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="eyebrow">Features</span>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
+            Everything serious project teams need.
+            <br />
+            <span className="text-ink-500">Nothing they don't.</span>
+          </h2>
+          <p className="mt-4 text-pretty text-ink-600">
+            Built for teams who actually ship: construction, R&amp;D, agencies, ops, hardware. The
+            kind of planning that survives reality.
+          </p>
+        </div>
+
+        <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map(({ icon: Icon, title, body, color }) => (
+            <article
+              key={title}
+              className="card card-hover group relative overflow-hidden p-6"
+            >
+              <div
+                className={`absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gradient-to-br ${color} blur-2xl transition duration-500 group-hover:scale-110`}
+                aria-hidden
+              />
+              <div className="relative">
+                <div
+                  className={`inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-soft ring-1 ring-ink-200 ${color
+                    .split(' ')
+                    .pop()}`}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-5 text-lg font-semibold tracking-tight">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-ink-600">{body}</p>
+                <div className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-ink-700 opacity-0 transition group-hover:opacity-100">
+                  Learn more
+                  <IconArrowRight className="h-3.5 w-3.5" />
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- HOW IT WORKS ---------- */
+function HowItWorks() {
+  const steps = [
+    {
+      n: '01',
+      title: 'Map the work',
+      body: 'Build your WBS in minutes. Codes, parents, durations. Import from CSV or start fresh.',
+    },
+    {
+      n: '02',
+      title: 'Link dependencies',
+      body: 'Wire predecessors and successors. Cycle detection blocks impossible plans.',
+    },
+    {
+      n: '03',
+      title: 'Compute Critical Path',
+      body: 'CPM runs on every change. See ES/EF, LS/LF and slack across the project.',
+    },
+    {
+      n: '04',
+      title: 'Ship with confidence',
+      body: 'Gantt, dashboards and resource histograms keep everyone aligned through delivery.',
+    },
+  ];
+
+  return (
+    <section id="how" className="relative section bg-ink-50/40">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ink-300 to-transparent"
+        aria-hidden
+      />
+      <div className="container">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="eyebrow">How it works</span>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
+            From empty workspace to shipping plan in an afternoon.
+          </h2>
+          <p className="mt-4 text-ink-600">
+            A short, opinionated path from idea to delivery — designed by PMs who've shipped real
+            things.
+          </p>
+        </div>
+
+        <ol className="relative mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div
+            className="pointer-events-none absolute left-0 right-0 top-9 hidden h-px bg-gradient-to-r from-transparent via-brand-300 to-transparent lg:block"
+            aria-hidden
+          />
+          {steps.map((s, i) => (
+            <li
+              key={s.n}
+              className="relative card p-6"
+              style={{ animationDelay: `${i * 80}ms` }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-gradient text-xs font-bold text-white shadow-lift">
+                  {s.n}
+                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">
+                  Step {i + 1}/4
+                </span>
+              </div>
+              <h3 className="mt-5 text-lg font-semibold tracking-tight">{s.title}</h3>
+              <p className="mt-1.5 text-sm text-ink-600">{s.body}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- DEEP FEATURE ROW ---------- */
+function DeepFeatures() {
+  return (
+    <section className="section">
+      <div className="container space-y-24">
+        <DeepRow
+          eyebrow="Critical Path Method"
+          title="See the path that decides your deadline."
+          body="PlanForge runs CPM on every dependency change. Tasks with zero slack glow red on the Gantt. Compress the path with confidence — we surface where each day saved actually comes from."
+          bullets={[
+            'Cycle detection on dependency creation',
+            'Forward & backward pass with lag/lead',
+            'Per-task ES, EF, LS, LF and slack',
+          ]}
+          visual={<CpmVisual />}
+        />
+        <DeepRow
+          reverse
+          eyebrow="Resource planning"
+          title="Stop discovering over-allocation in week three."
+          body="A resource histogram shows daily utilization per teammate. Add allocations from the task panel; we draw conflicts before they bite."
+          bullets={[
+            'Daily utilization buckets',
+            'Capacity warnings inline',
+            'Drill-down from any task',
+          ]}
+          visual={<HistogramVisual />}
+        />
+      </div>
+    </section>
+  );
+}
+
+function DeepRow({
+  eyebrow,
+  title,
+  body,
+  bullets,
+  visual,
+  reverse = false,
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  bullets: string[];
+  visual: React.ReactNode;
+  reverse?: boolean;
+}) {
+  return (
+    <div className={`grid items-center gap-12 lg:grid-cols-2 ${reverse ? 'lg:grid-flow-dense' : ''}`}>
+      <div className={reverse ? 'lg:col-start-2' : ''}>
+        <span className="eyebrow">{eyebrow}</span>
+        <h3 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">{title}</h3>
+        <p className="mt-4 text-ink-600">{body}</p>
+        <ul className="mt-6 space-y-2.5">
+          {bullets.map((b) => (
+            <li key={b} className="flex items-start gap-2.5 text-sm text-ink-700">
+              <span className="mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full bg-emerald-100 text-emerald-700">
+                <IconCheck className="h-3.5 w-3.5" />
+              </span>
+              {b}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className={reverse ? 'lg:col-start-1' : ''}>
+        <div className="relative">
+          <div
+            className="pointer-events-none absolute -inset-6 rounded-3xl bg-brand-500/10 blur-2xl"
+            aria-hidden
+          />
+          <div className="relative card overflow-hidden p-4">{visual}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CpmVisual() {
+  // simplified ES/EF chip board
+  const tasks = [
+    { name: 'Excavation', es: 0, ef: 4, slack: 0, critical: true },
+    { name: 'Slab pour', es: 4, ef: 10, slack: 0, critical: true },
+    { name: 'Framing', es: 10, ef: 25, slack: 0, critical: true },
+    { name: 'Site logistics', es: 4, ef: 8, slack: 6, critical: false },
+    { name: 'Permits', es: 0, ef: 3, slack: 12, critical: false },
+  ];
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between text-xs text-ink-500">
+        <span>Critical path</span>
+        <span className="badge bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-100">
+          5 tasks · 25d
+        </span>
+      </div>
+      {tasks.map((t) => (
+        <div
+          key={t.name}
+          className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm ${
+            t.critical
+              ? 'border-rose-200 bg-rose-50/60'
+              : 'border-ink-200 bg-white'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className={`h-2 w-2 rounded-full ${
+                t.critical ? 'bg-rose-500' : 'bg-ink-300'
+              }`}
+            />
+            <span className="font-medium text-ink-900">{t.name}</span>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-ink-500">
+            <span>ES {t.es}d</span>
+            <span>EF {t.ef}d</span>
+            <span>
+              Slack <strong className={t.critical ? 'text-rose-600' : 'text-ink-700'}>{t.slack}d</strong>
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HistogramVisual() {
+  const bars = [40, 60, 80, 110, 95, 70, 55, 90, 105, 75];
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs text-ink-500">
+        <span>Daily utilization · last 10 days</span>
+        <div className="flex items-center gap-3">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-brand-500" />
+            Booked
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-rose-500" />
+            Over
+          </span>
+        </div>
+      </div>
+      <div className="mt-3 flex h-36 items-end gap-2">
+        {bars.map((v, i) => {
+          const over = v > 100;
+          return (
+            <div key={i} className="flex flex-1 flex-col items-center gap-1">
+              <div
+                className={`w-full rounded-md ${
+                  over ? 'bg-gradient-to-t from-rose-500 to-rose-400' : 'bg-gradient-to-t from-brand-600 to-brand-400'
+                }`}
+                style={{ height: `${Math.min(100, v)}%` }}
+              />
+              <span className="text-[10px] text-ink-400">D{i + 1}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50/60 p-2.5 text-xs text-rose-700">
+        ⚠ Maria is 110% allocated on D4 — consider rebalancing 1d to D6.
+      </div>
+    </div>
+  );
+}
+
+/* ---------- PRICING ---------- */
+const TIERS = [
+  {
+    name: 'Free',
+    price: '$0',
+    period: 'forever',
+    description: 'For solo PMs and small teams getting organized.',
+    cta: 'Start free',
+    href: '/register',
+    features: [
+      'Up to 10 members',
+      '3 active projects',
+      'Tasks, dependencies, WBS',
+      'Gantt chart',
+      'Email support',
+    ],
+  },
+  {
+    name: 'Pro',
+    price: '$12',
+    period: 'per user / month',
+    description: 'For growing teams that ship under deadline pressure.',
+    highlighted: true,
+    cta: 'Start 14-day trial',
+    href: '/register',
+    features: [
+      'Up to 50 members',
+      '50 projects',
+      'Critical Path Method',
+      'Resource histogram',
+      'Priority support',
+    ],
+  },
+  {
+    name: 'Enterprise',
+    price: 'Custom',
+    period: 'volume pricing',
+    description: 'For organizations with compliance and scale needs.',
+    cta: 'Contact sales',
+    href: 'mailto:sales@example.com',
+    features: [
+      'Unlimited members & projects',
+      'SSO / SAML / SCIM',
+      'Audit log',
+      'SLA & DPA',
+      'Dedicated CSM',
+    ],
+  },
+];
+
+function Pricing() {
+  return (
+    <section id="pricing" className="section bg-ink-50/40">
+      <div className="container">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="eyebrow">Pricing</span>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
+            Simple, fair, predictable.
+          </h2>
+          <p className="mt-4 text-ink-600">
+            Pay only for active members. Cancel anytime. No "contact us to upgrade" games.
+          </p>
+        </div>
+
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {TIERS.map((t) => (
+            <PricingCard key={t.name} tier={t} />
+          ))}
+        </div>
+
+        <p className="mt-8 text-center text-xs text-ink-500">
+          Prices in USD. Annual billing saves 20%. Need a custom plan?{' '}
+          <a href="mailto:sales@example.com" className="text-brand-700 hover:underline">
+            Talk to sales
+          </a>
+          .
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function PricingCard({ tier }: { tier: (typeof TIERS)[number] }) {
+  const isHi = !!tier.highlighted;
+  return (
+    <div
+      className={`relative flex flex-col rounded-2xl p-6 transition ${
+        isHi
+          ? 'border-2 border-brand-600 bg-white shadow-[0_30px_60px_-30px_rgba(79,70,229,0.45)]'
+          : 'card card-hover'
+      }`}
+    >
+      {isHi && (
+        <span className="absolute -top-3 left-6 inline-flex items-center gap-1 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white shadow-lift">
+          <IconBolt className="h-3.5 w-3.5" />
+          Most popular
+        </span>
+      )}
+      <div className="flex items-baseline justify-between">
+        <h3 className="text-lg font-semibold tracking-tight">{tier.name}</h3>
+        {isHi && <span className="badge-soft">Save 20% annually</span>}
+      </div>
+      <p className="mt-1 text-sm text-ink-600">{tier.description}</p>
+
+      <div className="mt-5 flex items-baseline gap-2">
+        <span className="text-4xl font-bold tracking-tight">{tier.price}</span>
+        <span className="text-sm text-ink-500">/ {tier.period}</span>
+      </div>
+
+      <ul className="mt-6 space-y-2.5 text-sm text-ink-700">
+        {tier.features.map((f) => (
+          <li key={f} className="flex items-start gap-2.5">
+            <span className="mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full bg-brand-50 text-brand-700">
+              <IconCheck className="h-3.5 w-3.5" />
+            </span>
+            {f}
+          </li>
+        ))}
+      </ul>
+
+      <a
+        href={tier.href}
+        className={`${isHi ? 'btn-brand' : 'btn-secondary'} mt-7 w-full justify-center`}
+      >
+        {tier.cta}
+      </a>
+    </div>
+  );
+}
+
+/* ---------- SOCIAL PROOF ---------- */
+function SocialProof() {
+  return (
+    <section id="proof" className="section">
+      <div className="container">
+        <div className="grid gap-10 lg:grid-cols-3">
+          <div className="lg:col-span-1">
+            <span className="eyebrow">Loved by builders</span>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
+              The first PM tool engineers don't dread.
+            </h2>
+            <p className="mt-4 text-ink-600">
+              Construction PMs, hardware leads, agency owners — teams who plan in days and weeks, not just sprints.
+            </p>
+            <div className="mt-6 grid grid-cols-3 gap-4">
+              <KpiTile value="42%" label="faster planning" />
+              <KpiTile value="−4d" label="avg slack saved" />
+              <KpiTile value="98%" label="on-time delivery" />
+            </div>
+          </div>
+
+          <div className="grid gap-5 lg:col-span-2 md:grid-cols-2">
+            <Testimonial
+              quote="We replaced three spreadsheets and an aging MS Project install with PlanForge. Our ops lead now actually opens the plan."
+              name="Maya R."
+              role="Head of Delivery, NorthBuild"
+            />
+            <Testimonial
+              quote="The CPM view paid for the year-one subscription in our first reno. We saw a critical path we'd missed in three rebuilds."
+              name="Jordan T."
+              role="Construction PM, Outpost"
+            />
+            <Testimonial
+              quote="Finally a Gantt that doesn't fight me. Drag, drop, and successors actually move. The dependency cycle errors are chef's kiss."
+              name="Priya S."
+              role="Engineering Lead, Helix Labs"
+            />
+            <Testimonial
+              quote="Onboarding took an afternoon. The team picked up the WBS in one standup."
+              name="Sam K."
+              role="Founder, Quanta"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function KpiTile({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="card p-4">
+      <div className="text-2xl font-bold tracking-tight gradient-text">{value}</div>
+      <div className="mt-1 text-xs text-ink-500">{label}</div>
+    </div>
+  );
+}
+
+function Testimonial({
+  quote,
+  name,
+  role,
+}: {
+  quote: string;
+  name: string;
+  role: string;
+}) {
+  return (
+    <figure className="card card-hover relative p-6">
+      <div className="flex gap-0.5 text-amber-500">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <IconStar key={i} />
+        ))}
+      </div>
+      <blockquote className="mt-3 text-[15px] leading-relaxed text-ink-800">
+        “{quote}”
+      </blockquote>
+      <figcaption className="mt-5 flex items-center gap-3">
+        <span
+          className="grid h-9 w-9 place-items-center rounded-full bg-brand-gradient text-xs font-semibold text-white"
+          aria-hidden
+        >
+          {name
+            .split(' ')
+            .map((n) => n[0])
+            .join('')}
+        </span>
+        <div>
+          <div className="text-sm font-semibold text-ink-900">{name}</div>
+          <div className="text-xs text-ink-500">{role}</div>
+        </div>
+      </figcaption>
+    </figure>
+  );
+}
+
+/* ---------- FINAL CTA ---------- */
+function FinalCta() {
+  return (
+    <section className="section">
+      <div className="container">
+        <div className="relative overflow-hidden rounded-3xl bg-ink-950 p-10 text-white md:p-16">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-80"
+            style={{
+              background:
+                'radial-gradient(60% 80% at 80% 20%, rgba(99,102,241,0.45), transparent 60%), radial-gradient(50% 60% at 10% 80%, rgba(6,182,212,0.4), transparent 60%)',
+            }}
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-0 bg-noise opacity-40"
+            aria-hidden
+          />
+          <div className="relative grid items-center gap-8 md:grid-cols-3">
+            <div className="md:col-span-2">
+              <span className="eyebrow border-white/15 bg-white/5 text-white/80">
+                <IconLayers className="h-3.5 w-3.5" />
+                Built for the next 1,000 deliveries
+              </span>
+              <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
+                Ship the plan you actually believe in.
+              </h2>
+              <p className="mt-4 max-w-xl text-pretty text-white/70">
+                Free forever for small teams. 14-day Pro trial when you're ready. No card up
+                front, no migration drama.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 md:items-end">
+              <Link
+                to="/register"
+                className="btn btn-lg w-full justify-center bg-white text-ink-900 hover:bg-ink-100 md:w-auto"
+              >
+                Start free
+                <IconArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                to="/pricing"
+                className="btn btn-lg w-full justify-center border border-white/15 text-white hover:bg-white/10 md:w-auto"
+              >
+                Compare plans
+              </Link>
+              <span className="text-xs text-white/50">Trusted by ambitious teams worldwide</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

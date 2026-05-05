@@ -1,0 +1,186 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
+import { PlatformAdminGuard } from '../common/guards/platform-admin.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
+import { BillingService } from '../billing/billing.service';
+import type { AdminBillingDashboard, AdminWorkspaceBillingDetail } from '../billing/billing.types';
+import type { SubscriptionPlan } from '../billing/schemas/subscription-plan.schema';
+import {
+  AdminInsights,
+  AdminOverview,
+  AdminPlatformSettings,
+  AdminService,
+  AdminUserRow,
+  AdminWorkspaceRow,
+  ActivityEvent,
+  GrowthPoint,
+  RoleDistribution,
+  StatusDistribution,
+} from './admin.service';
+
+@ApiBearerAuth()
+@ApiTags('admin')
+@UseGuards(PlatformAdminGuard)
+@Controller('admin')
+export class AdminController {
+  constructor(
+    private readonly svc: AdminService,
+    private readonly billingService: BillingService,
+  ) {}
+
+  @Get('stats/overview')
+  overview(): Promise<AdminOverview> {
+    return this.svc.overview();
+  }
+
+  @Get('stats/growth')
+  growth(@Query('days') days?: string): Promise<GrowthPoint[]> {
+    return this.svc.growth(days ? parseInt(days, 10) : 30);
+  }
+
+  @Get('stats/tasks-by-status')
+  tasksByStatus(): Promise<StatusDistribution> {
+    return this.svc.tasksByStatus();
+  }
+
+  @Get('stats/role-distribution')
+  roleDistribution(): Promise<RoleDistribution> {
+    return this.svc.roleDistribution();
+  }
+
+  @Get('workspaces')
+  workspaces(
+    @Query('limit') limit?: string,
+    @Query('q') q?: string,
+  ): Promise<{ items: AdminWorkspaceRow[] }> {
+    return this.svc.workspacesTable({
+      limit: limit ? parseInt(limit, 10) : 25,
+      q,
+    });
+  }
+
+  @Get('users')
+  users(
+    @Query('limit') limit?: string,
+    @Query('q') q?: string,
+  ): Promise<{ items: AdminUserRow[] }> {
+    return this.svc.usersTable({
+      limit: limit ? parseInt(limit, 10) : 100,
+      q,
+    });
+  }
+
+  @Get('billing')
+  billingDashboard(
+    @Query('limit') limit?: string,
+    @Query('q') q?: string,
+  ): Promise<AdminBillingDashboard> {
+    return this.billingService.getAdminDashboard({
+      workspaceLimit: limit ? parseInt(limit, 10) : 80,
+      workspaceSearch: q,
+    });
+  }
+
+  @Get('billing/workspaces/:id')
+  billingWorkspace(@Param('id') id: string): Promise<AdminWorkspaceBillingDetail> {
+    return this.billingService.getWorkspaceDetail(id);
+  }
+
+  @Post('billing/workspaces/:id/plan')
+  assignPlan(
+    @Param('id') id: string,
+    @Body() body: { subscriptionPlanId: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.billingService.assignWorkspacePlan(id, body.subscriptionPlanId, user.sub);
+  }
+
+  @Post('billing/plans')
+  createPlan(@Body() body: Partial<SubscriptionPlan> & { key: string; displayName: string; tier: 'free' | 'pro' | 'enterprise' }) {
+    return this.billingService.createSubscriptionPlan(body);
+  }
+
+  @Patch('billing/plans/:id')
+  updatePlan(@Param('id') id: string, @Body() body: Partial<SubscriptionPlan>) {
+    return this.billingService.updateSubscriptionPlan(id, body);
+  }
+
+  @Post('billing/plans/:id/deactivate')
+  deactivatePlan(@Param('id') id: string) {
+    return this.billingService.deactivateSubscriptionPlan(id);
+  }
+
+  @Post('billing/workspaces/:id/enterprise-contract')
+  enterpriseContract(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      monthlyAmountUsd: number;
+      contractStart: string;
+      contractEnd?: string;
+      trialEndsAt?: string;
+      notes?: string;
+      manualInvoiceUrls?: string[];
+    },
+  ) {
+    return this.billingService.upsertEnterpriseContract(id, body);
+  }
+
+  @Get('billing/export/invoices')
+  async exportInvoices(@Res({ passthrough: false }) res: Response) {
+    const csv = await this.billingService.buildInvoicesCsv();
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="invoices.csv"');
+    res.send(csv);
+  }
+
+  @Get('billing/export/payments')
+  async exportPayments(@Res({ passthrough: false }) res: Response) {
+    const csv = await this.billingService.buildPaymentsCsv();
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="payments.csv"');
+    res.send(csv);
+  }
+
+  @Get('billing/export/monthly-report')
+  async exportMonthlyReport(@Res({ passthrough: false }) res: Response) {
+    const csv = await this.billingService.buildMonthlyReportCsv();
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="monthly-billing-summary.csv"');
+    res.send(csv);
+  }
+
+  @Get('billing/invoices/:id/html')
+  async invoiceHtml(@Param('id') id: string, @Res({ passthrough: false }) res: Response) {
+    const html = await this.billingService.getInvoiceHtml(id);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  }
+
+  @Get('settings')
+  settings(): Promise<AdminPlatformSettings> {
+    return this.svc.platformSettings();
+  }
+
+  @Get('activity')
+  activity(@Query('limit') limit?: string): Promise<ActivityEvent[]> {
+    return this.svc.activity(limit ? parseInt(limit, 10) : 30);
+  }
+
+  @Get('insights')
+  insights(): Promise<AdminInsights> {
+    return this.svc.insights();
+  }
+}
