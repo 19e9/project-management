@@ -3,102 +3,9 @@ import { Link } from 'react-router-dom';
 import { Navbar } from '../components/marketing/Navbar';
 import { Footer } from '../components/marketing/Footer';
 import { IconBolt, IconCheck } from '../components/ui/Icons';
+import { type PublicPricingPlan, usePublicPricingPlans } from '../features/pricing/publicPricing';
 
 type Cycle = 'monthly' | 'annual';
-
-interface Tier {
-  name: string;
-  description: string;
-  monthly: number | 'custom';
-  annual: number | 'custom';
-  highlighted?: boolean;
-  cta: string;
-  href: string;
-  features: string[];
-}
-
-const TIERS: Tier[] = [
-  {
-    name: 'Free',
-    description: 'For solo PMs and small teams getting organized.',
-    monthly: 0,
-    annual: 0,
-    cta: 'Start free',
-    href: '/register',
-    features: [
-      'Up to 10 members',
-      '3 active projects',
-      'Tasks, dependencies, WBS',
-      'Gantt chart',
-      'Email support',
-    ],
-  },
-  {
-    name: 'Pro',
-    description: 'For growing teams that ship under deadline pressure.',
-    monthly: 12,
-    annual: 9.6,
-    highlighted: true,
-    cta: 'Start 14-day trial',
-    href: '/register',
-    features: [
-      'Up to 50 members',
-      '50 projects',
-      'Critical Path Method',
-      'Resource histogram',
-      'Burndown & dashboards',
-      'Priority support',
-    ],
-  },
-  {
-    name: 'Enterprise',
-    description: 'Compliance, scale and dedicated support.',
-    monthly: 'custom',
-    annual: 'custom',
-    cta: 'Contact sales',
-    href: 'mailto:sales@example.com',
-    features: [
-      'Unlimited members & projects',
-      'SSO / SAML / SCIM',
-      'Audit log',
-      'SLA & DPA',
-      'Dedicated CSM',
-    ],
-  },
-];
-
-const COMPARE: Array<{
-  group: string;
-  rows: Array<{ feature: string; free: string | boolean; pro: string | boolean; enterprise: string | boolean }>;
-}> = [
-  {
-    group: 'Planning',
-    rows: [
-      { feature: 'Tasks & subtasks', free: true, pro: true, enterprise: true },
-      { feature: 'Dependencies (FS, lag/lead)', free: true, pro: true, enterprise: true },
-      { feature: 'Gantt chart', free: true, pro: true, enterprise: true },
-      { feature: 'Critical Path Method', free: false, pro: true, enterprise: true },
-      { feature: 'Resource histogram', free: false, pro: true, enterprise: true },
-    ],
-  },
-  {
-    group: 'Limits',
-    rows: [
-      { feature: 'Members per workspace', free: '10', pro: '50', enterprise: 'Unlimited' },
-      { feature: 'Active projects', free: '3', pro: '50', enterprise: 'Unlimited' },
-      { feature: 'API rate limit (req/min)', free: '60', pro: '300', enterprise: 'Custom' },
-    ],
-  },
-  {
-    group: 'Security & support',
-    rows: [
-      { feature: 'SSO / SAML', free: false, pro: false, enterprise: true },
-      { feature: 'Audit log', free: false, pro: false, enterprise: true },
-      { feature: 'SLA & DPA', free: false, pro: false, enterprise: true },
-      { feature: 'Support', free: 'Email', pro: 'Priority', enterprise: 'Dedicated CSM' },
-    ],
-  },
-];
 
 const FAQ = [
   {
@@ -107,7 +14,7 @@ const FAQ = [
   },
   {
     q: 'How is billing handled?',
-    a: 'You only pay for active members in your workspace, billed monthly or annually. Annual saves 20%.',
+    a: 'You only pay for active members in your workspace, billed monthly or annually. Annual discounts depend on the selected plan.',
   },
   {
     q: 'Can I switch plans later?',
@@ -120,7 +27,12 @@ const FAQ = [
 ];
 
 export default function PricingPage() {
+  const pricing = usePublicPricingPlans();
   const [cycle, setCycle] = useState<Cycle>('monthly');
+
+  const plans = pricing.data?.plans ?? [];
+  const maxDisc = pricing.data?.maxAnnualDiscountPercent ?? 0;
+
   return (
     <div className="bg-white">
       <Navbar />
@@ -133,22 +45,54 @@ export default function PricingPage() {
         <div className="container relative pb-12 pt-14 md:pb-20 md:pt-20">
           <div className="mx-auto max-w-2xl text-center">
             <span className="eyebrow">Pricing</span>
-            <h1 className="h-display mt-4 text-balance">
-              Pricing built for teams who actually ship.
-            </h1>
+            <h1 className="h-display mt-4 text-balance">Simple, fair, predictable.</h1>
             <p className="mx-auto mt-4 max-w-xl text-pretty text-ink-600">
-              Pay only for active members. Cancel anytime. No "contact us to upgrade" games.
+              Pay only for active members. Cancel anytime. No &quot;contact us to upgrade&quot; games.
             </p>
           </div>
 
           <div className="mt-8 flex justify-center">
-            <CycleToggle cycle={cycle} setCycle={setCycle} />
+            <CycleToggle cycle={cycle} setCycle={setCycle} annualBadgePct={maxDisc} />
           </div>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {TIERS.map((t) => (
-              <Card key={t.name} tier={t} cycle={cycle} />
-            ))}
+          {pricing.isError && (
+            <div
+              className="mx-auto mt-8 max-w-lg rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-center text-sm text-rose-800"
+              role="alert"
+            >
+              Could not load pricing plans.
+              <button
+                type="button"
+                className="ml-2 font-semibold text-brand-700 underline"
+                onClick={() => void pricing.refetch()}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          <div className="mt-10 grid grid-cols-1 gap-6 md:[grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
+            {pricing.isLoading &&
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="card h-[380px] p-6">
+                  <div className="skeleton mb-4 h-6 w-1/3" />
+                  <div className="skeleton mb-2 h-4 w-full" />
+                  <div className="skeleton mb-6 h-10 w-2/3" />
+                  <div className="space-y-2">
+                    <div className="skeleton h-4 w-full" />
+                    <div className="skeleton h-4 w-full" />
+                    <div className="skeleton h-4 w-5/6" />
+                  </div>
+                  <div className="skeleton mt-8 h-10 w-full rounded-xl" />
+                </div>
+              ))}
+            {!pricing.isLoading &&
+              plans.map((p) => <PricingCard key={p.id} plan={p} cycle={cycle} />)}
+            {!pricing.isLoading && plans.length === 0 && !pricing.isError && (
+              <p className="col-span-full text-center text-sm text-ink-600">
+                No active plans right now. Check back soon.
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -162,36 +106,8 @@ export default function PricingPage() {
             </h2>
           </div>
 
-          <div className="mt-10 overflow-hidden rounded-2xl border border-ink-200 bg-white">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-ink-50/70 text-xs uppercase tracking-wider text-ink-500">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Feature</th>
-                  <th className="px-5 py-3 font-semibold">Free</th>
-                  <th className="px-5 py-3 font-semibold text-brand-700">Pro</th>
-                  <th className="px-5 py-3 font-semibold">Enterprise</th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARE.map((g) => (
-                  <>
-                    <tr key={g.group} className="border-t border-ink-200 bg-ink-50/40">
-                      <td colSpan={4} className="px-5 py-2 text-xs font-semibold uppercase tracking-wider text-ink-500">
-                        {g.group}
-                      </td>
-                    </tr>
-                    {g.rows.map((r) => (
-                      <tr key={r.feature} className="border-t border-ink-200">
-                        <td className="px-5 py-3 font-medium text-ink-800">{r.feature}</td>
-                        <td className="px-5 py-3"><Cell v={r.free} /></td>
-                        <td className="px-5 py-3 bg-brand-50/40"><Cell v={r.pro} /></td>
-                        <td className="px-5 py-3"><Cell v={r.enterprise} /></td>
-                      </tr>
-                    ))}
-                  </>
-                ))}
-              </tbody>
-            </table>
+          <div className="mt-10 overflow-x-auto rounded-2xl border border-ink-200 bg-white">
+            <CompareTable plans={plans} loading={pricing.isLoading} />
           </div>
         </div>
       </section>
@@ -214,7 +130,13 @@ export default function PricingPage() {
                 <summary className="flex cursor-pointer items-center justify-between gap-4">
                   <span className="font-medium text-ink-900">{f.q}</span>
                   <span className="grid h-7 w-7 place-items-center rounded-full bg-ink-100 text-ink-700 transition group-open:rotate-45">
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <path d="M12 5v14M5 12h14" strokeLinecap="round" />
                     </svg>
                   </span>
@@ -228,7 +150,9 @@ export default function PricingPage() {
               Start free →
             </Link>
             <p className="mt-3 text-xs text-ink-500">
-              Still have questions?{' '}
+              Prices in USD.
+              {maxDisc > 0 ? ` Annual billing saves up to ${maxDisc}% on eligible paid plans.` : ''} Need a
+              custom plan?{' '}
               <a href="mailto:sales@example.com" className="text-brand-700 hover:underline">
                 Talk to sales
               </a>
@@ -242,23 +166,30 @@ export default function PricingPage() {
   );
 }
 
-function CycleToggle({ cycle, setCycle }: { cycle: Cycle; setCycle: (c: Cycle) => void }) {
+function CycleToggle({
+  cycle,
+  setCycle,
+  annualBadgePct,
+}: {
+  cycle: Cycle;
+  setCycle: (c: Cycle) => void;
+  annualBadgePct: number;
+}) {
   return (
     <div className="inline-flex items-center rounded-full border border-ink-200 bg-white p-1 shadow-soft">
       {(['monthly', 'annual'] as Cycle[]).map((c) => (
         <button
           key={c}
+          type="button"
           onClick={() => setCycle(c)}
           className={`relative rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            cycle === c
-              ? 'bg-ink-900 text-white shadow-soft'
-              : 'text-ink-600 hover:text-ink-900'
+            cycle === c ? 'bg-ink-900 text-white shadow-soft' : 'text-ink-600 hover:text-ink-900'
           }`}
         >
           {c === 'monthly' ? 'Monthly' : 'Annual'}
-          {c === 'annual' && cycle !== 'annual' && (
+          {c === 'annual' && cycle !== 'annual' && annualBadgePct > 0 && (
             <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
-              −20%
+              −{annualBadgePct}%
             </span>
           )}
         </button>
@@ -267,16 +198,29 @@ function CycleToggle({ cycle, setCycle }: { cycle: Cycle; setCycle: (c: Cycle) =
   );
 }
 
-function Card({ tier, cycle }: { tier: Tier; cycle: Cycle }) {
-  const isHi = !!tier.highlighted;
-  const price = cycle === 'monthly' ? tier.monthly : tier.annual;
-  const display = price === 'custom' ? 'Custom' : price === 0 ? '$0' : `$${price}`;
-  const period =
-    price === 'custom'
-      ? 'volume pricing'
-      : cycle === 'monthly'
-        ? 'per user / month'
-        : 'per user / month, billed annually';
+function PricingCard({ plan, cycle }: { plan: PublicPricingPlan; cycle: Cycle }) {
+  const isHi = plan.isHighlighted;
+  const { pricing } = plan;
+
+  let primaryPrice = '';
+  let period = '';
+
+  if (pricing.model === 'custom') {
+    primaryPrice = pricing.customLabel ?? 'Custom';
+    period = '';
+  } else if (pricing.model === 'free') {
+    primaryPrice = '$0';
+    period = 'forever';
+  } else if (cycle === 'monthly') {
+    primaryPrice = `$${pricing.seatPriceMonthlyUsd}`;
+    period = 'per user / month';
+  } else {
+    primaryPrice = `$${pricing.seatPriceEffectiveMonthlyAnnualUsd}`;
+    period = 'per user / month, billed annually';
+  }
+
+  const href = plan.cta.href;
+  const isInternal = href.startsWith('/') && !href.startsWith('//');
 
   return (
     <div
@@ -292,14 +236,21 @@ function Card({ tier, cycle }: { tier: Tier; cycle: Cycle }) {
           Most popular
         </span>
       )}
-      <h3 className="text-lg font-semibold tracking-tight">{tier.name}</h3>
-      <p className="mt-1 text-sm text-ink-600">{tier.description}</p>
-      <div className="mt-5 flex items-baseline gap-2">
-        <span className="text-4xl font-bold tracking-tight">{display}</span>
-        <span className="text-sm text-ink-500">/ {period}</span>
+      <h3 className="text-lg font-semibold tracking-tight">{plan.displayName}</h3>
+      <p className="mt-1 text-sm text-ink-600">{plan.marketingDescription}</p>
+      {pricing.model === 'per_seat' &&
+        cycle === 'annual' &&
+        pricing.annualDiscountPercent > 0 && (
+          <span className="mt-2 inline-flex w-fit rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-800 ring-1 ring-sky-100">
+            Save {pricing.annualDiscountPercent}% annually
+          </span>
+        )}
+      <div className="mt-5 flex flex-wrap items-baseline gap-2">
+        <span className="text-4xl font-bold tracking-tight">{primaryPrice}</span>
+        {period ? <span className="text-sm text-ink-500">/ {period}</span> : null}
       </div>
       <ul className="mt-6 space-y-2.5 text-sm text-ink-700">
-        {tier.features.map((f) => (
+        {plan.bullets.map((f) => (
           <li key={f} className="flex items-start gap-2.5">
             <span className="mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full bg-brand-50 text-brand-700">
               <IconCheck className="h-3.5 w-3.5" />
@@ -308,25 +259,119 @@ function Card({ tier, cycle }: { tier: Tier; cycle: Cycle }) {
           </li>
         ))}
       </ul>
-      <a
-        href={tier.href}
-        className={`${isHi ? 'btn-brand' : 'btn-secondary'} mt-7 w-full justify-center`}
-      >
-        {tier.cta}
-      </a>
+      {isInternal ? (
+        <Link
+          to={href}
+          className={`${isHi ? 'btn-brand' : 'btn-secondary'} mt-7 flex w-full justify-center`}
+        >
+          {plan.cta.label}
+        </Link>
+      ) : (
+        <a
+          href={href}
+          className={`${isHi ? 'btn-brand' : 'btn-secondary'} mt-7 flex w-full justify-center`}
+        >
+          {plan.cta.label}
+        </a>
+      )}
     </div>
   );
 }
 
-function Cell({ v }: { v: string | boolean }) {
-  if (typeof v === 'boolean') {
-    return v ? (
-      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-        <IconCheck className="h-3.5 w-3.5" />
-      </span>
-    ) : (
-      <span className="text-ink-300">—</span>
+function CompareTable({
+  plans,
+  loading,
+}: {
+  plans: PublicPricingPlan[];
+  loading: boolean;
+}) {
+  const defs = [
+    { label: 'Members per workspace', type: 'members' as const },
+    { label: 'Active projects', type: 'projects' as const },
+    { label: 'Storage', type: 'storage' as const },
+    { label: 'Gantt chart', type: 'gantt' as const },
+    { label: 'Critical Path Method', type: 'cpm' as const },
+    { label: 'Audit log', type: 'auditLog' as const },
+  ];
+
+  function cell(plan: PublicPricingPlan, type: (typeof defs)[number]['type']) {
+    if (type === 'members') {
+      const n = plan.limits.maxMembers;
+      return n >= 100_000 ? 'Unlimited' : n.toLocaleString('en-US');
+    }
+    if (type === 'projects') {
+      const n = plan.limits.maxProjects;
+      return n >= 100_000 ? 'Unlimited' : n.toLocaleString('en-US');
+    }
+    if (type === 'storage') return formatStorage(plan.limits.storageMb);
+    if (type === 'gantt') return plan.features.gantt;
+    if (type === 'cpm') return plan.features.cpm;
+    return plan.features.auditLog;
+  }
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="skeleton mx-auto h-40 w-full max-w-4xl" />
+      </div>
     );
   }
-  return <span className="text-ink-800">{v}</span>;
+
+  if (plans.length === 0) {
+    return (
+      <div className="p-8 text-center text-sm text-ink-500">Nothing to compare yet.</div>
+    );
+  }
+
+  return (
+    <table className="w-full min-w-[640px] text-left text-sm">
+      <thead className="bg-ink-50/70 text-xs uppercase tracking-wider text-ink-500">
+        <tr>
+          <th className="px-5 py-3 font-semibold">Feature</th>
+          {plans.map((p) => (
+            <th
+              key={p.id}
+              className={`px-5 py-3 font-semibold ${p.isHighlighted ? 'text-brand-700' : ''}`}
+            >
+              {p.displayName}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {defs.map((row) => (
+          <tr key={row.label} className="border-t border-ink-200">
+            <td className="px-5 py-3 font-medium text-ink-800">{row.label}</td>
+            {plans.map((p) => {
+              const v = cell(p, row.type);
+              return (
+                <td
+                  key={p.id}
+                  className={`px-5 py-3 ${p.isHighlighted ? 'bg-brand-50/40' : ''}`}
+                >
+                  {typeof v === 'boolean' ? <CompareBoolCell value={v} /> : v}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function CompareBoolCell({ value }: { value: boolean }) {
+  return value ? (
+    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+      <IconCheck className="h-3.5 w-3.5" />
+    </span>
+  ) : (
+    <span className="text-ink-300">—</span>
+  );
+}
+
+function formatStorage(mb: number) {
+  if (mb >= 1_048_576) return `${Math.round(mb / 1_048_576)} TB`;
+  if (mb >= 1024) return `${Math.round(mb / 1024)} GB`;
+  return `${mb.toLocaleString('en-US')} MB`;
 }

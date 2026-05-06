@@ -1,0 +1,50 @@
+export default {
+  common: {
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    seeAll: 'See all',
+  },
+  nav: {
+    projects: 'Projects',
+    tasks: 'Tasks',
+    admin: 'Admin',
+  },
+  roles: {
+    client: 'Client',
+    owner: 'Owner',
+  },
+  states: {
+    notFoundTitle: 'Not found',
+    notFoundHint: 'This project does not exist or you do not have access.',
+  },
+  dashboard: {
+    titleClient: 'Client dashboard',
+    readOnlyClientNotice: 'Read-only view: you can browse tasks.',
+    titleOwner: 'Workspace overview',
+    titleAdmin: 'Platform admin',
+    recentProjects: 'Recent projects',
+    activityFeed: 'Activity',
+    kpiUsers: 'Users',
+    kpiWorkspaces: 'Workspaces',
+    kpiActiveProjects: 'Active projects',
+    kpiOpenTasks: 'Open tasks',
+    kpiOverdue: 'Overdue',
+  },
+  projects: {
+    new: 'New project',
+    deadline: 'Deadline',
+    teamSize: 'people',
+    statusActive: 'Active',
+    boardView: 'Board',
+    progress: 'Progress',
+    owner: 'Owner',
+  },
+  tasks: {
+    new: 'New task',
+    title: 'Title',
+    assignee: 'Assignee',
+    statusBacklog: 'Status',
+    priorityHigh: 'Priority',
+    dueDate: 'Due',
+  },
+} as const;

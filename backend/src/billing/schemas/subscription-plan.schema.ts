@@ -45,6 +45,35 @@ export class SubscriptionPlan {
 
   @Prop({ default: 0 })
   sortOrder!: number;
+
+  /** Short paragraph shown on the public pricing card */
+  @Prop({ default: '' })
+  marketingDescription!: string;
+
+  /** When paying annually: effective discount vs monthly × 12 (0–100). */
+  @Prop({ default: 0 })
+  annualDiscountPercent!: number;
+
+  /** Highlight card (e.g. “Most popular”) */
+  @Prop({ default: false })
+  isHighlighted!: boolean;
+
+  @Prop({ default: 'Get started' })
+  ctaLabel!: string;
+
+  @Prop({ default: '/register' })
+  ctaHref!: string;
+
+  /** Show custom pricing copy instead of numeric seat prices */
+  @Prop({ default: false })
+  useCustomPricing!: boolean;
+
+  @Prop({ default: '' })
+  customPriceLabel!: string;
+
+  /** Extra bullet lines for the pricing card; when empty the API derives bullets from limits & flags */
+  @Prop({ type: [String], default: [] })
+  marketingBullets!: string[];
 }
 
 export const SubscriptionPlanSchema = SchemaFactory.createForClass(SubscriptionPlan);

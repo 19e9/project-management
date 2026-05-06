@@ -136,6 +136,14 @@ export default function AdminBillingPage() {
     ganttEnabled: true,
     cpmEnabled: true,
     auditLogEnabled: false,
+    marketingDescription: '',
+    annualDiscountPercent: 20,
+    isHighlighted: false,
+    useCustomPricing: false,
+    ctaLabel: 'Start 14-day trial',
+    ctaHref: '/register',
+    customPriceLabel: '',
+    marketingBulletsText: '',
   });
 
   const [contractForm, setContractForm] = useState({
@@ -594,6 +602,17 @@ export default function AdminBillingPage() {
               isActive: true,
               isDefaultForTier: false,
               sortOrder: 50,
+              marketingDescription: newPlan.marketingDescription.trim(),
+              annualDiscountPercent: newPlan.annualDiscountPercent,
+              isHighlighted: newPlan.isHighlighted,
+              useCustomPricing: newPlan.useCustomPricing,
+              ctaLabel: newPlan.ctaLabel.trim() || 'Get started',
+              ctaHref: newPlan.ctaHref.trim() || '/register',
+              customPriceLabel: newPlan.customPriceLabel.trim(),
+              marketingBullets: newPlan.marketingBulletsText
+                .split('\n')
+                .map((s) => s.trim())
+                .filter(Boolean),
             });
           }}
         >
@@ -675,6 +694,65 @@ export default function AdminBillingPage() {
             />
             Audit log
           </label>
+          <div className="col-span-full grid gap-3 border-t border-ink-100 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+            <input
+              className="rounded-lg border border-ink-200 px-2 py-2 text-sm lg:col-span-2"
+              placeholder="Marketing description (pricing page)"
+              value={newPlan.marketingDescription}
+              onChange={(e) => setNewPlan((s) => ({ ...s, marketingDescription: e.target.value }))}
+            />
+            <input
+              type="number"
+              min={0}
+              max={100}
+              className="rounded-lg border border-ink-200 px-2 py-2 text-sm"
+              placeholder="Annual discount %"
+              value={newPlan.annualDiscountPercent}
+              onChange={(e) =>
+                setNewPlan((s) => ({ ...s, annualDiscountPercent: Number(e.target.value) }))
+              }
+            />
+            <label className="flex items-center gap-2 text-xs text-ink-700">
+              <input
+                type="checkbox"
+                checked={newPlan.isHighlighted}
+                onChange={(e) => setNewPlan((s) => ({ ...s, isHighlighted: e.target.checked }))}
+              />
+              Highlight card
+            </label>
+            <label className="flex items-center gap-2 text-xs text-ink-700">
+              <input
+                type="checkbox"
+                checked={newPlan.useCustomPricing}
+                onChange={(e) => setNewPlan((s) => ({ ...s, useCustomPricing: e.target.checked }))}
+              />
+              Custom pricing UI
+            </label>
+            <input
+              className="rounded-lg border border-ink-200 px-2 py-2 text-sm"
+              placeholder="CTA label"
+              value={newPlan.ctaLabel}
+              onChange={(e) => setNewPlan((s) => ({ ...s, ctaLabel: e.target.value }))}
+            />
+            <input
+              className="rounded-lg border border-ink-200 px-2 py-2 text-sm"
+              placeholder="CTA href (/register or mailto:…)"
+              value={newPlan.ctaHref}
+              onChange={(e) => setNewPlan((s) => ({ ...s, ctaHref: e.target.value }))}
+            />
+            <input
+              className="rounded-lg border border-ink-200 px-2 py-2 text-sm lg:col-span-2"
+              placeholder="Custom price label (when custom pricing)"
+              value={newPlan.customPriceLabel}
+              onChange={(e) => setNewPlan((s) => ({ ...s, customPriceLabel: e.target.value }))}
+            />
+            <textarea
+              className="min-h-[72px] rounded-lg border border-ink-200 px-2 py-2 text-sm lg:col-span-4"
+              placeholder="Optional bullets for pricing card (one line each); leave empty to auto-generate"
+              value={newPlan.marketingBulletsText}
+              onChange={(e) => setNewPlan((s) => ({ ...s, marketingBulletsText: e.target.value }))}
+            />
+          </div>
           <button
             type="submit"
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
@@ -947,7 +1025,17 @@ function PlanEditorTable(props: {
   onPatch: (id: string, patch: Partial<AdminSubscriptionPlanRow>) => void;
   onDeactivate: (id: string) => void;
 }) {
+  const COL_MAIN = 8;
   const [drafts, setDrafts] = useState<Record<string, Partial<AdminSubscriptionPlanRow>>>({});
+
+  function mergeDraft(
+    prev: Record<string, Partial<AdminSubscriptionPlanRow>>,
+    id: string,
+    patch: Partial<AdminSubscriptionPlanRow>,
+  ): Partial<AdminSubscriptionPlanRow> {
+    return { ...(prev[id] ?? {}), ...patch };
+  }
+
   return (
     <div className="mt-6 overflow-x-auto">
       <table className="w-full text-xs">
@@ -963,95 +1051,217 @@ function PlanEditorTable(props: {
             <th className="px-2 py-2" />
           </tr>
         </thead>
-        <tbody className="divide-y divide-ink-100">
-          {props.loading &&
-            Array.from({ length: 3 }).map((_, i) => (
+        {props.loading && (
+          <tbody>
+            {Array.from({ length: 3 }).map((_, i) => (
               <tr key={i}>
-                <td colSpan={8} className="py-2">
+                <td colSpan={COL_MAIN} className="py-2">
                   <div className="skeleton h-6 w-full" />
                 </td>
               </tr>
             ))}
-          {!props.loading &&
-            props.plans.map((p) => (
-                <tr key={p.id} className="text-ink-800">
-                  <td className="px-2 py-2 font-mono">{p.key}</td>
-                  <td className="px-2 py-2">{p.tier}</td>
-                  <td className="px-2 py-2">
+          </tbody>
+        )}
+        {!props.loading &&
+          props.plans.map((p) => (
+            <tbody key={p.id} className="border-b border-ink-100">
+              <tr className="text-ink-800">
+                <td className="px-2 py-2 font-mono">{p.key}</td>
+                <td className="px-2 py-2">{p.tier}</td>
+                <td className="px-2 py-2">
+                  <input
+                    type="number"
+                    className="w-20 rounded border border-ink-200 px-1"
+                    defaultValue={p.pricePerSeatMonthlyUsd}
+                    onChange={(e) =>
+                      setDrafts((s) => ({
+                        ...s,
+                        [p.id]: mergeDraft(s, p.id, {
+                          pricePerSeatMonthlyUsd: Number(e.target.value),
+                        }),
+                      }))
+                    }
+                  />
+                </td>
+                <td className="px-2 py-2">
+                  <input
+                    type="number"
+                    className="w-16 rounded border border-ink-200 px-1"
+                    defaultValue={p.maxMembers}
+                    onChange={(e) =>
+                      setDrafts((s) => ({
+                        ...s,
+                        [p.id]: mergeDraft(s, p.id, { maxMembers: Number(e.target.value) }),
+                      }))
+                    }
+                  />
+                </td>
+                <td className="px-2 py-2">
+                  <input
+                    type="number"
+                    className="w-16 rounded border border-ink-200 px-1"
+                    defaultValue={p.maxProjects}
+                    onChange={(e) =>
+                      setDrafts((s) => ({
+                        ...s,
+                        [p.id]: mergeDraft(s, p.id, { maxProjects: Number(e.target.value) }),
+                      }))
+                    }
+                  />
+                </td>
+                <td className="px-2 py-2">
+                  <input
+                    type="number"
+                    className="w-20 rounded border border-ink-200 px-1"
+                    defaultValue={p.storageLimitMb}
+                    onChange={(e) =>
+                      setDrafts((s) => ({
+                        ...s,
+                        [p.id]: mergeDraft(s, p.id, { storageLimitMb: Number(e.target.value) }),
+                      }))
+                    }
+                  />
+                </td>
+                <td className="px-2 py-2">{p.isActive ? 'yes' : 'no'}</td>
+                <td className="px-2 py-2 text-right">
+                  <button
+                    type="button"
+                    className="mr-2 text-brand-700 underline"
+                    onClick={() => {
+                      const patch = drafts[p.id];
+                      if (patch && Object.keys(patch).length) props.onPatch(p.id, patch);
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    className="text-rose-700 underline"
+                    onClick={() => props.onDeactivate(p.id)}
+                  >
+                    Deactivate
+                  </button>
+                </td>
+              </tr>
+              <tr className="bg-ink-50/50 text-ink-800">
+                <td colSpan={COL_MAIN} className="px-2 py-3">
+                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-ink-500">
+                    Public pricing page & billing presentation
+                  </div>
+                  <div className="grid gap-2 lg:grid-cols-4">
                     <input
-                      type="number"
-                      className="w-20 rounded border border-ink-200 px-1"
-                      defaultValue={p.pricePerSeatMonthlyUsd}
+                      className="rounded border border-ink-200 px-1 py-1 lg:col-span-2"
+                      placeholder="Marketing description"
+                      defaultValue={p.marketingDescription}
+                      key={`md-${p.id}-${p.marketingDescription}`}
                       onChange={(e) =>
                         setDrafts((s) => ({
                           ...s,
-                          [p.id]: { ...s[p.id], pricePerSeatMonthlyUsd: Number(e.target.value) },
+                          [p.id]: mergeDraft(s, p.id, { marketingDescription: e.target.value }),
                         }))
                       }
                     />
-                  </td>
-                  <td className="px-2 py-2">
                     <input
                       type="number"
-                      className="w-16 rounded border border-ink-200 px-1"
-                      defaultValue={p.maxMembers}
+                      min={0}
+                      max={100}
+                      className="rounded border border-ink-200 px-1 py-1"
+                      placeholder="Annual discount %"
+                      defaultValue={p.annualDiscountPercent}
+                      key={`ad-${p.id}-${p.annualDiscountPercent}`}
                       onChange={(e) =>
                         setDrafts((s) => ({
                           ...s,
-                          [p.id]: { ...s[p.id], maxMembers: Number(e.target.value) },
+                          [p.id]: mergeDraft(s, p.id, {
+                            annualDiscountPercent: Number(e.target.value),
+                          }),
                         }))
                       }
                     />
-                  </td>
-                  <td className="px-2 py-2">
+                    <label className="flex items-center gap-1 text-[11px]">
+                      <input
+                        type="checkbox"
+                        defaultChecked={p.isHighlighted}
+                        onChange={(e) =>
+                          setDrafts((s) => ({
+                            ...s,
+                            [p.id]: mergeDraft(s, p.id, { isHighlighted: e.target.checked }),
+                          }))
+                        }
+                      />
+                      Highlight
+                    </label>
+                    <label className="flex items-center gap-1 text-[11px]">
+                      <input
+                        type="checkbox"
+                        defaultChecked={p.useCustomPricing}
+                        onChange={(e) =>
+                          setDrafts((s) => ({
+                            ...s,
+                            [p.id]: mergeDraft(s, p.id, { useCustomPricing: e.target.checked }),
+                          }))
+                        }
+                      />
+                      Custom price UI
+                    </label>
                     <input
-                      type="number"
-                      className="w-16 rounded border border-ink-200 px-1"
-                      defaultValue={p.maxProjects}
+                      className="rounded border border-ink-200 px-1 py-1"
+                      placeholder="CTA label"
+                      defaultValue={p.ctaLabel}
+                      key={`ct-${p.id}-${p.ctaLabel}`}
                       onChange={(e) =>
                         setDrafts((s) => ({
                           ...s,
-                          [p.id]: { ...s[p.id], maxProjects: Number(e.target.value) },
+                          [p.id]: mergeDraft(s, p.id, { ctaLabel: e.target.value }),
                         }))
                       }
                     />
-                  </td>
-                  <td className="px-2 py-2">
                     <input
-                      type="number"
-                      className="w-20 rounded border border-ink-200 px-1"
-                      defaultValue={p.storageLimitMb}
+                      className="rounded border border-ink-200 px-1 py-1 lg:col-span-2"
+                      placeholder="CTA href"
+                      defaultValue={p.ctaHref}
+                      key={`ch-${p.id}-${p.ctaHref}`}
                       onChange={(e) =>
                         setDrafts((s) => ({
                           ...s,
-                          [p.id]: { ...s[p.id], storageLimitMb: Number(e.target.value) },
+                          [p.id]: mergeDraft(s, p.id, { ctaHref: e.target.value }),
                         }))
                       }
                     />
-                  </td>
-                  <td className="px-2 py-2">{p.isActive ? 'yes' : 'no'}</td>
-                  <td className="px-2 py-2 text-right">
-                    <button
-                      type="button"
-                      className="mr-2 text-brand-700 underline"
-                      onClick={() => {
-                        const patch = drafts[p.id];
-                        if (patch && Object.keys(patch).length) props.onPatch(p.id, patch);
-                      }}
-                    >
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      className="text-rose-700 underline"
-                      onClick={() => props.onDeactivate(p.id)}
-                    >
-                      Deactivate
-                    </button>
-                  </td>
-                </tr>
-            ))}
-        </tbody>
+                    <input
+                      className="rounded border border-ink-200 px-1 py-1 lg:col-span-2"
+                      placeholder="Custom price label"
+                      defaultValue={p.customPriceLabel}
+                      key={`cpl-${p.id}-${p.customPriceLabel}`}
+                      onChange={(e) =>
+                        setDrafts((s) => ({
+                          ...s,
+                          [p.id]: mergeDraft(s, p.id, { customPriceLabel: e.target.value }),
+                        }))
+                      }
+                    />
+                    <textarea
+                      className="min-h-[52px] rounded border border-ink-200 px-1 py-1 font-mono lg:col-span-4"
+                      placeholder="Bullets (one per line); empty = auto"
+                      defaultValue={(p.marketingBullets ?? []).join('\n')}
+                      key={`mb-${p.id}-${(p.marketingBullets ?? []).join('|')}`}
+                      onChange={(e) =>
+                        setDrafts((s) => ({
+                          ...s,
+                          [p.id]: mergeDraft(s, p.id, {
+                            marketingBullets: e.target.value
+                              .split('\n')
+                              .map((x) => x.trim())
+                              .filter(Boolean),
+                          }),
+                        }))
+                      }
+                    />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          ))}
       </table>
     </div>
   );

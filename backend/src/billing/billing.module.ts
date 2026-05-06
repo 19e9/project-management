@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BillingService } from './billing.service';
+import { BillingPublicController } from './billing.public.controller';
 import {
   SubscriptionPlan,
   SubscriptionPlanSchema,
@@ -39,6 +40,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
       { name: User.name, schema: UserSchema },
     ]),
   ],
+  controllers: [BillingPublicController],
   providers: [BillingService],
   exports: [BillingService],
 })

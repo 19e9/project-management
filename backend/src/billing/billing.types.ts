@@ -94,6 +94,56 @@ export interface AdminSubscriptionPlanRow {
   isActive: boolean;
   isDefaultForTier: boolean;
   sortOrder: number;
+  marketingDescription: string;
+  annualDiscountPercent: number;
+  isHighlighted: boolean;
+  ctaLabel: string;
+  ctaHref: string;
+  useCustomPricing: boolean;
+  customPriceLabel: string;
+  marketingBullets: string[];
+}
+
+/** Active plans exposed to the marketing site (no auth). */
+export interface PublicPricingPlan {
+  id: string;
+  key: string;
+  displayName: string;
+  tier: 'free' | 'pro' | 'enterprise';
+  sortOrder: number;
+  isHighlighted: boolean;
+  marketingDescription: string;
+  pricing: {
+    model: 'free' | 'per_seat' | 'custom';
+    /** Monthly seat price when billed monthly (USD) */
+    seatPriceMonthlyUsd: number;
+    /** Equivalent $/seat/month when billed annually after discount */
+    seatPriceEffectiveMonthlyAnnualUsd: number;
+    annualDiscountPercent: number;
+    /** Shown when model === custom */
+    customLabel: string | null;
+  };
+  limits: {
+    maxMembers: number;
+    maxProjects: number;
+    storageMb: number;
+  };
+  features: {
+    gantt: boolean;
+    cpm: boolean;
+    auditLog: boolean;
+  };
+  /** Lines with checkmarks on the pricing card */
+  bullets: string[];
+  cta: { label: string; href: string };
+}
+
+export interface PublicPricingResponse {
+  currency: string;
+  generatedAt: string;
+  /** Largest annual discount among numeric plans — for the billing toggle badge */
+  maxAnnualDiscountPercent: number;
+  plans: PublicPricingPlan[];
 }
 
 export interface AdminEnterpriseContractRow {

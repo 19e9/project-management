@@ -223,6 +223,14 @@ export interface AdminSubscriptionPlanRow {
   isActive: boolean;
   isDefaultForTier: boolean;
   sortOrder: number;
+  marketingDescription: string;
+  annualDiscountPercent: number;
+  isHighlighted: boolean;
+  ctaLabel: string;
+  ctaHref: string;
+  useCustomPricing: boolean;
+  customPriceLabel: string;
+  marketingBullets: string[];
 }
 
 export interface AdminEnterpriseContractRow {
@@ -581,7 +589,10 @@ export function useCreateSubscriptionPlan() {
     mutationFn: async (body: Partial<AdminSubscriptionPlanRow> & { key: string; displayName: string; tier: 'free' | 'pro' | 'enterprise' }) => {
       await api.post('/admin/billing/plans', body);
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'billing'] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'billing'] });
+      void qc.invalidateQueries({ queryKey: ['public', 'pricing-plans'] });
+    },
   });
 }
 
@@ -591,7 +602,10 @@ export function useUpdateSubscriptionPlan() {
     mutationFn: async (p: { id: string; patch: Partial<AdminSubscriptionPlanRow> }) => {
       await api.patch(`/admin/billing/plans/${p.id}`, p.patch);
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'billing'] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'billing'] });
+      void qc.invalidateQueries({ queryKey: ['public', 'pricing-plans'] });
+    },
   });
 }
 
@@ -601,7 +615,10 @@ export function useDeactivateSubscriptionPlan() {
     mutationFn: async (id: string) => {
       await api.post(`/admin/billing/plans/${id}/deactivate`);
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'billing'] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'billing'] });
+      void qc.invalidateQueries({ queryKey: ['public', 'pricing-plans'] });
+    },
   });
 }
 

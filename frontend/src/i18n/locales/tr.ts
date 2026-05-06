@@ -1,0 +1,50 @@
+export default {
+  common: {
+    cancel: 'İptal',
+    confirm: 'Onayla',
+    seeAll: 'Tümünü gör',
+  },
+  nav: {
+    projects: 'Projeler',
+    tasks: 'Görevler',
+    admin: 'Yönetim',
+  },
+  roles: {
+    client: 'Müşteri',
+    owner: 'Sahip',
+  },
+  states: {
+    notFoundTitle: 'Bulunamadı',
+    notFoundHint: 'Aradığınız proje yok veya erişiminiz bulunmuyor.',
+  },
+  dashboard: {
+    titleClient: 'Müşteri paneli',
+    readOnlyClientNotice: 'Bu görünüm salt okunur: görevleri görüntüleyebilirsiniz.',
+    titleOwner: 'Çalışma alanı özeti',
+    titleAdmin: 'Platform yönetimi',
+    recentProjects: 'Son projeler',
+    activityFeed: 'Aktivite akışı',
+    kpiUsers: 'Kullanıcılar',
+    kpiWorkspaces: 'Çalışma alanları',
+    kpiActiveProjects: 'Aktif projeler',
+    kpiOpenTasks: 'Açık görevler',
+    kpiOverdue: 'Geciken işler',
+  },
+  projects: {
+    new: 'Yeni proje',
+    deadline: 'Son tarih',
+    teamSize: 'kişi',
+    statusActive: 'Aktif',
+    boardView: 'Pano',
+    progress: 'İlerleme',
+    owner: 'Sorumlu',
+  },
+  tasks: {
+    new: 'Yeni görev',
+    title: 'Başlık',
+    assignee: 'Atanan',
+    statusBacklog: 'Durum',
+    priorityHigh: 'Öncelik',
+    dueDate: 'Bitiş',
+  },
+} as const;

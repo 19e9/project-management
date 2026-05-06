@@ -43,6 +43,8 @@ import type {
   AdminWorkspaceBillingDetail,
   AdminWorkspaceRevenueBar,
   AdminBillingTimePoint,
+  PublicPricingPlan,
+  PublicPricingResponse,
 } from './billing.types';
 
 const DAY = 86_400_000;
@@ -92,6 +94,14 @@ export class BillingService implements OnModuleInit {
         auditLogEnabled: false,
         isDefaultForTier: true,
         sortOrder: 0,
+        marketingDescription: 'For solo PMs and small teams getting organized.',
+        annualDiscountPercent: 0,
+        isHighlighted: false,
+        ctaLabel: 'Start free',
+        ctaHref: '/register',
+        useCustomPricing: false,
+        customPriceLabel: '',
+        marketingBullets: [] as string[],
       },
       {
         key: 'pro-default',
@@ -106,6 +116,14 @@ export class BillingService implements OnModuleInit {
         auditLogEnabled: false,
         isDefaultForTier: true,
         sortOrder: 1,
+        marketingDescription: 'For growing teams that ship under deadline pressure.',
+        annualDiscountPercent: 20,
+        isHighlighted: true,
+        ctaLabel: 'Start 14-day trial',
+        ctaHref: '/register',
+        useCustomPricing: false,
+        customPriceLabel: '',
+        marketingBullets: [] as string[],
       },
       {
         key: 'enterprise-default',
@@ -120,10 +138,29 @@ export class BillingService implements OnModuleInit {
         auditLogEnabled: true,
         isDefaultForTier: true,
         sortOrder: 2,
+        marketingDescription: 'For organizations with compliance and scale needs.',
+        annualDiscountPercent: 0,
+        isHighlighted: false,
+        ctaLabel: 'Contact sales',
+        ctaHref: 'mailto:sales@example.com',
+        useCustomPricing: true,
+        customPriceLabel: 'Custom / volume pricing',
+        marketingBullets: [] as string[],
       },
     ];
     for (const d of defs) {
-      const { pricePerSeatMonthlyUsd, ...rest } = d as any;
+      const {
+        pricePerSeatMonthlyUsd,
+        marketingDescription,
+        annualDiscountPercent,
+        isHighlighted,
+        ctaLabel,
+        ctaHref,
+        useCustomPricing,
+        customPriceLabel,
+        marketingBullets,
+        ...rest
+      } = d as any;
       await this.plans.updateOne(
         { key: d.key },
         {
@@ -142,9 +179,62 @@ export class BillingService implements OnModuleInit {
             isDefaultForTier: rest.isDefaultForTier,
             sortOrder: rest.sortOrder,
           },
-          $setOnInsert: { key: d.key },
+          $setOnInsert: {
+            key: d.key,
+            marketingDescription,
+            annualDiscountPercent,
+            isHighlighted,
+            ctaLabel,
+            ctaHref,
+            useCustomPricing,
+            customPriceLabel,
+            marketingBullets,
+          },
         },
         { upsert: true },
+      );
+    }
+    await this.seedSubscriptionPlanMarketingDefaults();
+  }
+
+  /** Backfill marketing fields for deployments created before dynamic pricing metadata existed */
+  private async seedSubscriptionPlanMarketingDefaults() {
+    const seeds: Record<string, Record<string, unknown>> = {
+      'free-default': {
+        marketingDescription: 'For solo PMs and small teams getting organized.',
+        annualDiscountPercent: 0,
+        isHighlighted: false,
+        ctaLabel: 'Start free',
+        ctaHref: '/register',
+        useCustomPricing: false,
+        customPriceLabel: '',
+      },
+      'pro-default': {
+        marketingDescription: 'For growing teams that ship under deadline pressure.',
+        annualDiscountPercent: 20,
+        isHighlighted: true,
+        ctaLabel: 'Start 14-day trial',
+        ctaHref: '/register',
+        useCustomPricing: false,
+        customPriceLabel: '',
+      },
+      'enterprise-default': {
+        marketingDescription: 'For organizations with compliance and scale needs.',
+        annualDiscountPercent: 0,
+        isHighlighted: false,
+        ctaLabel: 'Contact sales',
+        ctaHref: 'mailto:sales@example.com',
+        useCustomPricing: true,
+        customPriceLabel: 'Custom / volume pricing',
+      },
+    };
+    for (const [key, fields] of Object.entries(seeds)) {
+      await this.plans.updateOne(
+        {
+          key,
+          $or: [{ marketingDescription: { $exists: false } }, { marketingDescription: '' }],
+        },
+        { $set: fields },
       );
     }
   }
@@ -502,22 +592,7 @@ export class BillingService implements OnModuleInit {
 
     const planRows: AdminSubscriptionPlanRow[] = allPlanDocs
       .sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName))
-      .map((p) => ({
-        id: String(p._id),
-        key: p.key,
-        displayName: p.displayName,
-        tier: p.tier,
-        pricePerSeatMonthlyUsd: p.pricePerSeatMonthlyUsd,
-        maxMembers: p.maxMembers,
-        maxProjects: p.maxProjects,
-        storageLimitMb: p.storageLimitMb,
-        ganttEnabled: p.ganttEnabled,
-        cpmEnabled: p.cpmEnabled,
-        auditLogEnabled: p.auditLogEnabled,
-        isActive: p.isActive,
-        isDefaultForTier: p.isDefaultForTier,
-        sortOrder: p.sortOrder,
-      }));
+      .map((p) => this.subscriptionPlanDocToAdminRow(p));
 
     const contractDocs = await this.contracts.find({}).lean();
     const enterpriseContracts: AdminEnterpriseContractRow[] = contractDocs.map((c) => ({
@@ -902,6 +977,14 @@ export class BillingService implements OnModuleInit {
       isActive: body.isActive ?? true,
       isDefaultForTier: body.isDefaultForTier ?? false,
       sortOrder: body.sortOrder ?? 99,
+      marketingDescription: body.marketingDescription ?? '',
+      annualDiscountPercent: body.annualDiscountPercent ?? 0,
+      isHighlighted: body.isHighlighted ?? false,
+      ctaLabel: body.ctaLabel ?? 'Get started',
+      ctaHref: body.ctaHref ?? '/register',
+      useCustomPricing: body.useCustomPricing ?? false,
+      customPriceLabel: body.customPriceLabel ?? '',
+      marketingBullets: body.marketingBullets ?? [],
     });
     if (body.isDefaultForTier) {
       await this.plans.updateMany(
@@ -1040,22 +1123,136 @@ export class BillingService implements OnModuleInit {
   async listPlansAdmin(): Promise<AdminSubscriptionPlanRow[]> {
     await this.ensureDefaultPlans();
     const allPlanDocs = await this.plans.find({}).sort({ sortOrder: 1, key: 1 }).lean();
-    return allPlanDocs.map((p) => ({
+    return allPlanDocs.map((p) => this.subscriptionPlanDocToAdminRow(p));
+  }
+
+  async listPublicPricingPlans(): Promise<PublicPricingResponse> {
+    await this.ensureDefaultPlans();
+    const docs = await this.plans
+      .find({ isActive: true })
+      .sort({ sortOrder: 1, displayName: 1 })
+      .lean();
+    const plans: PublicPricingPlan[] = docs.map((p) =>
+      this.toPublicPricingPlan(p as Record<string, unknown>),
+    );
+    const maxAnnualDiscountPercent = plans.reduce((m, pl) => {
+      if (pl.pricing.model !== 'per_seat') return m;
+      return Math.max(m, pl.pricing.annualDiscountPercent);
+    }, 0);
+    return {
+      currency: 'USD',
+      generatedAt: new Date().toISOString(),
+      maxAnnualDiscountPercent,
+      plans,
+    };
+  }
+
+  private subscriptionPlanDocToAdminRow(p: Record<string, unknown>): AdminSubscriptionPlanRow {
+    return {
       id: String(p._id),
-      key: p.key,
-      displayName: p.displayName,
-      tier: p.tier,
-      pricePerSeatMonthlyUsd: p.pricePerSeatMonthlyUsd,
-      maxMembers: p.maxMembers,
-      maxProjects: p.maxProjects,
-      storageLimitMb: p.storageLimitMb,
-      ganttEnabled: p.ganttEnabled,
-      cpmEnabled: p.cpmEnabled,
-      auditLogEnabled: p.auditLogEnabled,
-      isActive: p.isActive,
-      isDefaultForTier: p.isDefaultForTier,
-      sortOrder: p.sortOrder,
-    }));
+      key: String(p.key),
+      displayName: String(p.displayName),
+      tier: p.tier as 'free' | 'pro' | 'enterprise',
+      pricePerSeatMonthlyUsd: Number(p.pricePerSeatMonthlyUsd ?? 0),
+      maxMembers: Number(p.maxMembers ?? 0),
+      maxProjects: Number(p.maxProjects ?? 0),
+      storageLimitMb: Number(p.storageLimitMb ?? 0),
+      ganttEnabled: !!p.ganttEnabled,
+      cpmEnabled: !!p.cpmEnabled,
+      auditLogEnabled: !!p.auditLogEnabled,
+      isActive: p.isActive !== false,
+      isDefaultForTier: !!p.isDefaultForTier,
+      sortOrder: Number(p.sortOrder ?? 0),
+      marketingDescription: String(p.marketingDescription ?? ''),
+      annualDiscountPercent: Number(p.annualDiscountPercent ?? 0),
+      isHighlighted: !!p.isHighlighted,
+      ctaLabel: String(p.ctaLabel ?? 'Get started'),
+      ctaHref: String(p.ctaHref ?? '/register'),
+      useCustomPricing: !!p.useCustomPricing,
+      customPriceLabel: String(p.customPriceLabel ?? ''),
+      marketingBullets: Array.isArray(p.marketingBullets)
+        ? (p.marketingBullets as unknown[]).map(String)
+        : [],
+    };
+  }
+
+  private deriveDefaultMarketingBullets(p: Record<string, unknown>): string[] {
+    const out: string[] = [];
+    const maxM = Number(p.maxMembers ?? 0);
+    const maxP = Number(p.maxProjects ?? 0);
+    const storage = Number(p.storageLimitMb ?? 0);
+    const tier = p.tier as string;
+    if (maxM >= 100_000) out.push('Unlimited members');
+    else out.push(`Up to ${maxM.toLocaleString('en-US')} members`);
+    if (maxP >= 100_000) out.push('Unlimited projects');
+    else out.push(`${maxP.toLocaleString('en-US')} active projects`);
+    if (storage >= 1024) out.push(`${Math.round(storage / 1024)} GB cloud storage`);
+    else out.push(`${storage.toLocaleString('en-US')} MB storage`);
+    if (p.ganttEnabled) out.push('Gantt chart');
+    if (p.cpmEnabled) out.push('Critical Path Method (CPM)');
+    if (p.auditLogEnabled) out.push('Audit log');
+    if (tier === 'enterprise') {
+      out.push('SSO / SAML / SCIM');
+      out.push('SLA & DPA');
+      out.push('Dedicated success manager');
+    }
+    return out;
+  }
+
+  private toPublicPricingPlan(p: Record<string, unknown>): PublicPricingPlan {
+    const monthly = Number(p.pricePerSeatMonthlyUsd ?? 0);
+    const discRaw = Number(p.annualDiscountPercent ?? 0);
+    const disc = Math.min(100, Math.max(0, discRaw));
+    const effectiveAnnualMonthly =
+      Math.round(monthly * (1 - disc / 100) * 100) / 100;
+    const useCustom = !!p.useCustomPricing;
+    const tier = p.tier as 'free' | 'pro' | 'enterprise';
+
+    let model: PublicPricingPlan['pricing']['model'];
+    if (useCustom || (tier === 'enterprise' && monthly <= 0)) model = 'custom';
+    else if (tier === 'free') model = 'free';
+    else model = 'per_seat';
+
+    const customLabel =
+      String(p.customPriceLabel ?? '').trim() || 'Custom pricing';
+
+    const bulletsRaw = Array.isArray(p.marketingBullets)
+      ? (p.marketingBullets as unknown[]).map(String).filter(Boolean)
+      : [];
+    const bullets =
+      bulletsRaw.length > 0 ? bulletsRaw : this.deriveDefaultMarketingBullets(p);
+
+    return {
+      id: String(p._id),
+      key: String(p.key),
+      displayName: String(p.displayName),
+      tier,
+      sortOrder: Number(p.sortOrder ?? 0),
+      isHighlighted: !!p.isHighlighted,
+      marketingDescription: String(p.marketingDescription ?? ''),
+      pricing: {
+        model,
+        seatPriceMonthlyUsd: monthly,
+        seatPriceEffectiveMonthlyAnnualUsd: effectiveAnnualMonthly,
+        annualDiscountPercent: disc,
+        customLabel: model === 'custom' ? customLabel : null,
+      },
+      limits: {
+        maxMembers: Number(p.maxMembers ?? 0),
+        maxProjects: Number(p.maxProjects ?? 0),
+        storageMb: Number(p.storageLimitMb ?? 0),
+      },
+      features: {
+        gantt: !!p.ganttEnabled,
+        cpm: !!p.cpmEnabled,
+        auditLog: !!p.auditLogEnabled,
+      },
+      bullets,
+      cta: {
+        label: String(p.ctaLabel ?? 'Get started'),
+        href: String(p.ctaHref ?? '/register'),
+      },
+    };
   }
 
   async buildMonthlyReportCsv(): Promise<string> {
