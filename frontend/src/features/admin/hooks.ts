@@ -78,6 +78,9 @@ export interface AdminUserRow {
   avatarUrl: string | null;
   workspaceMemberships: number;
   createdAt: string;
+  lastLoginAt: string | null;
+  subscriptionTier: 'free' | 'pro' | 'enterprise';
+  subscriptionLabel: string;
 }
 
 export type ActivityKind =
@@ -421,6 +424,57 @@ export function useAdminUsers(q = '', limit = 100) {
           `/admin/users?limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}`,
         )
       ).data,
+  });
+}
+
+export type PatchAdminUserBody = Partial<{
+  displayName: string;
+  email: string;
+  timezone: string;
+  platformRole: 'platform_admin' | 'user';
+  isActive: boolean;
+}>;
+
+export function usePatchAdminUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { userId: string; body: PatchAdminUserBody }) => {
+      const { data } = await api.patch<AdminUserRow>(`/admin/users/${p.userId}`, p.body);
+      return data;
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+}
+
+export function useSoftDeleteAdminUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await api.delete(`/admin/users/${userId}`);
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+}
+
+export function useAdminResetPassword() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { userId: string; newPassword: string }) => {
+      await api.post(`/admin/users/${p.userId}/reset-password`, {
+        newPassword: p.newPassword,
+      });
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+}
+
+export function useAdminRevokeSessions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await api.post(`/admin/users/${userId}/revoke-sessions`);
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
   });
 }
 

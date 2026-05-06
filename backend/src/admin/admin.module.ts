@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from '../auth/auth.module';
 import { BillingModule } from '../billing/billing.module';
 import { UsersModule } from '../users/users.module';
 import { WorkspacesModule } from '../workspaces/workspaces.module';
@@ -12,6 +13,7 @@ import { AdminController } from './admin.controller';
 @Module({
   imports: [
     MongooseModule,
+    AuthModule,
     BillingModule,
     UsersModule,
     WorkspacesModule,

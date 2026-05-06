@@ -1,9 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model, PipelineStage, Types } from 'mongoose';
+import { AuthService } from '../auth/auth.service';
+import { UsersService } from '../users/users.service';
 import { User, UserDocument } from '../users/schemas/user.schema';
-import { Workspace, WorkspaceDocument } from '../workspaces/schemas/workspace.schema';
+import {
+  PLAN_DEFAULTS,
+  Workspace,
+  WorkspaceDocument,
+} from '../workspaces/schemas/workspace.schema';
 import {
   WorkspaceMember,
   WorkspaceMemberDocument,
@@ -14,9 +26,23 @@ import {
   ResourceAllocation,
   ResourceAllocationDocument,
 } from '../resources/schemas/resource-allocation.schema';
-import { PLAN_DEFAULTS } from '../workspaces/schemas/workspace.schema';
+import type { PatchAdminUserDto } from './dto/admin-user.dto';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function highestWorkspaceTier(plans: ('free' | 'pro' | 'enterprise')[]): 'free' | 'pro' | 'enterprise' {
+  if (plans.includes('enterprise')) return 'enterprise';
+  if (plans.includes('pro')) return 'pro';
+  return 'free';
+}
+
+function subscriptionLabel(
+  tier: 'free' | 'pro' | 'enterprise',
+  workspaceCount: number,
+): string {
+  const name = tier === 'enterprise' ? 'Enterprise' : tier === 'pro' ? 'Pro' : 'Free';
+  return workspaceCount === 1 ? name : `${name} · ${workspaceCount} workspaces`;
+}
 
 interface ChangeKpi {
   total: number;
@@ -86,6 +112,9 @@ export interface AdminUserRow {
   avatarUrl: string | null;
   workspaceMemberships: number;
   createdAt: string;
+  lastLoginAt: string | null;
+  subscriptionTier: 'free' | 'pro' | 'enterprise';
+  subscriptionLabel: string;
 }
 
 export type ActivityKind =
@@ -201,6 +230,8 @@ export class AdminService {
   constructor(
     @InjectConnection() private readonly conn: Connection,
     private readonly cfg: ConfigService,
+    private readonly auth: AuthService,
+    private readonly userSvc: UsersService,
     @InjectModel(User.name) private readonly users: Model<UserDocument>,
     @InjectModel(Workspace.name) private readonly workspaces: Model<WorkspaceDocument>,
     @InjectModel(WorkspaceMember.name)
@@ -452,16 +483,21 @@ export class AdminService {
 
   async usersTable(opts: { limit?: number; q?: string }): Promise<{ items: AdminUserRow[] }> {
     const limit = Math.max(1, Math.min(200, opts.limit ?? 100));
-    const filter: Record<string, unknown> = {};
+    const filter: Record<string, unknown> = { deletedAt: { $exists: false } };
     const q = opts.q?.trim();
     if (q) {
       const esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      filter.$or = [{ email: { $regex: esc, $options: 'i' } }, { displayName: { $regex: esc, $options: 'i' } }];
+      filter.$or = [
+        { email: { $regex: esc, $options: 'i' } },
+        { displayName: { $regex: esc, $options: 'i' } },
+      ];
     }
 
     const userList = await this.users
       .find(filter)
-      .select('email displayName platformRole isActive authProviders avatarUrl createdAt')
+      .select(
+        'email displayName platformRole isActive authProviders avatarUrl createdAt lastLoginAt',
+      )
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
@@ -469,13 +505,192 @@ export class AdminService {
     if (userList.length === 0) return { items: [] };
 
     const userIds = userList.map((u) => u._id);
-    const counts = await this.members.aggregate<{ _id: Types.ObjectId; count: number }>([
-      { $match: { userId: { $in: userIds }, status: 'active' } },
-      { $group: { _id: '$userId', count: { $sum: 1 } } },
-    ]);
-    const countMap = new Map(counts.map((c) => [String(c._id), c.count]));
+    const wsColl = this.workspaces.collection.collectionName;
 
-    const items: AdminUserRow[] = userList.map((u) => ({
+    const [counts, planAgg] = await Promise.all([
+      this.members.aggregate<{ _id: Types.ObjectId; count: number }>([
+        { $match: { userId: { $in: userIds }, status: 'active' } },
+        { $group: { _id: '$userId', count: { $sum: 1 } } },
+      ]),
+      this.members.aggregate<{
+        _id: Types.ObjectId;
+        plans: ('free' | 'pro' | 'enterprise')[];
+        wsCount: number;
+      }>([
+        { $match: { userId: { $in: userIds }, status: 'active' } },
+        {
+          $lookup: {
+            from: wsColl,
+            localField: 'workspaceId',
+            foreignField: '_id',
+            as: 'ws',
+          },
+        },
+        { $unwind: '$ws' },
+        {
+          $group: {
+            _id: '$userId',
+            plans: { $addToSet: '$ws.plan' },
+            wsCount: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const countMap = new Map(counts.map((c) => [String(c._id), c.count]));
+    const planMap = new Map(planAgg.map((p) => [String(p._id), p]));
+
+    const items: AdminUserRow[] = userList.map((u) => {
+      const wsCount = countMap.get(String(u._id)) ?? 0;
+      const pinfo = planMap.get(String(u._id));
+      const plans = pinfo?.plans ?? [];
+      return this.toAdminUserRow(u, wsCount, plans);
+    });
+    return { items };
+  }
+
+  async patchAdminUser(
+    actorId: string,
+    targetId: string,
+    dto: PatchAdminUserDto,
+  ): Promise<AdminUserRow> {
+    if (!Types.ObjectId.isValid(targetId)) {
+      throw new NotFoundException({ code: 'USER_NOT_FOUND' });
+    }
+    const targetOid = new Types.ObjectId(targetId);
+
+    const target = await this.users
+      .findOne({ _id: targetOid, deletedAt: { $exists: false } })
+      .lean();
+    if (!target) throw new NotFoundException({ code: 'USER_NOT_FOUND' });
+
+    if (dto.isActive === false && actorId === targetId) {
+      throw new ForbiddenException({
+        code: 'CANNOT_DEACTIVATE_SELF',
+        message: 'You cannot deactivate your own account.',
+      });
+    }
+
+    if (dto.platformRole === 'user' && target.platformRole === 'platform_admin') {
+      const others = await this.users.countDocuments({
+        platformRole: 'platform_admin',
+        deletedAt: { $exists: false },
+        _id: { $ne: targetOid },
+      });
+      if (others < 1) {
+        throw new BadRequestException({
+          code: 'LAST_PLATFORM_ADMIN',
+          message: 'Assign another platform admin before demoting this account.',
+        });
+      }
+    }
+
+    if (dto.email && dto.email.toLowerCase() !== target.email) {
+      const taken = await this.users
+        .findOne({
+          email: dto.email.toLowerCase(),
+          _id: { $ne: targetOid },
+          deletedAt: { $exists: false },
+        })
+        .select('_id')
+        .lean();
+      if (taken) {
+        throw new ConflictException({ code: 'EMAIL_TAKEN' });
+      }
+    }
+
+    const $set: Record<string, unknown> = {};
+    if (dto.displayName !== undefined) $set.displayName = dto.displayName;
+    if (dto.email !== undefined) $set.email = dto.email.toLowerCase();
+    if (dto.timezone !== undefined) $set.timezone = dto.timezone;
+    if (dto.platformRole !== undefined) $set.platformRole = dto.platformRole;
+    if (dto.isActive !== undefined) $set.isActive = dto.isActive;
+
+    if (Object.keys($set).length > 0) {
+      await this.users.updateOne({ _id: targetOid }, { $set });
+    }
+
+    const row = await this.fetchAdminUserRowById(targetId);
+    if (!row) throw new NotFoundException({ code: 'USER_NOT_FOUND' });
+    return row;
+  }
+
+  async softDeleteAdminUser(actorId: string, targetId: string): Promise<{ ok: true }> {
+    if (actorId === targetId) {
+      throw new ForbiddenException({
+        code: 'CANNOT_DELETE_SELF',
+        message: 'You cannot delete your own account.',
+      });
+    }
+    if (!Types.ObjectId.isValid(targetId)) {
+      throw new NotFoundException({ code: 'USER_NOT_FOUND' });
+    }
+    const targetOid = new Types.ObjectId(targetId);
+
+    const target = await this.users
+      .findOne({ _id: targetOid, deletedAt: { $exists: false } })
+      .lean();
+    if (!target) throw new NotFoundException({ code: 'USER_NOT_FOUND' });
+
+    if (target.platformRole === 'platform_admin') {
+      const others = await this.users.countDocuments({
+        platformRole: 'platform_admin',
+        deletedAt: { $exists: false },
+        _id: { $ne: targetOid },
+      });
+      if (others < 1) {
+        throw new BadRequestException({
+          code: 'LAST_PLATFORM_ADMIN',
+          message: 'Assign another platform admin before removing this account.',
+        });
+      }
+    }
+
+    await this.users.updateOne(
+      { _id: targetOid },
+      { $set: { deletedAt: new Date(), isActive: false } },
+    );
+    await this.auth.logoutAll(targetId);
+    return { ok: true };
+  }
+
+  async adminResetPassword(targetId: string, newPassword: string): Promise<{ ok: true }> {
+    await this.userSvc.adminSetPassword(targetId, newPassword);
+    await this.auth.logoutAll(targetId);
+    return { ok: true };
+  }
+
+  async adminRevokeSessions(targetId: string): Promise<{ ok: true }> {
+    await this.auth.logoutAll(targetId);
+    return { ok: true };
+  }
+
+  private toAdminUserRow(
+    u: {
+      _id: Types.ObjectId;
+      email: string;
+      displayName: string;
+      platformRole: 'platform_admin' | 'user';
+      isActive: boolean;
+      authProviders?: string[];
+      avatarUrl?: string | null;
+      createdAt?: Date;
+      lastLoginAt?: Date;
+    },
+    workspaceMemberships: number,
+    plans: ('free' | 'pro' | 'enterprise')[],
+  ): AdminUserRow {
+    const tier =
+      workspaceMemberships === 0
+        ? 'free'
+        : plans.length
+          ? highestWorkspaceTier(plans)
+          : 'free';
+    const subscriptionLabelOut =
+      workspaceMemberships === 0 ? '—' : subscriptionLabel(tier, workspaceMemberships);
+    const createdAt = u.createdAt?.toISOString?.() ?? new Date().toISOString();
+    const lastLoginAt = u.lastLoginAt?.toISOString?.() ?? null;
+    return {
       id: String(u._id),
       email: u.email,
       displayName: u.displayName,
@@ -483,10 +698,59 @@ export class AdminService {
       isActive: u.isActive,
       authProviders: u.authProviders ?? ['local'],
       avatarUrl: u.avatarUrl ?? null,
-      workspaceMemberships: countMap.get(String(u._id)) ?? 0,
-      createdAt: (u as { createdAt?: Date }).createdAt?.toISOString?.() ?? new Date().toISOString(),
-    }));
-    return { items };
+      workspaceMemberships,
+      createdAt,
+      lastLoginAt,
+      subscriptionTier: tier,
+      subscriptionLabel: subscriptionLabelOut,
+    };
+  }
+
+  private async fetchAdminUserRowById(userId: string): Promise<AdminUserRow | null> {
+    if (!Types.ObjectId.isValid(userId)) return null;
+    const oid = new Types.ObjectId(userId);
+    const u = await this.users
+      .findOne({ _id: oid, deletedAt: { $exists: false } })
+      .select(
+        'email displayName platformRole isActive authProviders avatarUrl createdAt lastLoginAt',
+      )
+      .lean();
+    if (!u) return null;
+
+    const wsColl = this.workspaces.collection.collectionName;
+    const [countArr, planAgg] = await Promise.all([
+      this.members.aggregate<{ c: number }>([
+        { $match: { userId: oid, status: 'active' } },
+        { $count: 'c' },
+      ]),
+      this.members.aggregate<{
+        plans: ('free' | 'pro' | 'enterprise')[];
+        wsCount: number;
+      }>([
+        { $match: { userId: oid, status: 'active' } },
+        {
+          $lookup: {
+            from: wsColl,
+            localField: 'workspaceId',
+            foreignField: '_id',
+            as: 'ws',
+          },
+        },
+        { $unwind: '$ws' },
+        {
+          $group: {
+            _id: null,
+            plans: { $addToSet: '$ws.plan' },
+            wsCount: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const wsCount = countArr[0]?.c ?? 0;
+    const pinfo = planAgg[0];
+    const plans = pinfo?.plans ?? [];
+    return this.toAdminUserRow(u, wsCount, plans);
   }
 
   async platformSettings(): Promise<AdminPlatformSettings> {

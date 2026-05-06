@@ -31,6 +31,13 @@ export class User {
 
   @Prop({ default: true })
   isActive!: boolean;
+
+  @Prop({ type: Date })
+  lastLoginAt?: Date;
+
+  /** Soft-delete timestamp — blocked from signing in while set. */
+  @Prop({ type: Date, index: true, sparse: true })
+  deletedAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

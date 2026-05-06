@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -29,6 +30,7 @@ import {
   RoleDistribution,
   StatusDistribution,
 } from './admin.service';
+import { AdminResetPasswordDto, PatchAdminUserDto } from './dto/admin-user.dto';
 
 @ApiBearerAuth()
 @ApiTags('admin')
@@ -80,6 +82,30 @@ export class AdminController {
       limit: limit ? parseInt(limit, 10) : 100,
       q,
     });
+  }
+
+  @Patch('users/:id')
+  patchUser(
+    @Param('id') id: string,
+    @Body() dto: PatchAdminUserDto,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<AdminUserRow> {
+    return this.svc.patchAdminUser(user.sub, id, dto);
+  }
+
+  @Delete('users/:id')
+  softDeleteUser(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.svc.softDeleteAdminUser(user.sub, id);
+  }
+
+  @Post('users/:id/reset-password')
+  resetPassword(@Param('id') id: string, @Body() dto: AdminResetPasswordDto) {
+    return this.svc.adminResetPassword(id, dto.newPassword);
+  }
+
+  @Post('users/:id/revoke-sessions')
+  revokeSessions(@Param('id') id: string) {
+    return this.svc.adminRevokeSessions(id);
   }
 
   @Get('billing')

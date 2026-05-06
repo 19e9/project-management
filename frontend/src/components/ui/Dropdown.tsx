@@ -74,21 +74,25 @@ export function DropdownItem({
   danger,
   icon,
   shortcut,
+  disabled,
 }: {
   children: ReactNode;
   onClick?: () => void;
   danger?: boolean;
   icon?: ReactNode;
   shortcut?: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       data-dropdown-item
-      onClick={onClick}
+      disabled={disabled}
+      onClick={disabled ? undefined : onClick}
       className={cn(
         'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition',
-        danger ? 'text-danger hover:bg-danger/10' : 'text-fg hover:bg-surface-2',
+        disabled ? 'cursor-not-allowed opacity-40' : '',
+        danger && !disabled ? 'text-danger hover:bg-danger/10' : 'text-fg hover:bg-surface-2',
       )}
       role="menuitem"
     >
