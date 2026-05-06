@@ -11,6 +11,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import AppLayout from './layouts/AppLayout';
 import AdminPlaceholderPage from './pages/admin/AdminPlaceholderPage';
+import AdminActivityPage from './pages/admin/AdminActivityPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminBillingPage from './pages/admin/AdminBillingPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
@@ -123,10 +124,7 @@ export default function App() {
           path="/dashboard/activity"
           element={
             <PlatformAdminOnly>
-              <AdminPlaceholderPage
-                title="Activity log"
-                hint="Full audit trail across users, workspaces, projects and tasks."
-              />
+              <AdminActivityPage />
             </PlatformAdminOnly>
           }
         />

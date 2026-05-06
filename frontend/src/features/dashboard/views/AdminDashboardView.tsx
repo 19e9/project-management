@@ -216,7 +216,11 @@ export function AdminDashboardView() {
       {/* Activity + Insights */}
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7">
-          <ActivityFeed events={activity.data ?? []} loading={activity.isLoading} />
+          <ActivityFeed
+            events={activity.data ?? []}
+            loading={activity.isLoading}
+            viewAllHref="/dashboard/activity"
+          />
         </div>
         <div className="lg:col-span-5">
           <InsightsPanel data={insights.data} loading={insights.isLoading} />

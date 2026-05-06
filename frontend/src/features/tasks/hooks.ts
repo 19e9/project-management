@@ -17,6 +17,8 @@ export interface TaskItem {
   assigneeIds: string[];
   progressPct: number;
   sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const base = (wid: string, pid: string) =>

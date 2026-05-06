@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useProject } from '../features/projects/hooks';
 import {
@@ -8,22 +8,54 @@ import {
   useCreateTask,
   useDependencies,
   useDeleteTask,
+  usePatchTask,
   useTaskTree,
   useTasks,
   type TaskItem,
 } from '../features/tasks/hooks';
-import { useWorkspace } from '../features/workspaces/hooks';
+import {
+  useInviteWorkspaceMember,
+  useWorkspace,
+  useWorkspaceMembers,
+} from '../features/workspaces/hooks';
 import { ProjectGantt } from '../features/gantt/ProjectGantt';
 import { WbsTree } from '../features/wbs/WbsTree';
+import { ProjectKanban } from '../features/project-detail/ProjectKanban';
+import { TaskDrawer } from '../features/project-detail/TaskDrawer';
+import {
+  ProjectCommandCenter,
+  type QuickAction,
+} from '../features/project-detail/ProjectCommandCenter';
+import { ProjectOverviewAnalytics } from '../features/project-detail/ProjectOverviewAnalytics';
+import {
+  ProjectActivityTab,
+  ProjectAiTab,
+  ProjectDocsTab,
+} from '../features/project-detail/ProjectPulsePanels';
+import { CpmLockedPreview } from '../features/project-detail/CpmLockedPreview';
+import { countOverdue, isDescendantTasks } from '../features/project-detail/projectMetrics';
 
-type TabId = 'overview' | 'wbs' | 'gantt' | 'cpm' | 'tasks';
+type TabId =
+  | 'overview'
+  | 'wbs'
+  | 'gantt'
+  | 'cpm'
+  | 'tasks'
+  | 'kanban'
+  | 'activity'
+  | 'docs'
+  | 'ai';
 
 const TABS: { id: TabId; label: string; description: string }[] = [
   { id: 'overview', label: 'Overview', description: 'Health & progress' },
   { id: 'wbs', label: 'WBS', description: 'Work breakdown' },
   { id: 'gantt', label: 'Gantt', description: 'Timeline' },
   { id: 'cpm', label: 'Critical path', description: 'CPM' },
-  { id: 'tasks', label: 'Tasks', description: 'List & dependencies' },
+  { id: 'tasks', label: 'Tasks', description: 'Table & dependencies' },
+  { id: 'kanban', label: 'Kanban', description: 'Board & WIP' },
+  { id: 'activity', label: 'Activity', description: 'Project pulse' },
+  { id: 'docs', label: 'Docs', description: 'Files vault' },
+  { id: 'ai', label: 'AI', description: 'Copilot preview' },
 ];
 
 export default function ProjectDetailPage() {
@@ -43,60 +75,110 @@ export default function ProjectDetailPage() {
   const createTask = useCreateTask(workspaceId!, projectId!);
   const createDep = useCreateDependency(workspaceId!, projectId!);
   const deleteTask = useDeleteTask(workspaceId!, projectId!);
+  const patchTaskMut = usePatchTask(workspaceId!, projectId!);
+  const { data: members = [] } = useWorkspaceMembers(workspaceId);
+  const inviteMutation = useInviteWorkspaceMember(workspaceId!);
+
+  const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'owner' | 'member' | 'client'>('member');
+  const [taskFormKey, setTaskFormKey] = useState(0);
+  const [newTaskDefaultTitle, setNewTaskDefaultTitle] = useState('');
+  const taskAnchorRef = useRef<HTMLDivElement | null>(null);
 
   const cpmEnabled = workspace?.entitlements?.cpmEnabled;
   const criticalIds: string[] = cpm.data?.criticalTaskIds ?? [];
+  const drawerTask = drawerTaskId ? (tasks.find((t) => t.id === drawerTaskId) ?? null) : null;
+
+  const criticalCount = tasks.filter((t) => criticalIds.includes(t.id)).length;
+  const blocked = overview.data?.blocked ?? 0;
+  const completionPct = overview.data?.completionPct ?? 0;
+  const overdueCount = countOverdue(tasks);
+
+  function handleQuickAction(action: QuickAction) {
+    switch (action.type) {
+      case 'task':
+        setTab('tasks');
+        setNewTaskDefaultTitle('');
+        setTaskFormKey((k) => k + 1);
+        queueMicrotask(() => taskAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        break;
+      case 'milestone':
+        setTab('tasks');
+        setNewTaskDefaultTitle('Milestone: ');
+        setTaskFormKey((k) => k + 1);
+        queueMicrotask(() => taskAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        break;
+      case 'invite':
+        setInviteOpen(true);
+        break;
+      case 'docs':
+        setTab('docs');
+        break;
+      case 'export':
+        exportTasksJson(project?.name ?? 'project', tasks);
+        break;
+      case 'kanban':
+        setTab('kanban');
+        break;
+      case 'report':
+        exportMarkdownReport(project?.name ?? 'Project', tasks, overview.data);
+        break;
+      default:
+        break;
+    }
+  }
+
+  async function reparentTask(taskId: string, newParentId: string | null) {
+    if (newParentId && isDescendantTasks(tasks, taskId, newParentId)) return;
+    await patchTaskMut.mutateAsync({ id: taskId, parentTaskId: newParentId });
+  }
 
   return (
     <div className="space-y-6">
-      <Breadcrumb
-        items={[
-          { to: '/dashboard', label: 'Overview' },
-          { to: '/dashboard/workspaces', label: 'Workspaces' },
-          {
-            to: `/dashboard/workspaces/${workspaceId}/projects`,
-            label: workspace?.name ?? 'Projects',
-          },
-          { label: project?.name ?? 'Project' },
-        ]}
-      />
-
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <span className="eyebrow">Project</span>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-ink-900 md:text-3xl">
-              {project?.name ?? 'Project'}
-            </h1>
-            {project?.code && (
-              <span className="rounded-lg bg-ink-100 px-2.5 py-1 font-mono text-xs font-semibold text-ink-700 ring-1 ring-inset ring-ink-200">
-                {project.code}
-              </span>
-            )}
-          </div>
-          {project?.description ? (
-            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-600">{project.description}</p>
-          ) : (
-            <p className="mt-2 text-sm text-ink-400">No description added.</p>
-          )}
-          <div className="mt-4 flex flex-wrap gap-2 text-xs">
-            {project?.startDate && (
-              <MetaKV label="Start" value={fmt(project.startDate)} />
-            )}
-            {project?.endDate && <MetaKV label="End" value={fmt(project.endDate)} />}
-            <MetaKV
-              label="CPM"
-              value={cpmEnabled ? 'Enabled on plan' : 'Upgrade required'}
-            />
-          </div>
-        </div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <Breadcrumb
+          items={[
+            { to: '/dashboard', label: 'Overview' },
+            { to: '/dashboard/workspaces', label: 'Workspaces' },
+            {
+              to: `/dashboard/workspaces/${workspaceId}/projects`,
+              label: workspace?.name ?? 'Projects',
+            },
+            { label: project?.name ?? 'Project' },
+          ]}
+        />
         <Link
           to={`/dashboard/workspaces/${workspaceId}/projects`}
-          className="btn-secondary h-10 shrink-0 self-start px-4 text-sm"
+          className="btn-secondary h-10 shrink-0 px-4 text-sm"
         >
           ← Back to projects
         </Link>
-      </header>
+      </div>
+
+      <ProjectCommandCenter
+        projectId={projectId!}
+        projectName={project?.name ?? 'Project'}
+        projectEnd={project?.endDate ?? null}
+        tasks={tasks}
+        members={members}
+        overview={overview.data}
+        criticalCount={criticalCount}
+        blocked={blocked}
+        completionPct={completionPct}
+        cpmEnabled={!!cpmEnabled}
+        onQuickAction={handleQuickAction}
+      />
+
+      {project?.code && (
+        <p className="text-xs text-ink-500">
+          Code{' '}
+          <span className="rounded-md bg-ink-100 px-2 py-0.5 font-mono font-semibold text-ink-700">
+            {project.code}
+          </span>
+        </p>
+      )}
 
       <div className="card overflow-hidden">
         <div className="border-b border-ink-200 bg-ink-50/40 px-2 py-2 sm:px-4">
@@ -122,34 +204,41 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        <div className="p-5 sm:p-6">
+        <div className="p-4 sm:p-5">
           {tab === 'overview' && (
-            <OverviewPanel overview={overview} tasks={tasks} criticalIds={criticalIds} />
+            <ProjectOverviewAnalytics
+              projectId={projectId!}
+              overview={overview.data}
+              tasks={tasks}
+              members={members}
+              criticalIds={criticalIds}
+            />
           )}
 
           {tab === 'wbs' && (
-            <SectionIntro
-              title="Work breakdown structure"
-              subtitle="Task hierarchy with critical-path emphasis (red)."
-            />
-          )}
-          {tab === 'wbs' && (
-            <div className="mt-4 rounded-2xl border border-ink-100 bg-ink-50/30 p-4 sm:p-5">
-              <WbsTree nodes={tree as any} criticalIds={criticalIds} />
-            </div>
+            <>
+              <SectionIntro
+                title="Work breakdown structure"
+                subtitle="Drag :: handles to reorganize parents. Drop on the dashed strip to promote to root."
+              />
+              <div className="mt-4 rounded-2xl border border-ink-100 bg-ink-50/30 p-4 sm:p-5">
+                <WbsTree nodes={tree as any} criticalIds={criticalIds} onReparent={reparentTask} />
+              </div>
+            </>
           )}
 
           {tab === 'gantt' && (
             <>
               <SectionIntro
                 title="Gantt"
-                subtitle="Drag bars to reschedule. Critical tasks stay highlighted."
+                subtitle="Zoom levels, today marker, dependency arrows, and drag to reschedule."
               />
               <div className="mt-4 rounded-2xl border border-ink-100 bg-white p-2 sm:p-4">
                 <ProjectGantt
                   workspaceId={workspaceId!}
                   projectId={projectId!}
                   criticalIds={criticalIds}
+                  members={members}
                 />
               </div>
             </>
@@ -157,6 +246,7 @@ export default function ProjectDetailPage() {
 
           {tab === 'cpm' && (
             <CpmPanel
+              workspaceId={workspaceId}
               cpmEnabled={!!cpmEnabled}
               cpm={cpm}
               tasks={tasks}
@@ -164,17 +254,114 @@ export default function ProjectDetailPage() {
           )}
 
           {tab === 'tasks' && (
-            <TasksPanel
+            <div ref={taskAnchorRef}>
+              <TasksPanel
+                key={taskFormKey}
+                tasks={tasks}
+                deps={deps}
+                criticalIds={criticalIds}
+                members={members}
+                newTaskDefaultTitle={newTaskDefaultTitle}
+                onCreateTask={(payload) => createTask.mutateAsync(payload)}
+                onCreateDep={(body) => createDep.mutateAsync(body)}
+                onDeleteTask={(id) => deleteTask.mutate(id)}
+                onOpenTask={(t) => setDrawerTaskId(t.id)}
+              />
+            </div>
+          )}
+
+          {tab === 'kanban' && (
+            <ProjectKanban
+              projectId={projectId!}
               tasks={tasks}
-              deps={deps}
-              criticalIds={criticalIds}
-              onCreateTask={(payload) => createTask.mutateAsync(payload)}
-              onCreateDep={(body) => createDep.mutateAsync(body)}
-              onDeleteTask={(id) => deleteTask.mutate(id)}
+              members={members}
+              onStatusChange={(id, status) => patchTaskMut.mutate({ id, status })}
+              onOpenTask={(t) => setDrawerTaskId(t.id)}
+            />
+          )}
+
+          {tab === 'activity' && <ProjectActivityTab tasks={tasks} />}
+
+          {tab === 'docs' && (
+            <ProjectDocsTab projectId={projectId!} workspaceId={workspaceId!} />
+          )}
+
+          {tab === 'ai' && (
+            <ProjectAiTab
+              tasks={tasks}
+              projectName={project?.name ?? 'Project'}
+              blocked={blocked}
+              overdue={overdueCount}
             />
           )}
         </div>
       </div>
+
+      <TaskDrawer
+        open={drawerTaskId !== null}
+        task={drawerTask}
+        tasks={tasks}
+        members={members}
+        projectId={projectId!}
+        onClose={() => setDrawerTaskId(null)}
+        patchTask={(patch) => patchTaskMut.mutateAsync(patch)}
+        createTask={(body) => createTask.mutateAsync(body)}
+      />
+
+      {inviteOpen && (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-ink-900/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-ink-200">
+            <h3 className="text-lg font-semibold text-ink-900">Invite teammate</h3>
+            <p className="mt-1 text-xs text-ink-500">Uses workspace invite API (owner only).</p>
+            <form
+              className="mt-4 space-y-3"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const email = inviteEmail.trim();
+                if (!email) return;
+                await inviteMutation.mutateAsync({ email, role: inviteRole });
+                setInviteEmail('');
+                setInviteOpen(false);
+              }}
+            >
+              <div>
+                <label className="label">Email</label>
+                <input
+                  className="input text-sm"
+                  type="email"
+                  required
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label">Role</label>
+                <select
+                  className="input text-sm"
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as typeof inviteRole)}
+                >
+                  <option value="member">Member</option>
+                  <option value="client">Client</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  className="btn-secondary px-4 text-sm"
+                  onClick={() => setInviteOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary px-4 text-sm" disabled={inviteMutation.isPending}>
+                  Send invite
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -204,15 +391,6 @@ function Breadcrumb({
   );
 }
 
-function MetaKV({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-lg bg-ink-100/80 px-2.5 py-1 font-medium text-ink-700 ring-1 ring-inset ring-ink-200/60">
-      <span className="text-ink-500">{label}</span>
-      {value}
-    </span>
-  );
-}
-
 function SectionIntro({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div>
@@ -222,147 +400,13 @@ function SectionIntro({ title, subtitle }: { title: string; subtitle: string }) 
   );
 }
 
-function OverviewPanel({
-  overview,
-  tasks,
-  criticalIds,
-}: {
-  overview: ReturnType<typeof useAnalyticsOverview>;
-  tasks: TaskItem[];
-  criticalIds: string[];
-}) {
-  const o = overview.data;
-  const criticalCount = tasks.filter((t) => criticalIds.includes(t.id)).length;
-
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi label="Tasks" value={o?.total ?? 0} hint="All records" accent="brand" />
-        <Kpi
-          label="Completion"
-          value={`${o?.completionPct ?? 0}%`}
-          hint="Done share"
-          accent="emerald"
-        />
-        <Kpi label="In progress" value={o?.inProgress ?? 0} hint="Active work" accent="cyan" />
-        <Kpi label="Blocked" value={o?.blocked ?? 0} hint="Needs attention" accent="amber" />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="card p-5">
-          <h3 className="text-base font-semibold text-ink-900">Status mix</h3>
-          <p className="text-xs text-ink-500">Share of tasks by workflow state</p>
-          <div className="mt-5 space-y-3">
-            {(
-              [
-                { key: 'not_started' as const, label: 'Not started', dataKey: 'notStarted' },
-                { key: 'in_progress' as const, label: 'In progress', dataKey: 'inProgress' },
-                { key: 'blocked' as const, label: 'Blocked', dataKey: 'blocked' },
-                { key: 'done' as const, label: 'Done', dataKey: 'done' },
-                { key: 'cancelled' as const, label: 'Cancelled', dataKey: 'cancelled' },
-              ] as const
-            ).map((row) => (
-              <StatusBar
-                key={row.key}
-                label={row.label}
-                value={(o as any)?.[row.dataKey] ?? 0}
-                total={o?.total ?? 0}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="card relative overflow-hidden p-5">
-          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br from-brand-500/15 to-transparent blur-2xl" />
-          <h3 className="relative text-base font-semibold text-ink-900">Ops snapshot</h3>
-          <p className="relative mt-1 text-xs text-ink-500">Quick health signals</p>
-          <ul className="relative mt-4 space-y-3 text-sm text-ink-700">
-            <li className="flex justify-between gap-2 border-b border-ink-100 pb-2">
-              <span className="text-ink-500">Critical tasks</span>
-              <span className="font-semibold tabular-nums text-ink-900">{criticalCount}</span>
-            </li>
-            <li className="flex justify-between gap-2 border-b border-ink-100 pb-2">
-              <span className="text-ink-500">Blocked tasks</span>
-              <span className="font-semibold tabular-nums text-ink-900">{o?.blocked ?? 0}</span>
-            </li>
-            <li className="flex justify-between gap-2">
-              <span className="text-ink-500">Completion</span>
-              <span className="font-semibold tabular-nums text-emerald-700">
-                {o?.completionPct ?? 0}%
-              </span>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Kpi({
-  label,
-  value,
-  hint,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  hint: string;
-  accent: 'brand' | 'emerald' | 'cyan' | 'amber';
-}) {
-  const dot = {
-    brand: 'bg-brand-500',
-    emerald: 'bg-emerald-500',
-    cyan: 'bg-cyan-500',
-    amber: 'bg-amber-500',
-  }[accent];
-  return (
-    <div className="card relative overflow-hidden p-5">
-      <div
-        className={`pointer-events-none absolute -right-3 -top-3 h-20 w-20 rounded-full opacity-40 blur-xl ${
-          accent === 'brand'
-            ? 'bg-brand-400'
-            : accent === 'emerald'
-              ? 'bg-emerald-400'
-              : accent === 'cyan'
-                ? 'bg-cyan-400'
-                : 'bg-amber-400'
-        }`}
-      />
-      <div className="relative flex items-center gap-2">
-        <span className={`h-2 w-2 rounded-full ${dot}`} />
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">{label}</span>
-      </div>
-      <div className="relative mt-1 text-3xl font-bold tracking-tight text-ink-900">{value}</div>
-      <div className="relative text-xs text-ink-500">{hint}</div>
-    </div>
-  );
-}
-
-function StatusBar({ label, value, total }: { label: string; value: number; total: number }) {
-  const pct = total === 0 ? 0 : (value / total) * 100;
-  return (
-    <div>
-      <div className="flex justify-between text-xs font-medium text-ink-600">
-        <span>{label}</span>
-        <span className="tabular-nums text-ink-500">
-          {value}
-          <span className="text-ink-400"> / {total}</span>
-        </span>
-      </div>
-      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-ink-100">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-brand-600 to-cyan-500 transition-all duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 function CpmPanel({
+  workspaceId,
   cpmEnabled,
   cpm,
   tasks,
 }: {
+  workspaceId?: string;
   cpmEnabled: boolean;
   cpm: ReturnType<typeof useCpm>;
   tasks: { id: string; title: string }[];
@@ -374,12 +418,12 @@ function CpmPanel({
         subtitle="Early start/finish with slack; critical activities highlighted."
       />
       {!cpmEnabled && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-900">
-          <p className="font-semibold">CPM is not enabled</p>
-          <p className="mt-1 text-xs text-amber-800/90">
-            Upgrade the workspace plan to unlock full critical-path calculations.
-          </p>
-        </div>
+        <>
+          <CpmLockedPreview workspaceId={workspaceId} />
+          <div className="rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-3 text-xs text-amber-900">
+            Upgrade this workspace to compute exact slack, drag-impact scenarios, and exports.
+          </div>
+        </>
       )}
       {cpmEnabled && cpm.isLoading && (
         <div className="flex items-center gap-2 text-sm text-ink-500">
@@ -438,9 +482,12 @@ function TasksPanel({
   tasks,
   deps,
   criticalIds,
+  members,
+  newTaskDefaultTitle,
   onCreateTask,
   onCreateDep,
   onDeleteTask,
+  onOpenTask,
 }: {
   tasks: TaskItem[];
   deps: {
@@ -451,43 +498,76 @@ function TasksPanel({
     lagDays: number;
   }[];
   criticalIds: string[];
+  members: import('../features/workspaces/hooks').WorkspaceMemberRow[];
+  newTaskDefaultTitle: string;
   onCreateTask: (payload: any) => Promise<void>;
   onCreateDep: (b: { predecessorId: string; successorId: string }) => Promise<void>;
   onDeleteTask: (id: string) => void;
+  onOpenTask: (task: TaskItem) => void;
 }) {
+  const memberMap = new Map(members.map((m) => [m.userId, m]));
+
   return (
     <div className="space-y-6">
-      <NewTaskForm onCreate={onCreateTask} />
+      <NewTaskForm
+        tasks={tasks}
+        defaultTitle={newTaskDefaultTitle}
+        onCreate={onCreateTask}
+      />
       <NewDependencyForm tasks={tasks} onCreate={onCreateDep} />
 
       <div className="overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-card">
         <div className="border-b border-ink-200 bg-ink-50/40 px-5 py-4">
           <h3 className="text-base font-semibold text-ink-900">All tasks</h3>
-          <p className="text-xs text-ink-500">{tasks.length} rows</p>
+          <p className="text-xs text-ink-500">{tasks.length} rows · click a row for the detail drawer</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[960px] text-sm">
             <thead className="border-b border-ink-200 bg-ink-50/30 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-500">
               <tr>
                 <th className="whitespace-nowrap px-5 py-3">Title</th>
+                <th className="px-5 py-3">Priority</th>
+                <th className="px-5 py-3">Assignees</th>
                 <th className="px-5 py-3">WBS</th>
                 <th className="px-5 py-3">Start</th>
                 <th className="px-5 py-3">End</th>
                 <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">%</th>
                 <th className="px-5 py-3">Critical</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink-100">
               {tasks.map((t) => (
-                <tr key={t.id} className="transition hover:bg-ink-50/50">
+                <tr
+                  key={t.id}
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer transition hover:bg-ink-50/50"
+                  onClick={() => onOpenTask(t)}
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                      ev.preventDefault();
+                      onOpenTask(t);
+                    }
+                  }}
+                >
                   <td className="px-5 py-3 font-medium text-ink-900">{t.title}</td>
+                  <td className="px-5 py-3 text-xs capitalize text-ink-700">{t.priority}</td>
+                  <td className="px-5 py-3 text-xs text-ink-600">
+                    {t.assigneeIds.length === 0
+                      ? '—'
+                      : t.assigneeIds
+                          .map((id) => memberMap.get(id)?.displayName ?? id.slice(-4))
+                          .join(', ')}
+                  </td>
                   <td className="px-5 py-3 font-mono text-xs text-ink-600">{t.wbsCode ?? '—'}</td>
                   <td className="px-5 py-3 tabular-nums text-ink-700">{fmt(t.startDate)}</td>
                   <td className="px-5 py-3 tabular-nums text-ink-700">{fmt(t.endDate)}</td>
                   <td className="px-5 py-3">
                     <TaskStatusBadge status={t.status} />
                   </td>
+                  <td className="px-5 py-3 tabular-nums text-xs text-ink-700">{t.progressPct ?? 0}</td>
                   <td className="px-5 py-3">
                     {criticalIds.includes(t.id) ? (
                       <span className="badge bg-rose-50 text-rose-800 ring-1 ring-inset ring-rose-100">
@@ -501,16 +581,19 @@ function TasksPanel({
                     <button
                       type="button"
                       className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
-                      onClick={() => onDeleteTask(t.id)}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        onDeleteTask(t.id);
+                      }}
                     >
-                        Delete
+                      Delete
                     </button>
                   </td>
                 </tr>
               ))}
               {tasks.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-ink-500">
+                  <td colSpan={10} className="px-5 py-12 text-center text-sm text-ink-500">
                     No tasks yet. Use the form above to add one.
                   </td>
                 </tr>
@@ -575,16 +658,31 @@ function TaskStatusBadge({ status }: { status: string }) {
   );
 }
 
-function NewTaskForm({ onCreate }: { onCreate: (payload: any) => Promise<void> }) {
-  const [title, setTitle] = useState('');
+function NewTaskForm({
+  tasks,
+  defaultTitle,
+  onCreate,
+}: {
+  tasks: TaskItem[];
+  defaultTitle: string;
+  onCreate: (payload: any) => Promise<void>;
+}) {
+  const [title, setTitle] = useState(defaultTitle);
+  const [parentTaskId, setParentTaskId] = useState<string>('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [duration, setDuration] = useState(1);
 
+  useEffect(() => {
+    setTitle(defaultTitle);
+  }, [defaultTitle]);
+
   return (
     <div className="card p-5">
       <h3 className="text-base font-semibold text-ink-900">New task</h3>
-      <p className="text-xs text-ink-500">Use dates together with duration</p>
+      <p className="text-xs text-ink-500">
+        Use dates together with duration. Optional parent nests tasks for real WBS.
+      </p>
       <form
         className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:items-end"
         onSubmit={async (e) => {
@@ -595,8 +693,10 @@ function NewTaskForm({ onCreate }: { onCreate: (payload: any) => Promise<void> }
             startDate: new Date(start),
             endDate: new Date(end),
             durationDays: duration,
+            parentTaskId: parentTaskId || null,
           });
-          setTitle('');
+          setTitle(defaultTitle);
+          setParentTaskId('');
           setStart('');
           setEnd('');
           setDuration(1);
@@ -613,6 +713,24 @@ function NewTaskForm({ onCreate }: { onCreate: (payload: any) => Promise<void> }
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
+        </div>
+        <div className="sm:col-span-2 lg:col-span-4">
+          <label className="label" htmlFor="nt-parent">
+            Parent (optional)
+          </label>
+          <select
+            id="nt-parent"
+            className="input"
+            value={parentTaskId}
+            onChange={(e) => setParentTaskId(e.target.value)}
+          >
+            <option value="">Top level</option>
+            {tasks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="lg:col-span-2">
           <label className="label" htmlFor="nt-start">
@@ -723,4 +841,54 @@ function fmt(value: string | Date | undefined | null) {
   if (!value) return '—';
   const d = typeof value === 'string' ? new Date(value) : value;
   return d.toISOString().slice(0, 10);
+}
+
+function exportTasksJson(projectName: string, tasks: TaskItem[]) {
+  const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `planforge-${slug(projectName)}-tasks.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportMarkdownReport(
+  projectName: string,
+  tasks: TaskItem[],
+  overview:
+    | {
+        total?: number;
+        completionPct?: number;
+        blocked?: number;
+        inProgress?: number;
+      }
+    | undefined,
+) {
+  const lines = [
+    `# ${projectName}`,
+    '',
+    `- Tasks: ${overview?.total ?? tasks.length}`,
+    `- Completion: ${overview?.completionPct ?? 0}%`,
+    `- Blocked: ${overview?.blocked ?? 0}`,
+    `- In progress: ${overview?.inProgress ?? 0}`,
+    '',
+    '## Task register',
+    '',
+    ...tasks.map(
+      (t) =>
+        `- **${t.title}** · ${t.status} · ${fmt(t.startDate)}→${fmt(t.endDate)} · ${t.priority}`,
+    ),
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `planforge-${slug(projectName)}-report.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function slug(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project';
 }

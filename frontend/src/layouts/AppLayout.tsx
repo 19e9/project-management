@@ -147,9 +147,8 @@ export default function AppLayout() {
 function RoleChip({ role, platformAdmin }: { role?: string; platformAdmin: boolean }) {
   if (platformAdmin)
     return (
-      <span className="hidden items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 ring-1 ring-inset ring-brand-100 sm:inline-flex">
+      <span className="">
         <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-        Platform admin
       </span>
     );
   if (role === 'owner')

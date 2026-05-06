@@ -1,9 +1,12 @@
+import { Link } from 'react-router-dom';
 import type { ActivityEvent, ActivityKind } from '../../features/admin/hooks';
 
 interface Props {
   events: ActivityEvent[];
   loading?: boolean;
   limit?: number;
+  /** Full activity page route — omit on the activity page itself. */
+  viewAllHref?: string;
 }
 
 const KIND_META: Record<
@@ -37,7 +40,7 @@ const KIND_META: Record<
   },
 };
 
-export function ActivityFeed({ events, loading, limit = 12 }: Props) {
+export function ActivityFeed({ events, loading, limit = 12, viewAllHref }: Props) {
   const items = events.slice(0, limit);
   return (
     <section className="card">
@@ -46,9 +49,13 @@ export function ActivityFeed({ events, loading, limit = 12 }: Props) {
           <h3 className="text-base font-semibold text-ink-900">Recent activity</h3>
           <p className="text-xs text-ink-500">Live cross-workspace event stream</p>
         </div>
-        <button type="button" className="text-xs font-medium text-brand-700 hover:underline">
-          View all →
-        </button>
+        {viewAllHref ? (
+          <Link to={viewAllHref} className="text-xs font-medium text-brand-700 hover:underline">
+            View all →
+          </Link>
+        ) : (
+          <span className="text-xs tabular-nums text-ink-400">{events.length} events</span>
+        )}
       </header>
 
       <ol className="relative px-5 py-4">
