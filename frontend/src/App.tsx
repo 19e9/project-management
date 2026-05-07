@@ -12,6 +12,7 @@ import ProjectDetailPage from './pages/ProjectDetailPage';
 import AppLayout from './layouts/AppLayout';
 import AdminPlaceholderPage from './pages/admin/AdminPlaceholderPage';
 import AdminActivityPage from './pages/admin/AdminActivityPage';
+import AdminAllWorkspacesPage from './pages/admin/AdminAllWorkspacesPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminBillingPage from './pages/admin/AdminBillingPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
@@ -132,10 +133,7 @@ export default function App() {
           path="/dashboard/all-workspaces"
           element={
             <PlatformAdminOnly>
-              <AdminPlaceholderPage
-                title="Platform workspaces"
-                hint="Browse, search and manage every workspace on the platform."
-              />
+              <AdminAllWorkspacesPage />
             </PlatformAdminOnly>
           }
         />

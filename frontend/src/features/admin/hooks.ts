@@ -411,13 +411,14 @@ export function useRoleDistribution() {
   });
 }
 
-export function useAdminWorkspaces(q = '') {
+export function useAdminWorkspaces(q = '', limit = 100) {
+  const capped = Math.max(1, Math.min(100, limit));
   return useQuery({
-    queryKey: ['admin', 'workspaces', q],
+    queryKey: ['admin', 'workspaces', q, capped],
     queryFn: async () =>
       (
         await api.get<{ items: AdminWorkspaceRow[] }>(
-          `/admin/workspaces?limit=25${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+          `/admin/workspaces?limit=${capped}${q ? `&q=${encodeURIComponent(q)}` : ''}`,
         )
       ).data,
   });
