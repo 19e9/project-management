@@ -1,5 +1,6 @@
 import { AxiosError } from 'axios';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { AdminUserRow } from '../../features/admin/hooks';
 import {
   useAdminResetPassword,
@@ -17,6 +18,8 @@ interface Props {
   rows: AdminUserRow[];
   loading?: boolean;
   onSearchChange?: (q: string) => void;
+  /** Owned workspace renewal hints keyed by platform user id (billing projection). */
+  ownerBillingByUserId?: Record<string, { workspaceCount: number; renewalHint: string }>;
 }
 
 type SortKey =
@@ -29,7 +32,7 @@ type SortKey =
   | 'subscriptionTier'
   | 'isActive';
 
-const COL_COUNT = 11;
+const COL_COUNT = 13;
 
 function extractApiMessage(err: unknown): string {
   if (err instanceof AxiosError) {
@@ -64,7 +67,7 @@ function formatLastLogin(iso: string | null): string {
   });
 }
 
-export function UsersTable({ rows, loading, onSearchChange }: Props) {
+export function UsersTable({ rows, loading, onSearchChange, ownerBillingByUserId }: Props) {
   const { user: authUser } = useAuth();
   const selfId = authUser?.id;
 
@@ -284,6 +287,12 @@ export function UsersTable({ rows, loading, onSearchChange }: Props) {
                 {header('Last login', 'lastLoginAt')}
                 {header('Account age')}
                 {header('Plan', 'subscriptionTier')}
+                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                  Renewal
+                </th>
+                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                  Billing
+                </th>
                 {header('Status', 'isActive')}
                 {header('Actions')}
               </tr>
@@ -378,6 +387,29 @@ export function UsersTable({ rows, loading, onSearchChange }: Props) {
                     </td>
                     <td className="max-w-[140px] px-4 py-3">
                       <PlanCell tier={u.subscriptionTier} label={u.subscriptionLabel} />
+                    </td>
+                    <td className="max-w-[160px] px-4 py-3">
+                      {ownerBillingByUserId?.[u.id] ? (
+                        <>
+                          <div className="text-xs text-ink-800">
+                            {ownerBillingByUserId[u.id].renewalHint}
+                          </div>
+                          <div className="text-[11px] text-ink-500">
+                            {ownerBillingByUserId[u.id].workspaceCount} owned workspace
+                            {ownerBillingByUserId[u.id].workspaceCount === 1 ? '' : 's'}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-ink-400">—</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <Link
+                        to={`/dashboard/users/${u.id}/billing`}
+                        className="text-xs font-semibold text-brand-700 hover:underline"
+                      >
+                        Manage subscription
+                      </Link>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <button

@@ -14,7 +14,17 @@ import AdminPlaceholderPage from './pages/admin/AdminPlaceholderPage';
 import AdminActivityPage from './pages/admin/AdminActivityPage';
 import AdminAllWorkspacesPage from './pages/admin/AdminAllWorkspacesPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
-import AdminBillingPage from './pages/admin/AdminBillingPage';
+import BillingModuleLayout from './features/billing/BillingModuleLayout';
+import BillingOverviewPage from './pages/billing/BillingOverviewPage';
+import BillingSubscriptionsPage from './pages/billing/BillingSubscriptionsPage';
+import BillingPlansPage from './pages/billing/BillingPlansPage';
+import BillingInvoicesPage from './pages/billing/BillingInvoicesPage';
+import BillingPaymentsPage from './pages/billing/BillingPaymentsPage';
+import BillingRefundsPage from './pages/billing/BillingRefundsPage';
+import BillingEnterprisePage from './pages/billing/BillingEnterprisePage';
+import BillingAnalyticsPage from './pages/billing/BillingAnalyticsPage';
+import BillingSettingsPage from './pages/billing/BillingSettingsPage';
+import UserBillingPage from './pages/billing/UserBillingPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
 function FullPageLoader() {
@@ -146,13 +156,32 @@ export default function App() {
           }
         />
         <Route
-          path="/dashboard/billing"
+          path="/dashboard/users/:userId/billing"
           element={
             <PlatformAdminOnly>
-              <AdminBillingPage />
+              <UserBillingPage />
             </PlatformAdminOnly>
           }
         />
+        <Route
+          path="/dashboard/billing"
+          element={
+            <PlatformAdminOnly>
+              <BillingModuleLayout />
+            </PlatformAdminOnly>
+          }
+        >
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<BillingOverviewPage />} />
+          <Route path="subscriptions" element={<BillingSubscriptionsPage />} />
+          <Route path="plans" element={<BillingPlansPage />} />
+          <Route path="invoices" element={<BillingInvoicesPage />} />
+          <Route path="payments" element={<BillingPaymentsPage />} />
+          <Route path="refunds" element={<BillingRefundsPage />} />
+          <Route path="enterprise" element={<BillingEnterprisePage />} />
+          <Route path="analytics" element={<BillingAnalyticsPage />} />
+          <Route path="settings" element={<BillingSettingsPage />} />
+        </Route>
         <Route
           path="/dashboard/settings"
           element={
