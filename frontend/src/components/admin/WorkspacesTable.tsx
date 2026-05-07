@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { AdminWorkspaceRow } from '../../features/admin/hooks';
 
 interface Props {
@@ -181,12 +182,12 @@ export function WorkspacesTable({ rows, loading, onSearchChange }: Props) {
                         Suspended
                       </span>
                     ) : (
-                      <button
-                        type="button"
+                      <Link
+                        to={`/dashboard/workspaces/${w.id}/projects`}
                         className="text-xs font-medium text-brand-700 hover:underline"
                       >
                         Open →
-                      </button>
+                      </Link>
                     )}
                   </td>
                 </tr>
