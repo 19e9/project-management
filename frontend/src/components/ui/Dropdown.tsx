@@ -52,7 +52,7 @@ export function Dropdown({ trigger, children, align = 'right', className }: Prop
         <div
           role="menu"
           className={cn(
-            'absolute z-30 mt-1 min-w-[200px] overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-pop animate-slide-up',
+            'absolute z-50 mt-1 min-w-[200px] overflow-hidden rounded-xl border border-ink-200 bg-white p-1 shadow-lg ring-1 ring-ink-900/[0.06] animate-fade-in-up dark:border-white/10 dark:bg-ink-900 dark:ring-white/[0.08]',
             align === 'right' ? 'right-0' : 'left-0',
             className,
           )}
@@ -92,11 +92,13 @@ export function DropdownItem({
       className={cn(
         'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition',
         disabled ? 'cursor-not-allowed opacity-40' : '',
-        danger && !disabled ? 'text-danger hover:bg-danger/10' : 'text-fg hover:bg-surface-2',
+        danger && !disabled
+          ? 'text-danger-600 hover:bg-danger-500/10 dark:text-danger-500'
+          : 'text-ink-800 hover:bg-ink-50 dark:text-ink-100 dark:hover:bg-ink-800',
       )}
       role="menuitem"
     >
-      {icon && <span className="grid h-4 w-4 place-items-center text-muted">{icon}</span>}
+      {icon && <span className="grid h-4 w-4 place-items-center text-ink-500">{icon}</span>}
       <span className="flex-1">{children}</span>
       {shortcut && <span className="kbd">{shortcut}</span>}
     </button>
@@ -104,9 +106,9 @@ export function DropdownItem({
 }
 
 export function DropdownLabel({ children }: { children: ReactNode }) {
-  return <div className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted">{children}</div>;
+  return <div className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-ink-400 dark:text-ink-500">{children}</div>;
 }
 
 export function DropdownSeparator() {
-  return <div className="my-1 h-px bg-border" />;
+  return <div className="my-1 h-px bg-ink-100 dark:bg-white/10" />;
 }

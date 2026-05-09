@@ -73,11 +73,11 @@ export class AuthService {
   async login(dto: LoginDto): Promise<IssuedTokens> {
     const user = await this.users.findByEmailIncludingDeleted(dto.email, true);
     if (!user || !user.passwordHash) {
-      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS' });
+      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid email or password.' });
     }
     const ok = await argon2.verify(user.passwordHash, dto.password);
     if (!ok) {
-      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS' });
+      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid email or password.' });
     }
     return this.issueSession(user);
   }
@@ -86,7 +86,7 @@ export class AuthService {
     const tokenHash = this.hashToken(rawRefreshToken);
     const stored = await this.refreshes.findOne({ tokenHash });
     if (!stored || stored.revoked || stored.expiresAt < new Date()) {
-      throw new UnauthorizedException({ code: 'REFRESH_INVALID' });
+      throw new UnauthorizedException({ code: 'REFRESH_INVALID', message: 'Session expired. Please sign in again.' });
     }
     const user = await this.users.getOrFail(String(stored.userId));
     stored.revoked = true;

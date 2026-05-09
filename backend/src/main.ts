@@ -10,8 +10,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
   app.use(helmet());
+  const isDev = (process.env.NODE_ENV ?? 'development') === 'development';
   app.enableCors({
-    origin: (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(','),
+    origin: isDev
+      ? (origin: string | undefined, cb: (e: Error | null, ok?: boolean) => void) => {
+          // allow any localhost origin in dev (covers :5173, :5174, etc.)
+          if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin)) cb(null, true);
+          else cb(new Error('CORS: origin not allowed'));
+        }
+      : (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',').map((o) => o.trim()),
     credentials: true,
   });
   app.setGlobalPrefix('api/v1');

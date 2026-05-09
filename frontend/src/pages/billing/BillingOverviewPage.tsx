@@ -158,8 +158,8 @@ export default function BillingOverviewPage() {
             />
             <Kpi
               label="Cash velocity"
-              value="Trailing window"
-              hint={revenueGrowthHint ?? '—'}
+              value={revenueGrowthHint ?? '—'}
+              hint="vs trailing window start"
             />
             <Kpi
               label="ARPU"
@@ -182,23 +182,21 @@ export default function BillingOverviewPage() {
             <p className="mt-3 text-3xl font-bold tabular-nums">{totalWs || '—'}</p>
             <p className="text-sm text-white/70">Workspaces on platform</p>
           </div>
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6">
             {billing.isLoading ? (
-              <div className="skeleton h-40 w-40 rounded-full bg-white/10" />
+              <div className="skeleton h-40 w-40 rounded-full bg-white/10 mx-auto" />
             ) : (
               <DonutChart
-                size={200}
-                thickness={22}
+                size={160}
+                thickness={20}
                 centerLabel={totalWs ? String(totalWs) : '0'}
                 centerSubLabel="mix"
+                centerColor="white"
+                layout="col"
                 slices={[
                   { label: 'Free', value: b?.planDistribution.free ?? 0, color: '#94a3b8' },
                   { label: 'Pro', value: b?.planDistribution.pro ?? 0, color: '#818cf8' },
-                  {
-                    label: 'Enterprise',
-                    value: b?.planDistribution.enterprise ?? 0,
-                    color: '#fbbf24',
-                  },
+                  { label: 'Enterprise', value: b?.planDistribution.enterprise ?? 0, color: '#fbbf24' },
                 ]}
               />
             )}

@@ -101,7 +101,14 @@ function Hero() {
 
 /* ---------- LOGO CLOUD ---------- */
 function LogoCloud() {
-  const names = ['NorthBuild', 'Helix Labs', 'Outpost', 'Mariner', 'Quanta', 'Aether'];
+  const brands: { name: string; href: string }[] = [
+    { name: 'Slope', href: 'https://slope.so' },
+    { name: 'Relay', href: 'https://relay.app' },
+    { name: 'Harbor', href: 'https://harbor.build' },
+    { name: 'Beacon', href: 'https://beacon.team' },
+    { name: 'Stride', href: 'https://stride.work' },
+    { name: 'Catalyst', href: 'https://catalyst.io' },
+  ];
   return (
     <section className="border-y border-ink-200/70 bg-ink-50/40 py-10">
       <div className="container">
@@ -109,14 +116,17 @@ function LogoCloud() {
           Trusted by modern teams shipping ambitious work
         </p>
         <div className="mt-6 grid grid-cols-2 items-center gap-x-10 gap-y-6 sm:grid-cols-3 md:grid-cols-6">
-          {names.map((n) => (
-            <div
-              key={n}
-              className="flex items-center justify-center text-base font-semibold tracking-tight text-ink-400 transition hover:text-ink-700"
+          {brands.map(({ name, href }) => (
+            <a
+              key={name}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center text-base font-semibold tracking-tight text-ink-400 transition hover:text-ink-700 hover:underline underline-offset-2"
             >
               <span className="mr-2 inline-block h-2 w-2 rounded-full bg-current opacity-60" />
-              {n}
-            </div>
+              {name}
+            </a>
           ))}
         </div>
       </div>
@@ -606,22 +616,22 @@ function SocialProof() {
             <Testimonial
               quote="We replaced three spreadsheets and an aging MS Project install with PlanForge. Our ops lead now actually opens the plan."
               name="Maya R."
-              role="Head of Delivery, NorthBuild"
+              role="Head of Delivery, Slope"
             />
             <Testimonial
               quote="The CPM view paid for the year-one subscription in our first reno. We saw a critical path we'd missed in three rebuilds."
               name="Jordan T."
-              role="Construction PM, Outpost"
+              role="Construction PM, Harbor"
             />
             <Testimonial
               quote="Finally a Gantt that doesn't fight me. Drag, drop, and successors actually move. The dependency cycle errors are chef's kiss."
               name="Priya S."
-              role="Engineering Lead, Helix Labs"
+              role="Engineering Lead, Relay"
             />
             <Testimonial
               quote="Onboarding took an afternoon. The team picked up the WBS in one standup."
               name="Sam K."
-              role="Founder, Quanta"
+              role="Founder, Catalyst"
             />
           </div>
         </div>
