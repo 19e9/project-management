@@ -6,7 +6,7 @@ import { IconArrowRight } from '../ui/Icons';
 const links = [
   { label: 'Features', to: '/#features' },
   { label: 'How it works', to: '/#how' },
-  { label: 'Pricing', to: '/pricing' },
+  { label: 'Pricing', to: '/#pricing' },
   { label: 'Customers', to: '/#proof' },
 ];
 

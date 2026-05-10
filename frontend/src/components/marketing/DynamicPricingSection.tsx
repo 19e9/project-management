@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Navbar } from '../components/marketing/Navbar';
-import { Footer } from '../components/marketing/Footer';
-import { IconBolt, IconCheck } from '../components/ui/Icons';
-import { type PublicPricingPlan, usePublicPricingPlans } from '../features/pricing/publicPricing';
+import { IconBolt, IconCheck } from '../ui/Icons';
+import { type PublicPricingPlan, usePublicPricingPlans } from '../../features/pricing/publicPricing';
 
 type Cycle = 'monthly' | 'annual';
 
@@ -26,7 +24,11 @@ const FAQ = [
   },
 ];
 
-export default function PricingPage() {
+/**
+ * Landing-only pricing: renders `/public/pricing-plans` (subscription_plan docs).
+ * Admin billing mutations invalidate this query — avoid duplicate `/pricing` routes.
+ */
+export function DynamicPricingSection() {
   const pricing = usePublicPricingPlans();
   const [cycle, setCycle] = useState<Cycle>('monthly');
 
@@ -34,20 +36,17 @@ export default function PricingPage() {
   const maxDisc = pricing.data?.maxAnnualDiscountPercent ?? 0;
 
   return (
-    <div className="bg-white">
-      <Navbar />
-
-      <section className="relative overflow-hidden">
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-radial-fade"
-          aria-hidden
-        />
-        <div className="container relative pb-12 pt-14 md:pb-20 md:pt-20">
+    <div id="pricing" className="scroll-mt-24">
+      <section className="relative overflow-hidden section bg-ink-50/40">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-radial-fade opacity-60" aria-hidden />
+        <div className="container relative">
           <div className="mx-auto max-w-2xl text-center">
             <span className="eyebrow">Pricing</span>
-            <h1 className="h-display mt-4 text-balance">Simple, fair, predictable.</h1>
+            <h2 className="h-display mt-4 text-balance text-3xl md:text-5xl">
+              Simple, fair, predictable.
+            </h2>
             <p className="mx-auto mt-4 max-w-xl text-pretty text-ink-600">
-              Pay only for active members. Cancel anytime. No &quot;contact us to upgrade&quot; games.
+              Plans below sync directly from your product catalog — updates from admin billing appear here automatically.
             </p>
           </div>
 
@@ -87,38 +86,45 @@ export default function PricingPage() {
                 </div>
               ))}
             {!pricing.isLoading &&
-              plans.map((p) => <PricingCard key={p.id} plan={p} cycle={cycle} />)}
+              [...plans].sort((a, b) => a.sortOrder - b.sortOrder).map((p) => (
+                <PricingPlanCard key={p.id} plan={p} cycle={cycle} />
+              ))}
             {!pricing.isLoading && plans.length === 0 && !pricing.isError && (
               <p className="col-span-full text-center text-sm text-ink-600">
-                No active plans right now. Check back soon.
+                No active plans yet. Create plans in Billing → Plans.
               </p>
             )}
           </div>
+
+          <p className="mt-8 text-center text-xs text-ink-500">
+            Prices in {pricing.data?.currency ?? 'USD'}.
+            {maxDisc > 0 ? ` Annual billing saves up to ${maxDisc}% on eligible paid plans.` : ''} Need a custom plan?{' '}
+            <a href="mailto:sales@example.com" className="text-brand-700 hover:underline">
+              Talk to sales
+            </a>
+            .
+          </p>
         </div>
       </section>
 
-      <section className="section bg-ink-50/40">
+      <section className="section bg-white">
         <div className="container">
           <div className="mx-auto max-w-2xl text-center">
             <span className="eyebrow">Compare plans</span>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
-              Every detail, side by side.
-            </h2>
+            <h3 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">Every detail, side by side.</h3>
           </div>
 
-          <div className="mt-10 overflow-x-auto rounded-2xl border border-ink-200 bg-white">
+          <div className="mt-10 overflow-x-auto rounded-2xl border border-ink-200 bg-white shadow-soft">
             <CompareTable plans={plans} loading={pricing.isLoading} />
           </div>
         </div>
       </section>
 
-      <section className="section">
+      <section className="section bg-ink-50/40">
         <div className="container max-w-3xl">
           <div className="text-center">
             <span className="eyebrow">FAQ</span>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
-              Common questions
-            </h2>
+            <h3 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">Common questions</h3>
           </div>
           <div className="mt-10 divide-y divide-ink-200 rounded-2xl border border-ink-200 bg-white">
             {FAQ.map((f, i) => (
@@ -130,13 +136,7 @@ export default function PricingPage() {
                 <summary className="flex cursor-pointer items-center justify-between gap-4">
                   <span className="font-medium text-ink-900">{f.q}</span>
                   <span className="grid h-7 w-7 place-items-center rounded-full bg-ink-100 text-ink-700 transition group-open:rotate-45">
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M12 5v14M5 12h14" strokeLinecap="round" />
                     </svg>
                   </span>
@@ -149,19 +149,9 @@ export default function PricingPage() {
             <Link to="/register" className="btn-brand btn-lg">
               Start free →
             </Link>
-            <p className="mt-3 text-xs text-ink-500">
-              Prices in USD.
-              {maxDisc > 0 ? ` Annual billing saves up to ${maxDisc}% on eligible paid plans.` : ''} Need a
-              custom plan?{' '}
-              <a href="mailto:sales@example.com" className="text-brand-700 hover:underline">
-                Talk to sales
-              </a>
-            </p>
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }
@@ -198,7 +188,7 @@ function CycleToggle({
   );
 }
 
-function PricingCard({ plan, cycle }: { plan: PublicPricingPlan; cycle: Cycle }) {
+function PricingPlanCard({ plan, cycle }: { plan: PublicPricingPlan; cycle: Cycle }) {
   const isHi = plan.isHighlighted;
   const { pricing } = plan;
 
@@ -238,13 +228,11 @@ function PricingCard({ plan, cycle }: { plan: PublicPricingPlan; cycle: Cycle })
       )}
       <h3 className="text-lg font-semibold tracking-tight">{plan.displayName}</h3>
       <p className="mt-1 text-sm text-ink-600">{plan.marketingDescription}</p>
-      {pricing.model === 'per_seat' &&
-        cycle === 'annual' &&
-        pricing.annualDiscountPercent > 0 && (
-          <span className="mt-2 inline-flex w-fit rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-800 ring-1 ring-sky-100">
-            Save {pricing.annualDiscountPercent}% annually
-          </span>
-        )}
+      {pricing.model === 'per_seat' && cycle === 'annual' && pricing.annualDiscountPercent > 0 && (
+        <span className="mt-2 inline-flex w-fit rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-800 ring-1 ring-sky-100">
+          Save {pricing.annualDiscountPercent}% annually
+        </span>
+      )}
       <div className="mt-5 flex flex-wrap items-baseline gap-2">
         <span className="text-4xl font-bold tracking-tight">{primaryPrice}</span>
         {period ? <span className="text-sm text-ink-500">/ {period}</span> : null}
@@ -267,10 +255,7 @@ function PricingCard({ plan, cycle }: { plan: PublicPricingPlan; cycle: Cycle })
           {plan.cta.label}
         </Link>
       ) : (
-        <a
-          href={href}
-          className={`${isHi ? 'btn-brand' : 'btn-secondary'} mt-7 flex w-full justify-center`}
-        >
+        <a href={href} className={`${isHi ? 'btn-brand' : 'btn-secondary'} mt-7 flex w-full justify-center`}>
           {plan.cta.label}
         </a>
       )}
@@ -309,6 +294,8 @@ function CompareTable({
     return plan.features.auditLog;
   }
 
+  const sorted = [...plans].sort((a, b) => a.sortOrder - b.sortOrder);
+
   if (loading) {
     return (
       <div className="p-8">
@@ -317,10 +304,8 @@ function CompareTable({
     );
   }
 
-  if (plans.length === 0) {
-    return (
-      <div className="p-8 text-center text-sm text-ink-500">Nothing to compare yet.</div>
-    );
+  if (sorted.length === 0) {
+    return <div className="p-8 text-center text-sm text-ink-500">Nothing to compare yet.</div>;
   }
 
   return (
@@ -328,11 +313,8 @@ function CompareTable({
       <thead className="bg-ink-50/70 text-xs uppercase tracking-wider text-ink-500">
         <tr>
           <th className="px-5 py-3 font-semibold">Feature</th>
-          {plans.map((p) => (
-            <th
-              key={p.id}
-              className={`px-5 py-3 font-semibold ${p.isHighlighted ? 'text-brand-700' : ''}`}
-            >
+          {sorted.map((p) => (
+            <th key={p.id} className={`px-5 py-3 font-semibold ${p.isHighlighted ? 'text-brand-700' : ''}`}>
               {p.displayName}
             </th>
           ))}
@@ -342,13 +324,10 @@ function CompareTable({
         {defs.map((row) => (
           <tr key={row.label} className="border-t border-ink-200">
             <td className="px-5 py-3 font-medium text-ink-800">{row.label}</td>
-            {plans.map((p) => {
+            {sorted.map((p) => {
               const v = cell(p, row.type);
               return (
-                <td
-                  key={p.id}
-                  className={`px-5 py-3 ${p.isHighlighted ? 'bg-brand-50/40' : ''}`}
-                >
+                <td key={p.id} className={`px-5 py-3 ${p.isHighlighted ? 'bg-brand-50/40' : ''}`}>
                   {typeof v === 'boolean' ? <CompareBoolCell value={v} /> : v}
                 </td>
               );

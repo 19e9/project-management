@@ -7,7 +7,7 @@ const cols = [
     links: [
       { label: 'Features', to: '/#features' },
       { label: 'How it works', to: '/#how' },
-      { label: 'Pricing', to: '/pricing' },
+      { label: 'Pricing', to: '/#pricing' },
       { label: 'Roadmap', to: '#' },
       { label: 'Changelog', to: '#' },
     ],
@@ -64,7 +64,7 @@ export function Footer() {
                 Start free
               </Link>
               <Link
-                to="/pricing"
+                to="/#pricing"
                 className="btn px-4 py-2 text-sm text-ink-200 hover:text-white"
               >
                 See pricing →
