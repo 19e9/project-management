@@ -2,13 +2,14 @@ import { Link } from 'react-router-dom';
 import { Logo } from '../ui/Logo';
 import { usePublicSiteFooter } from '../../features/cms/hooks';
 import { MarketingLink } from './MarketingLink';
+import { cn } from '../../lib/cn';
 
-export function Footer() {
+export function Footer({ className }: { className?: string }) {
   const q = usePublicSiteFooter();
   const cols = q.data?.columns ?? [];
 
   return (
-    <footer className="relative overflow-hidden bg-ink-950 text-ink-300">
+    <footer className={cn('relative overflow-hidden bg-ink-950 text-ink-300', className)}>
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-500/60 to-transparent"
         aria-hidden

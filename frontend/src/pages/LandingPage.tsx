@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Navbar } from '../components/marketing/Navbar';
-import { Footer } from '../components/marketing/Footer';
+import { MarketingPageShell } from '../components/marketing/MarketingPageShell';
 import { DynamicPricingSection } from '../components/marketing/DynamicPricingSection';
 import { HeroMockup } from '../components/marketing/HeroMockup';
 import {
@@ -18,8 +17,7 @@ import {
 
 export default function LandingPage() {
   return (
-    <div className="bg-white">
-      <Navbar />
+    <MarketingPageShell>
       <Hero />
       <LogoCloud />
       <Features />
@@ -28,8 +26,7 @@ export default function LandingPage() {
       <DynamicPricingSection />
       <SocialProof />
       <FinalCta />
-      <Footer />
-    </div>
+    </MarketingPageShell>
   );
 }
 
