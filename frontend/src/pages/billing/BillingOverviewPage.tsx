@@ -90,7 +90,7 @@ export default function BillingOverviewPage() {
 
   return (
     <div className="space-y-10 animate-fade-in-up">
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,360px)]">
         <div className="rounded-3xl bg-gradient-to-br from-white via-white to-ink-50/90 p-8 shadow-[0_24px_80px_-32px_rgba(15,23,42,0.35)] ring-1 ring-ink-900/[0.06] dark:from-ink-900 dark:via-ink-950 dark:to-ink-950 dark:ring-white/[0.08]">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -174,7 +174,7 @@ export default function BillingOverviewPage() {
           </div>
         </div>
 
-        <aside className="flex flex-col justify-between rounded-3xl bg-ink-900 p-6 text-white shadow-xl dark:bg-black dark:ring-1 dark:ring-white/10">
+        <aside className="flex min-w-0 flex-col justify-between overflow-hidden rounded-3xl bg-ink-900 p-6 text-white shadow-xl dark:bg-black dark:ring-1 dark:ring-white/10">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
               Subscription health
@@ -182,13 +182,14 @@ export default function BillingOverviewPage() {
             <p className="mt-3 text-3xl font-bold tabular-nums">{totalWs || '—'}</p>
             <p className="text-sm text-white/70">Workspaces on platform</p>
           </div>
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 w-full min-w-0">
             {billing.isLoading ? (
-              <div className="skeleton h-40 w-40 rounded-full bg-white/10" />
+              <div className="mx-auto aspect-square w-full max-w-[220px] rounded-full bg-white/10 skeleton" />
             ) : (
               <DonutChart
-                size={200}
-                thickness={22}
+                legendPlacement="below"
+                tone="dark"
+                thickness={20}
                 centerLabel={totalWs ? String(totalWs) : '0'}
                 centerSubLabel="mix"
                 slices={[
