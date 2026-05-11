@@ -66,6 +66,9 @@ export default function BillingPlansPage() {
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-ink-600 dark:text-ink-400">
             Cards mirror how buyers experience pricing; edits stay modular — no endless scroll forms.
+            Only <strong className="font-semibold text-ink-800 dark:text-ink-200">live</strong>{' '}
+            plans appear on the public landing pricing section; <strong className="font-semibold text-ink-800 dark:text-ink-200">off</strong>{' '}
+            plans are hidden until activated.
           </p>
         </div>
         <button
@@ -173,13 +176,25 @@ export default function BillingPlansPage() {
                   >
                     Duplicate
                   </button>
-                  <button
-                    type="button"
-                    className="rounded-full px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
-                    onClick={() => void deactivatePlan.mutateAsync(p.id)}
-                  >
-                    Deactivate
-                  </button>
+                  {p.isActive ? (
+                    <button
+                      type="button"
+                      className="rounded-full px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                      onClick={() => void deactivatePlan.mutateAsync(p.id)}
+                    >
+                      Deactivate
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                      onClick={() =>
+                        void updatePlan.mutateAsync({ id: p.id, patch: { isActive: true } })
+                      }
+                    >
+                      Activate
+                    </button>
+                  )}
                 </div>
               </article>
             );
@@ -564,6 +579,19 @@ function EditPlanModal({
             value={Number(field('sortOrder'))}
             onChange={(e) => setPatch((p) => ({ ...p, sortOrder: Number(e.target.value) }))}
           />
+        </label>
+        <label className="flex items-center gap-2 text-xs sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={Boolean(field('isActive'))}
+            onChange={(e) => setPatch((p) => ({ ...p, isActive: e.target.checked }))}
+          />
+          <span>
+            <strong className="font-semibold text-ink-800">Live on marketing site</strong>
+            <span className="block text-[11px] font-normal text-ink-500">
+              When off, this plan is hidden from the public pricing page.
+            </span>
+          </span>
         </label>
         <div className="flex flex-wrap gap-4 sm:col-span-2">
           {(['ganttEnabled', 'cpmEnabled', 'auditLogEnabled', 'isHighlighted', 'useCustomPricing'] as const).map(

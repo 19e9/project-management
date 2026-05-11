@@ -48,6 +48,9 @@ export function usePublicPricingPlans() {
       return data;
     },
     staleTime: 0,
+    gcTime: 5 * 60_000,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }

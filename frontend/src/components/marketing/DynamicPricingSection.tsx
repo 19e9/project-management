@@ -47,6 +47,8 @@ export function DynamicPricingSection() {
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-pretty text-ink-600">
               Plans below sync directly from your product catalog — updates from admin billing appear here automatically.
+              Only <strong className="font-semibold text-ink-800">active</strong> plans are shown; sort follows{' '}
+              <strong className="font-semibold text-ink-800">sort order</strong> from Billing → Plans.
             </p>
           </div>
 
@@ -223,7 +225,7 @@ function PricingPlanCard({ plan, cycle }: { plan: PublicPricingPlan; cycle: Cycl
       {isHi && (
         <span className="absolute -top-3 left-6 inline-flex items-center gap-1 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white shadow-lift">
           <IconBolt className="h-3.5 w-3.5" />
-          Most popular
+          Featured
         </span>
       )}
       <h3 className="text-lg font-semibold tracking-tight">{plan.displayName}</h3>
