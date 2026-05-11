@@ -167,6 +167,11 @@ export class AdminController {
     return this.billingService.deactivateSubscriptionPlan(id);
   }
 
+  @Delete('billing/plans/:id')
+  deleteSubscriptionPlan(@Param('id') id: string) {
+    return this.billingService.deleteSubscriptionPlan(id);
+  }
+
   @Post('billing/workspaces/:id/enterprise-contract')
   enterpriseContract(
     @Param('id') id: string,

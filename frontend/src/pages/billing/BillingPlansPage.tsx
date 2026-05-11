@@ -5,6 +5,7 @@ import {
 import {
   useCreateSubscriptionPlan,
   useDeactivateSubscriptionPlan,
+  useDeleteSubscriptionPlan,
   useUpdateSubscriptionPlan,
   type AdminSubscriptionPlanRow,
 } from '../../features/admin/hooks';
@@ -17,6 +18,22 @@ type DraftPlan = Partial<AdminSubscriptionPlanRow> & {
   displayName: string;
   tier: 'free' | 'pro' | 'enterprise';
 };
+
+/** Must match backend `PROTECTED_SUBSCRIPTION_PLAN_KEYS` in billing.service.ts */
+const PROTECTED_PLAN_KEYS = new Set(['free-default', 'pro-default', 'enterprise-default']);
+
+function planDeleteBlockedReason(
+  plan: AdminSubscriptionPlanRow,
+  attachedWorkspaces: number,
+): string | null {
+  if (PROTECTED_PLAN_KEYS.has(plan.key)) {
+    return 'Built-in default plans cannot be deleted.';
+  }
+  if (attachedWorkspaces > 0) {
+    return `This plan is assigned to ${attachedWorkspaces} workspace(s). Reassign workspaces before deleting.`;
+  }
+  return null;
+}
 
 function PlanStat({ label, value }: { label: string; value: string }) {
   return (
@@ -34,9 +51,11 @@ export default function BillingPlansPage() {
   const createPlan = useCreateSubscriptionPlan();
   const updatePlan = useUpdateSubscriptionPlan();
   const deactivatePlan = useDeactivateSubscriptionPlan();
+  const deletePlan = useDeleteSubscriptionPlan();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editPlan, setEditPlan] = useState<AdminSubscriptionPlanRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminSubscriptionPlanRow | null>(null);
 
   const planEconomics = useMemo(() => {
     const map = new Map<
@@ -88,6 +107,7 @@ export default function BillingPlansPage() {
         {!billing.isLoading &&
           (billing.data?.plans ?? []).map((p) => {
             const econ = planEconomics.get(p.key) ?? { subs: 0, mrr: 0 };
+            const deleteBlocked = planDeleteBlockedReason(p, econ.subs);
             const conv =
               totalPaidWs > 0 ? ((econ.subs / totalPaidWs) * 100).toFixed(1) : '—';
             return (
@@ -169,12 +189,12 @@ export default function BillingPlansPage() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-full border border-ink-200 px-3 py-1.5 text-xs font-semibold hover:bg-ink-50 dark:border-white/10 dark:hover:bg-white/5"
-                    onClick={() =>
-                      alert('Duplicate creates a new draft plan via API in a future iteration.')
-                    }
+                    disabled={Boolean(deleteBlocked)}
+                    title={deleteBlocked ?? undefined}
+                    className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                    onClick={() => setDeleteTarget(p)}
                   >
-                    Duplicate
+                    Delete
                   </button>
                   {p.isActive ? (
                     <button
@@ -221,6 +241,42 @@ export default function BillingPlansPage() {
             setEditPlan(null);
           }}
         />
+      )}
+
+      {deleteTarget && (
+        <Modal
+          open
+          onClose={() => setDeleteTarget(null)}
+          title="Delete plan"
+          footer={
+            <>
+              <Button variant="ghost" type="button" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                type="button"
+                loading={deletePlan.isPending}
+                onClick={() =>
+                  void (async () => {
+                    await deletePlan.mutateAsync(deleteTarget.id);
+                    setDeleteTarget(null);
+                  })()
+                }
+              >
+                Delete plan
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-ink-600 dark:text-ink-400">
+            Permanently delete{' '}
+            <strong className="font-semibold text-ink-900 dark:text-white">
+              {deleteTarget.displayName}
+            </strong>{' '}
+            (<span className="font-mono text-xs">{deleteTarget.key}</span>)? This cannot be undone.
+          </p>
+        </Modal>
       )}
     </div>
   );
