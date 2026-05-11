@@ -17,6 +17,8 @@ import {
   NavShortcutDto,
 } from './dto/cms.dto';
 
+import { ensureSiteMediaDir } from './cms-upload.storage';
+
 const RESERVED_SLUGS = new Set([
   '',
   'api',
@@ -73,6 +75,7 @@ export class CmsService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    ensureSiteMediaDir();
     await this.ensureDefaultFooter();
   }
 

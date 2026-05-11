@@ -9,10 +9,16 @@ import {
   Put,
   Query,
   Res,
+  UploadedFile,
+  BadRequestException,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { randomUUID } from 'crypto';
+import { diskStorage } from 'multer';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { PlatformAdminGuard } from '../common/guards/platform-admin.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
@@ -38,6 +44,11 @@ import {
   PatchSitePageDto,
   ReplaceSiteFooterDto,
 } from '../cms/dto/cms.dto';
+import {
+  ALLOWED_SITE_MEDIA_MIMES,
+  SITE_MEDIA_DIR,
+  extFromMime,
+} from '../cms/cms-upload.storage';
 
 @ApiBearerAuth()
 @ApiTags('admin')
@@ -216,6 +227,33 @@ export class AdminController {
   @Get('insights')
   insights(): Promise<AdminInsights> {
     return this.svc.insights();
+  }
+
+  @Post('cms/site-media')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: SITE_MEDIA_DIR,
+        filename: (_req, file, cb) => {
+          const ext = extFromMime(file.mimetype);
+          if (!ext) {
+            cb(new Error('Unsupported mime'), '');
+            return;
+          }
+          cb(null, `${randomUUID()}${ext}`);
+        },
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        cb(null, ALLOWED_SITE_MEDIA_MIMES.has(file.mimetype));
+      },
+    }),
+  )
+  uploadSiteMedia(@UploadedFile() file: Express.Multer.File) {
+    if (!file?.filename) {
+      throw new BadRequestException('Dosya yüklenemedi veya türü geçersiz.');
+    }
+    return { filename: file.filename };
   }
 
   @Get('site-pages')

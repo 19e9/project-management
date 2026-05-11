@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
 type Variant = 'primary' | 'ghost' | 'danger';
@@ -6,11 +6,16 @@ type Variant = 'primary' | 'ghost' | 'danger';
 export function Button({
   variant = 'primary',
   loading,
+  leftIcon,
   className,
   children,
   disabled,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; loading?: boolean }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: Variant;
+  loading?: boolean;
+  leftIcon?: ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -30,7 +35,10 @@ export function Button({
           {children}
         </span>
       ) : (
-        children
+        <>
+          {leftIcon ? <span className="inline-flex shrink-0">{leftIcon}</span> : null}
+          {children}
+        </>
       )}
     </button>
   );

@@ -6,6 +6,7 @@ import {
   isCmsReservedSlug,
   usePublicSitePage,
 } from '../features/cms/hooks';
+import { CMS_BODY_HTML_CLASS } from '../features/cms/cmsHtmlClasses';
 
 export default function PublicSitePage() {
   const { slug = '' } = useParams<{ slug: string }>();
@@ -55,10 +56,7 @@ export default function PublicSitePage() {
       <article className="border-b border-ink-100">
         <div className="container max-w-3xl py-14 md:py-20">
           <h1 className="h-display text-3xl text-ink-900 md:text-4xl">{title}</h1>
-          <div
-            className="cms-body mt-8 space-y-4 text-base leading-relaxed text-ink-700 [&_a]:text-brand-700 [&_a]:underline [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-ink-900 [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
-            dangerouslySetInnerHTML={{ __html: body }}
-          />
+          <div className={CMS_BODY_HTML_CLASS} dangerouslySetInnerHTML={{ __html: body }} />
         </div>
       </article>
       <Footer />

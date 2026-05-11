@@ -10,6 +10,7 @@ import {
   useAdminSiteFooter,
   useAdminSitePages,
 } from '../../features/cms/hooks';
+import { SitePageRichEditor } from '../../components/admin/cms/SitePageRichEditor';
 
 function cloneFooter(src: AdminSiteFooterResponse): AdminSiteFooterResponse {
   return {
@@ -43,6 +44,8 @@ export function MarketingCmsSections() {
     | null
   >(null);
 
+  const [editorSession, setEditorSession] = useState(0);
+
   const busy =
     createPage.isPending ||
     patchPage.isPending ||
@@ -58,8 +61,8 @@ export function MarketingCmsSections() {
           <h2 className="text-base font-semibold text-ink-900">Landing sayfaları</h2>
           <p className="mt-0.5 text-xs text-ink-500">
             Slug tek segment olmalı (ör. <code className="rounded bg-ink-100 px-1">about</code> →{' '}
-            <code className="rounded bg-ink-100 px-1">/about</code>). İçerik HTML olarak
-            saklanır.
+            <code className="rounded bg-ink-100 px-1">/about</code>). İçerik TipTap ile üretilir ve
+            HTML olarak saklanır.
           </p>
         </header>
         <div className="overflow-x-auto px-2 py-3 sm:px-5">
@@ -68,7 +71,10 @@ export function MarketingCmsSections() {
               type="button"
               className="btn-brand btn-sm"
               disabled={busy}
-              onClick={() => setModal({ mode: 'create' })}
+              onClick={() => {
+                setEditorSession((s) => s + 1);
+                setModal({ mode: 'create' });
+              }}
             >
               Yeni sayfa
             </button>
@@ -112,7 +118,10 @@ export function MarketingCmsSections() {
                       type="button"
                       className="btn-ghost btn-sm mr-1"
                       disabled={busy}
-                      onClick={() => setModal({ mode: 'edit', row })}
+                      onClick={() => {
+                        setEditorSession((s) => s + 1);
+                        setModal({ mode: 'edit', row });
+                      }}
                     >
                       Düzenle
                     </button>
@@ -343,6 +352,7 @@ export function MarketingCmsSections() {
 
       {modal?.mode === 'create' && (
         <PageModal
+          editorSession={editorSession}
           title="Yeni sayfa"
           busy={busy}
           initial={{
@@ -362,6 +372,7 @@ export function MarketingCmsSections() {
       )}
       {modal?.mode === 'edit' && (
         <PageModal
+          editorSession={editorSession}
           title="Sayfayı düzenle"
           busy={busy}
           initial={{
@@ -521,12 +532,14 @@ function FooterColumnEditor({
 }
 
 function PageModal({
+  editorSession,
   title,
   initial,
   busy,
   onClose,
   onSave,
 }: {
+  editorSession: number;
   title: string;
   initial: {
     slug: string;
@@ -573,7 +586,7 @@ function PageModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div
-        className="card max-h-[90vh] w-full max-w-2xl overflow-y-auto p-5 shadow-xl"
+        className="card max-h-[90vh] w-full max-w-5xl overflow-y-auto p-5 shadow-xl"
         role="dialog"
         aria-labelledby="cms-page-title"
       >
@@ -600,15 +613,10 @@ function PageModal({
               onChange={(e) => setPageTitle(e.target.value)}
             />
           </label>
-          <label className="grid gap-1 text-xs text-ink-500">
-            İçerik (HTML)
-            <textarea
-              className="input min-h-[200px] font-mono text-xs leading-relaxed"
-              value={body}
-              disabled={busy}
-              onChange={(e) => setBody(e.target.value)}
-            />
-          </label>
+          <div className="grid gap-1">
+            <span className="text-xs text-ink-500">Sayfa içeriği</span>
+            <SitePageRichEditor key={editorSession} value={body} onChange={setBody} disabled={busy} />
+          </div>
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 text-sm text-ink-700">
               <input
