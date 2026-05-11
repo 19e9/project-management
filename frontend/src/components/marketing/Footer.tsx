@@ -1,50 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Logo } from '../ui/Logo';
-
-const cols = [
-  {
-    title: 'Product',
-    links: [
-      { label: 'Features', to: '/#features' },
-      { label: 'How it works', to: '/#how' },
-      { label: 'Pricing', to: '/#pricing' },
-      { label: 'Roadmap', to: '#' },
-      { label: 'Changelog', to: '#' },
-    ],
-  },
-  {
-    title: 'Company',
-    links: [
-      { label: 'About', to: '#' },
-      { label: 'Customers', to: '/#proof' },
-      { label: 'Careers', to: '#' },
-      { label: 'Contact', to: '#' },
-      { label: 'Press kit', to: '#' },
-    ],
-  },
-  {
-    title: 'Resources',
-    links: [
-      { label: 'Documentation', to: '#' },
-      { label: 'API reference', to: '#' },
-      { label: 'Templates', to: '#' },
-      { label: 'Guides', to: '#' },
-      { label: 'Status', to: '#' },
-    ],
-  },
-  {
-    title: 'Legal',
-    links: [
-      { label: 'Privacy', to: '#' },
-      { label: 'Terms', to: '#' },
-      { label: 'Security', to: '#' },
-      { label: 'DPA', to: '#' },
-      { label: 'Cookies', to: '#' },
-    ],
-  },
-];
+import { usePublicSiteFooter } from '../../features/cms/hooks';
+import { MarketingLink } from './MarketingLink';
 
 export function Footer() {
+  const q = usePublicSiteFooter();
+  const cols = q.data?.columns ?? [];
+
   return (
     <footer className="relative overflow-hidden bg-ink-950 text-ink-300">
       <div
@@ -55,43 +17,69 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-4">
             <Logo dark />
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink-400">
-              Plan, schedule and ship faster. PlanForge brings Gantt, WBS and the Critical Path
-              Method into one calm, modern workspace.
-            </p>
-            <div className="mt-6 flex items-center gap-3">
-              <Link to="/register" className="btn-brand">
-                Start free
-              </Link>
-              <Link
-                to="/#pricing"
-                className="btn px-4 py-2 text-sm text-ink-200 hover:text-white"
-              >
-                See pricing →
-              </Link>
-            </div>
+            {q.isLoading ? (
+              <>
+                <div className="mt-4 skeleton h-4 w-full max-w-sm bg-white/10" />
+                <div className="mt-2 skeleton h-4 w-full max-w-xs bg-white/10" />
+                <div className="mt-6 flex gap-3">
+                  <div className="skeleton h-10 w-28 rounded-lg bg-white/10" />
+                  <div className="skeleton h-10 w-32 rounded-lg bg-white/10" />
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink-400">
+                  {q.data?.footerTagline ?? ''}
+                </p>
+                <div className="mt-6 flex items-center gap-3">
+                  <Link to="/register" className="btn-brand">
+                    Start free
+                  </Link>
+                  <MarketingLink
+                    href={q.data?.secondaryCtaHref ?? '#'}
+                    className="btn px-4 py-2 text-sm text-ink-200 hover:text-white"
+                  >
+                    {q.data?.secondaryCtaLabel ?? ''}
+                  </MarketingLink>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-8 md:col-span-8 md:grid-cols-4">
-            {cols.map((c) => (
-              <div key={c.title}>
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-                  {c.title}
-                </h4>
-                <ul className="mt-4 space-y-2.5 text-sm">
-                  {c.links.map((l) => (
-                    <li key={l.label}>
-                      <Link
-                        to={l.to}
-                        className="text-ink-300 transition hover:text-white"
-                      >
-                        {l.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {q.isLoading &&
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i}>
+                  <div className="skeleton h-3 w-24 bg-white/10" />
+                  <ul className="mt-4 space-y-2.5">
+                    {Array.from({ length: 4 }).map((__, j) => (
+                      <li key={j}>
+                        <div className="skeleton h-4 w-full max-w-[140px] bg-white/10" />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            {!q.isLoading &&
+              cols.map((c, ci) => (
+                <div key={`${ci}-${c.title}`}>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-500">
+                    {c.title}
+                  </h4>
+                  <ul className="mt-4 space-y-2.5 text-sm">
+                    {c.links.map((l) => (
+                      <li key={`${c.title}:${l.label}:${l.href}`}>
+                        <MarketingLink
+                          href={l.href}
+                          className="text-ink-300 transition hover:text-white"
+                        >
+                          {l.label}
+                        </MarketingLink>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
           </div>
         </div>
 

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Res,
   UseGuards,
@@ -31,6 +32,12 @@ import {
   StatusDistribution,
 } from './admin.service';
 import { AdminResetPasswordDto, PatchAdminUserDto } from './dto/admin-user.dto';
+import { CmsService } from '../cms/cms.service';
+import {
+  CreateSitePageDto,
+  PatchSitePageDto,
+  ReplaceSiteFooterDto,
+} from '../cms/dto/cms.dto';
 
 @ApiBearerAuth()
 @ApiTags('admin')
@@ -40,6 +47,7 @@ export class AdminController {
   constructor(
     private readonly svc: AdminService,
     private readonly billingService: BillingService,
+    private readonly cms: CmsService,
   ) {}
 
   @Get('stats/overview')
@@ -208,5 +216,35 @@ export class AdminController {
   @Get('insights')
   insights(): Promise<AdminInsights> {
     return this.svc.insights();
+  }
+
+  @Get('site-pages')
+  sitePagesAdminList() {
+    return this.cms.adminListPages();
+  }
+
+  @Post('site-pages')
+  sitePagesAdminCreate(@Body() dto: CreateSitePageDto) {
+    return this.cms.adminCreatePage(dto);
+  }
+
+  @Patch('site-pages/:id')
+  sitePagesAdminPatch(@Param('id') id: string, @Body() dto: PatchSitePageDto) {
+    return this.cms.adminPatchPage(id, dto);
+  }
+
+  @Delete('site-pages/:id')
+  sitePagesAdminDelete(@Param('id') id: string) {
+    return this.cms.adminDeletePage(id);
+  }
+
+  @Get('site-footer')
+  siteFooterAdminGet() {
+    return this.cms.adminGetFooter();
+  }
+
+  @Put('site-footer')
+  siteFooterAdminPut(@Body() dto: ReplaceSiteFooterDto) {
+    return this.cms.adminReplaceFooter(dto);
   }
 }

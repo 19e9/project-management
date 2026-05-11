@@ -10,11 +10,14 @@ import { ResourcesModule } from '../resources/resources.module';
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
 
+import { CmsModule } from '../cms/cms.module';
+
 @Module({
   imports: [
     MongooseModule,
     AuthModule,
     BillingModule,
+    CmsModule,
     UsersModule,
     WorkspacesModule,
     ProjectsModule,

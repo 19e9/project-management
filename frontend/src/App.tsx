@@ -25,6 +25,7 @@ import BillingAnalyticsPage from './pages/billing/BillingAnalyticsPage';
 import BillingSettingsPage from './pages/billing/BillingSettingsPage';
 import UserBillingPage from './pages/billing/UserBillingPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import PublicSitePage from './pages/PublicSitePage';
 
 function FullPageLoader() {
   return (
@@ -190,6 +191,8 @@ export default function App() {
           }
         />
       </Route>
+
+      <Route path="/:slug" element={<PublicSitePage />} />
 
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
