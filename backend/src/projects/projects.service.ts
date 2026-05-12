@@ -57,7 +57,7 @@ export class ProjectsService {
       workspaceId: new Types.ObjectId(workspaceId),
       status: 'active',
     };
-    if (!this.canSeeWorkspaceWide(actor)) {
+    if (this.shouldRestrictToAssignedProjects(actor)) {
       projectFilter._id = {
         $in: await this.visibleProjectIdsForActor(workspaceId, actor),
       };
@@ -81,7 +81,7 @@ export class ProjectsService {
       })
       .lean();
     if (!p) throw new NotFoundException({ code: 'PROJECT_NOT_FOUND' });
-    if (!this.canSeeWorkspaceWide(actor)) {
+    if (this.shouldRestrictToAssignedProjects(actor)) {
       const hasAccess = await this.actorCanSeeProject(workspaceId, projectId, actor);
       if (!hasAccess) throw new NotFoundException({ code: 'PROJECT_NOT_FOUND' });
     }
@@ -110,6 +110,10 @@ export class ProjectsService {
 
   private canSeeWorkspaceWide(actor?: WorkspaceActor) {
     return actor?.platformOverride || actor?.workspaceRole === 'owner' || actor?.workspaceRole === 'admin';
+  }
+
+  private shouldRestrictToAssignedProjects(actor?: WorkspaceActor) {
+    return !this.canSeeWorkspaceWide(actor) && actor?.workspaceRole === 'member';
   }
 
   private async visibleProjectIdsForActor(workspaceId: string, actor?: WorkspaceActor) {
