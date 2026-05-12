@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api, tokens } from '../../lib/api-client';
 
 interface AuthUser {
@@ -23,8 +24,10 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   async function loadMe() {
+    setLoading(true);
     try {
       const { data } = await api.get('/me');
       setUser(data);
@@ -49,11 +52,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       loading,
       async signIn(email, password) {
+        queryClient.clear();
+        setUser(null);
+        setLoading(true);
         const { data } = await api.post('/auth/login', { email, password });
         tokens.set(data.accessToken, data.refreshToken);
         await loadMe();
       },
       async signUp(email, password, displayName) {
+        queryClient.clear();
+        setUser(null);
+        setLoading(true);
         const { data } = await api.post('/auth/register', { email, password, displayName });
         tokens.set(data.accessToken, data.refreshToken);
         await loadMe();
@@ -65,14 +74,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           /* ignore */
         }
         tokens.clear();
+        queryClient.clear();
         setUser(null);
+        setLoading(false);
       },
       async ingestTokens(access, refresh) {
+        queryClient.clear();
+        setUser(null);
+        setLoading(true);
         tokens.set(access, refresh);
         await loadMe();
       },
     }),
-    [user, loading],
+    [user, loading, queryClient],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

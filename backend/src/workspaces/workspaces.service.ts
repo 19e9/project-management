@@ -1,6 +1,6 @@
 import {
   BadRequestException,
-  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -22,6 +22,7 @@ import {
   UpdateWorkspaceDto,
   InviteMemberDto,
   UpdateMemberRoleDto,
+  type WorkspaceRole,
 } from './dto/workspace.dto';
 import { BillingService } from '../billing/billing.service';
 
@@ -31,8 +32,18 @@ export interface WorkspaceMemberListItem {
   email: string;
   displayName: string;
   avatarUrl?: string;
-  role: 'owner' | 'member' | 'client';
+  role: WorkspaceRole;
   status: 'invited' | 'active' | 'removed';
+}
+
+interface WorkspaceActor {
+  userId: string;
+  workspaceRole?: WorkspaceRole;
+  platformOverride?: boolean;
+}
+
+function isBillableRole(role: WorkspaceRole) {
+  return role === 'owner' || role === 'admin' || role === 'member';
 }
 
 @Injectable()
@@ -81,7 +92,7 @@ export class WorkspacesService {
       .lean();
     if (!memberships.length) return [];
     const workspaces = await this.workspaces
-      .find({ _id: { $in: memberships.map((m) => m.workspaceId) } })
+      .find({ _id: { $in: memberships.map((m) => m.workspaceId) }, status: 'active' })
       .lean();
     const roleByWs = new Map(
       memberships.map((m) => [String(m.workspaceId), m.role]),
@@ -107,6 +118,14 @@ export class WorkspacesService {
       .lean();
     if (!w) throw new NotFoundException({ code: 'WORKSPACE_NOT_FOUND' });
     return this.shape(w);
+  }
+
+  async archive(workspaceId: string) {
+    const w = await this.workspaces
+      .findByIdAndUpdate(workspaceId, { status: 'suspended' }, { new: true })
+      .lean();
+    if (!w) throw new NotFoundException({ code: 'WORKSPACE_NOT_FOUND' });
+    return { ok: true };
   }
 
   async listMembers(workspaceId: string): Promise<WorkspaceMemberListItem[]> {
@@ -137,7 +156,8 @@ export class WorkspacesService {
     });
   }
 
-  async inviteMember(workspaceId: string, dto: InviteMemberDto) {
+  async inviteMember(workspaceId: string, dto: InviteMemberDto, actor?: WorkspaceActor) {
+    this.assertRoleChangeAllowed(dto.role, actor);
     const ws = await this.workspaces.findById(workspaceId);
     if (!ws) throw new NotFoundException({ code: 'WORKSPACE_NOT_FOUND' });
 
@@ -163,21 +183,20 @@ export class WorkspacesService {
       workspaceId: ws._id,
       userId: user._id,
     });
-    if (exists && exists.status === 'active') {
-      throw new ConflictException({ code: 'ALREADY_MEMBER' });
-    }
-    const billableAfter = dto.role === 'owner' || dto.role === 'member';
+    const billableAfter = isBillableRole(dto.role);
     if (exists) {
-      const prevBillable = exists.role === 'owner' || exists.role === 'member';
+      this.assertRoleChangeAllowed(dto.role, actor, exists.role);
+      const prevBillable = isBillableRole(exists.role);
+      const prevRole = exists.role;
       exists.role = dto.role;
       exists.status = 'active';
       await exists.save();
-      if (prevBillable !== billableAfter) {
+      if (prevBillable !== billableAfter || prevRole !== dto.role) {
         await this.billing.recordSeatEvent({
           workspaceId,
           userId: String(user._id),
           role: dto.role,
-          action: 'role_changed',
+          action: prevRole === dto.role ? 'added' : 'role_changed',
           billableAfter,
         });
       }
@@ -203,17 +222,20 @@ export class WorkspacesService {
     workspaceId: string,
     targetUserId: string,
     dto: UpdateMemberRoleDto,
+    actor?: WorkspaceActor,
   ) {
+    await this.assertPrimaryOwnerCanBeChanged(workspaceId, targetUserId, actor);
     const m = await this.members.findOne({
       workspaceId: new Types.ObjectId(workspaceId),
       userId: new Types.ObjectId(targetUserId),
     });
     if (!m) throw new NotFoundException({ code: 'MEMBER_NOT_FOUND' });
+    this.assertRoleChangeAllowed(dto.role, actor, m.role);
     const oldRole = m.role;
-    const oldBillable = oldRole === 'owner' || oldRole === 'member';
+    const oldBillable = isBillableRole(oldRole);
     m.role = dto.role;
     await m.save();
-    const newBillable = dto.role === 'owner' || dto.role === 'member';
+    const newBillable = isBillableRole(dto.role);
     if (oldBillable !== newBillable || oldRole !== dto.role) {
       await this.billing.recordSeatEvent({
         workspaceId,
@@ -226,14 +248,16 @@ export class WorkspacesService {
     return m.toObject();
   }
 
-  async removeMember(workspaceId: string, targetUserId: string) {
+  async removeMember(workspaceId: string, targetUserId: string, actor?: WorkspaceActor) {
+    await this.assertPrimaryOwnerCanBeChanged(workspaceId, targetUserId, actor);
     const m = await this.members.findOne({
       workspaceId: new Types.ObjectId(workspaceId),
       userId: new Types.ObjectId(targetUserId),
       status: 'active',
     });
     if (!m) throw new NotFoundException({ code: 'MEMBER_NOT_FOUND' });
-    const wasBillable = m.role === 'owner' || m.role === 'member';
+    this.assertRoleChangeAllowed('viewer', actor, m.role);
+    const wasBillable = isBillableRole(m.role);
     const role = m.role;
     m.status = 'removed';
     await m.save();
@@ -247,6 +271,44 @@ export class WorkspacesService {
       });
     }
     return { ok: true };
+  }
+
+  private assertRoleChangeAllowed(
+    nextRole: WorkspaceRole,
+    actor?: WorkspaceActor,
+    currentRole?: WorkspaceRole,
+  ) {
+    if (actor?.platformOverride || actor?.workspaceRole === 'owner') return;
+    if (actor?.workspaceRole !== 'admin') {
+      throw new ForbiddenException({
+        code: 'ROLE_CHANGE_NOT_ALLOWED',
+        message: 'Only workspace owners and admins can manage members.',
+      });
+    }
+    if (nextRole === 'owner' || currentRole === 'owner') {
+      throw new ForbiddenException({
+        code: 'OWNER_ROLE_REQUIRED',
+        message: 'Only workspace owners can grant or change owner access.',
+      });
+    }
+  }
+
+  private async assertPrimaryOwnerCanBeChanged(
+    workspaceId: string,
+    targetUserId: string,
+    actor?: WorkspaceActor,
+  ) {
+    const workspace = await this.workspaces
+      .findById(workspaceId)
+      .select('ownerId')
+      .lean();
+    if (!workspace) throw new NotFoundException({ code: 'WORKSPACE_NOT_FOUND' });
+    if (String(workspace.ownerId) === targetUserId && !actor?.platformOverride) {
+      throw new ForbiddenException({
+        code: 'PRIMARY_OWNER_LOCKED',
+        message: 'The current workspace owner role can only be changed by a platform admin.',
+      });
+    }
   }
 
   private shape(w: any) {

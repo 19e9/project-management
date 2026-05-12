@@ -1,10 +1,12 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { Task, TaskDocument } from '../tasks/schemas/task.schema';
 import { Project, ProjectDocument } from './schemas/project.schema';
 import { CreateProjectDto, UpdateProjectDto } from './dto/project.dto';
 import {
@@ -12,15 +14,23 @@ import {
   WorkspaceDocument,
 } from '../workspaces/schemas/workspace.schema';
 
+interface WorkspaceActor {
+  userId: string;
+  workspaceRole?: 'owner' | 'admin' | 'member' | 'viewer' | 'client';
+  platformOverride?: boolean;
+}
+
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectModel(Project.name) private readonly projects: Model<ProjectDocument>,
+    @InjectModel(Task.name) private readonly tasks: Model<TaskDocument>,
     @InjectModel(Workspace.name)
     private readonly workspaces: Model<WorkspaceDocument>,
   ) {}
 
-  async create(workspaceId: string, dto: CreateProjectDto) {
+  async create(workspaceId: string, dto: CreateProjectDto, actor?: WorkspaceActor) {
+    this.assertOwner(actor);
     const ws = await this.workspaces.findById(workspaceId);
     if (!ws) throw new NotFoundException({ code: 'WORKSPACE_NOT_FOUND' });
 
@@ -42,15 +52,19 @@ export class ProjectsService {
     return this.shape(created.toObject());
   }
 
-  async list(workspaceId: string) {
+  async list(workspaceId: string, actor?: WorkspaceActor) {
+    const projectFilter: any = {
+      workspaceId: new Types.ObjectId(workspaceId),
+      status: 'active',
+    };
     const items = await this.projects
-      .find({ workspaceId: new Types.ObjectId(workspaceId) })
+      .find(projectFilter)
       .sort({ createdAt: -1 })
       .lean();
     return items.map((i) => this.shape(i));
   }
 
-  async getOrFail(workspaceId: string, projectId: string) {
+  async getOrFail(workspaceId: string, projectId: string, actor?: WorkspaceActor) {
     if (!Types.ObjectId.isValid(projectId)) {
       throw new NotFoundException({ code: 'PROJECT_NOT_FOUND' });
     }
@@ -58,13 +72,15 @@ export class ProjectsService {
       .findOne({
         _id: new Types.ObjectId(projectId),
         workspaceId: new Types.ObjectId(workspaceId),
+        status: 'active',
       })
       .lean();
     if (!p) throw new NotFoundException({ code: 'PROJECT_NOT_FOUND' });
     return this.shape(p);
   }
 
-  async update(workspaceId: string, projectId: string, dto: UpdateProjectDto) {
+  async update(workspaceId: string, projectId: string, dto: UpdateProjectDto, actor?: WorkspaceActor) {
+    this.assertOwner(actor);
     const p = await this.projects
       .findOneAndUpdate(
         {
@@ -79,8 +95,21 @@ export class ProjectsService {
     return this.shape(p);
   }
 
-  async archive(workspaceId: string, projectId: string) {
-    return this.update(workspaceId, projectId, { status: 'archived' });
+  async archive(workspaceId: string, projectId: string, actor?: WorkspaceActor) {
+    return this.update(workspaceId, projectId, { status: 'archived' }, actor);
+  }
+
+  private canSeeWorkspaceWide(actor?: WorkspaceActor) {
+    return actor?.platformOverride || actor?.workspaceRole === 'owner' || actor?.workspaceRole === 'admin';
+  }
+
+  private assertOwner(actor?: WorkspaceActor) {
+    if (!this.canSeeWorkspaceWide(actor)) {
+      throw new ForbiddenException({
+        code: 'OWNER_REQUIRED',
+        message: 'Only workspace owners and admins can manage projects.',
+      });
+    }
   }
 
   private shape(p: any) {

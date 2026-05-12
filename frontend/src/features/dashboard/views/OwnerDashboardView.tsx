@@ -1,5 +1,11 @@
 import { Link } from 'react-router-dom';
-import type { MeDashboardData, ProjectSummary, WorkspaceSummary } from '../hooks';
+import {
+  useUpdateDashboardTask,
+  type MeDashboardData,
+  type ProjectSummary,
+  type UpcomingTask,
+  type WorkspaceSummary,
+} from '../hooks';
 import { DonutChart } from '../../../components/admin/charts/DonutChart';
 
 interface Props {
@@ -9,6 +15,7 @@ interface Props {
 
 export function OwnerDashboardView({ data, userName }: Props) {
   const { workspaces, taskStats, upcomingTasks, myProjects } = data;
+  const updateTask = useUpdateDashboardTask();
 
   const totalMembers = workspaces.reduce((s, w) => s + w.memberCount, 0);
   const totalProjects = workspaces.reduce((s, w) => s + w.projectCount, 0);
@@ -150,7 +157,19 @@ export function OwnerDashboardView({ data, userName }: Props) {
           </h3>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {upcomingTasks.slice(0, 6).map((t) => (
-              <UpcomingTaskCard key={t.id} task={t} />
+              <UpcomingTaskCard
+                key={t.id}
+                task={t}
+                working={updateTask.variables?.taskId === t.id}
+                onWork={(patch) =>
+                  updateTask.mutate({
+                    workspaceId: t.workspaceId,
+                    projectId: t.projectId,
+                    taskId: t.id,
+                    patch,
+                  })
+                }
+              />
             ))}
           </div>
         </div>
@@ -277,7 +296,15 @@ function ProjectRow({ p }: { p: ProjectSummary }) {
   );
 }
 
-function UpcomingTaskCard({ task }: { task: any }) {
+function UpcomingTaskCard({
+  task,
+  working,
+  onWork,
+}: {
+  task: UpcomingTask;
+  working: boolean;
+  onWork: (patch: { status?: string; progressPct?: number }) => void;
+}) {
   const priorityColor: Record<string, string> = {
     critical: 'bg-rose-500/15 text-rose-700',
     high: 'bg-amber-500/15 text-amber-700',
@@ -307,6 +334,34 @@ function UpcomingTaskCard({ task }: { task: any }) {
           className="h-full rounded-full bg-brand-gradient"
           style={{ width: `${task.progressPct}%` }}
         />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Link
+          to={`/dashboard/workspaces/${task.workspaceId}/projects/${task.projectId}`}
+          className="btn-secondary px-3 py-1 text-[11px]"
+        >
+          Open
+        </Link>
+        {task.status === 'not_started' && (
+          <button
+            type="button"
+            className="btn-secondary px-3 py-1 text-[11px]"
+            disabled={working}
+            onClick={() => onWork({ status: 'in_progress', progressPct: Math.max(task.progressPct, 10) })}
+          >
+            Start
+          </button>
+        )}
+        {task.status !== 'done' && (
+          <button
+            type="button"
+            className="btn-primary px-3 py-1 text-[11px]"
+            disabled={working}
+            onClick={() => onWork({ status: 'done', progressPct: 100 })}
+          >
+            Done
+          </button>
+        )}
       </div>
     </div>
   );

@@ -59,10 +59,7 @@ export class UsersService {
 
   assertEligibleForSession(user: UserDocument): void {
     if (!user.isActive || user.deletedAt) {
-      throw new UnauthorizedException({
-        code: 'ACCOUNT_DISABLED',
-        message: 'This account cannot sign in.',
-      });
+      throw new UnauthorizedException({ code: 'ACCOUNT_DISABLED', message: 'This account has been disabled.' });
     }
   }
 

@@ -13,6 +13,10 @@ interface Props {
   thickness?: number;
   centerLabel?: string;
   centerSubLabel?: string;
+  /** Optional override for center text color. */
+  centerColor?: string;
+  /** @deprecated Use legendPlacement instead. */
+  layout?: 'row' | 'col';
   /** Beside tries chart + legend in one row with wrapping when the container is narrow. */
   legendPlacement?: 'beside' | 'below';
   /** Dark variant for charts on ink/black surfaces (e.g. billing health card). */
@@ -25,6 +29,8 @@ export function DonutChart({
   thickness = 22,
   centerLabel,
   centerSubLabel,
+  centerColor,
+  layout,
   legendPlacement = 'beside',
   tone = 'light',
 }: Props) {
@@ -35,8 +41,9 @@ export function DonutChart({
 
   const trackStroke =
     tone === 'dark' ? 'rgba(248,250,252,0.12)' : 'rgba(15,23,42,0.06)';
-  const svgTextPrimary = tone === 'dark' ? '#f8fafc' : '#0f172a';
+  const svgTextPrimary = centerColor ?? (tone === 'dark' ? '#f8fafc' : '#0f172a');
   const svgTextMuted = tone === 'dark' ? 'rgba(248,250,252,0.55)' : '#64748b';
+  const placement = layout === 'col' ? 'below' : legendPlacement;
 
   const legendLabelCls = tone === 'dark' ? 'text-white/80' : 'text-ink-700';
   const legendValueCls = tone === 'dark' ? 'text-white' : 'text-ink-900';
@@ -46,7 +53,7 @@ export function DonutChart({
     <div
       className={cn(
         'flex w-full min-w-0 gap-x-5 gap-y-4',
-        legendPlacement === 'below'
+        placement === 'below'
           ? 'flex-col items-center'
           : 'flex-row flex-wrap items-center justify-center md:justify-start',
       )}
@@ -54,7 +61,7 @@ export function DonutChart({
       <div
         className={cn(
           'aspect-square shrink-0',
-          legendPlacement === 'below'
+          placement === 'below'
             ? 'mx-auto w-full max-w-[220px]'
             : 'w-full max-w-[min(220px,100%)]',
         )}
@@ -113,6 +120,7 @@ export function DonutChart({
                   fontFamily="Inter"
                   fontSize={10}
                   fill={svgTextMuted}
+                  fillOpacity={centerColor ? 0.55 : undefined}
                   dy="14"
                 >
                   {centerSubLabel}
@@ -126,7 +134,7 @@ export function DonutChart({
       <ul
         className={cn(
           'min-w-0 space-y-2 text-xs sm:text-sm',
-          legendPlacement === 'below'
+          placement === 'below'
             ? 'w-full max-w-sm'
             : 'min-w-[min(100%,12rem)] flex-1 sm:min-w-[14rem]',
         )}

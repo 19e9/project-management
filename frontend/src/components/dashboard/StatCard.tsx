@@ -1,4 +1,7 @@
 import type { ReactNode } from 'react';
+import { cn } from '../../lib/cn';
+
+type Tone = 'brand' | 'success' | 'warning' | 'danger' | 'info';
 
 const toneRing: Record<string, string> = {
   info: 'ring-blue-100 bg-blue-50/60',
@@ -19,7 +22,7 @@ export function StatCard({
   label: string;
   value: ReactNode;
   delta?: number;
-  tone?: 'info' | 'brand' | 'success' | 'warning' | 'danger';
+  tone?: Tone;
   icon?: ReactNode;
   hint?: string;
 }) {

@@ -23,8 +23,13 @@
         "backgroundColor": "#4f46e5"
       }
     },
-    "web": { "bundler": "metro" },
-    "plugins": ["expo-router"],
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset"
+    ],
     "extra": {
       "apiBaseUrl": "http://localhost:3000/api/v1"
     }

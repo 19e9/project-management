@@ -1,12 +1,13 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
-type Variant = 'primary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 export function Button({
   variant = 'primary',
   loading,
   leftIcon,
+  rightIcon,
   className,
   children,
   disabled,
@@ -15,6 +16,7 @@ export function Button({
   variant?: Variant;
   loading?: boolean;
   leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
 }) {
   return (
     <button
@@ -22,6 +24,7 @@ export function Button({
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:pointer-events-none disabled:opacity-50',
         variant === 'primary' && 'bg-ink-900 text-white shadow-soft hover:bg-ink-800',
+        variant === 'secondary' && 'border border-border bg-surface text-fg shadow-soft hover:bg-surface-2',
         variant === 'ghost' && 'text-ink-700 hover:bg-ink-100',
         variant === 'danger' && 'bg-rose-600 text-white hover:bg-rose-700',
         className,
@@ -38,6 +41,7 @@ export function Button({
         <>
           {leftIcon ? <span className="inline-flex shrink-0">{leftIcon}</span> : null}
           {children}
+          {rightIcon ? <span className="inline-flex shrink-0">{rightIcon}</span> : null}
         </>
       )}
     </button>

@@ -4,7 +4,7 @@ import {
   ViewMode,
 } from 'gantt-task-react';
 import 'gantt-task-react/dist/index.css';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useDependencies,
   usePatchTask,
@@ -12,29 +12,65 @@ import {
 } from '../tasks/hooks';
 import type { WorkspaceMemberRow } from '../workspaces/hooks';
 
+// Each column (Name, From, To) gets colWidth px → total left panel = 3 * colWidth
+const COL_MIN = 50;
+const COL_MAX = 320;
+const COL_DEFAULT = 160;
+
 export function ProjectGantt({
   workspaceId,
   projectId,
   criticalIds = [],
   members = [],
+  canManage = false,
 }: {
   workspaceId: string;
   projectId: string;
   criticalIds?: string[];
   members?: WorkspaceMemberRow[];
+  canManage?: boolean;
 }) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
+  const [colWidth, setColWidth] = useState(COL_DEFAULT);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartCol = useRef(colWidth);
+
   const { data: tasks = [] } = useTasks(workspaceId, projectId);
   const { data: deps = [] } = useDependencies(workspaceId, projectId);
   const patch = usePatchTask(workspaceId, projectId);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const dx = e.clientX - dragStartX.current;
+      // total panel moves by dx → each of 3 cols moves by dx/3
+      const next = Math.max(COL_MIN, Math.min(COL_MAX, Math.round(dragStartCol.current + dx / 3)));
+      setColWidth(next);
+    };
+    const onUp = () => {
+      if (isDragging.current) {
+        isDragging.current = false;
+        setIsResizing(false);
+      }
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+  }, []);
 
   const memberByUserId = useMemo(
     () => new Map(members.map((m) => [m.userId, m])),
     [members],
   );
 
-  const columnWidth =
-    viewMode === ViewMode.Month ? 88 : viewMode === ViewMode.Week ? 72 : viewMode === ViewMode.Day ? 52 : 64;
+  const chartColumnWidth =
+    viewMode === ViewMode.Month ? 88 : viewMode === ViewMode.Week ? 72 : 52;
 
   const items: GTask[] = useMemo(() => {
     return tasks.map((t) => {
@@ -47,12 +83,7 @@ export function ProjectGantt({
         .map((id) => {
           const nm = memberByUserId.get(id)?.displayName ?? '';
           return nm
-            ? nm
-                .split(/\s+/)
-                .map((s) => s[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase()
+            ? nm.split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase()
             : '';
         })
         .filter(Boolean)
@@ -87,6 +118,9 @@ export function ProjectGantt({
       </div>
     );
   }
+
+  // left panel = 3 columns × colWidth; handle sits at that boundary
+  const leftPanelPx = colWidth * 3;
 
   return (
     <div className="space-y-3">
@@ -124,22 +158,30 @@ export function ProjectGantt({
         </div>
       </div>
 
-      <div className="relative overflow-x-auto rounded-md border border-slate-200">
+      {/* Chart + resizable divider */}
+      <div
+        className={`relative rounded-md border border-slate-200 ${isResizing ? 'select-none' : ''}`}
+        style={{ cursor: isResizing ? 'col-resize' : undefined }}
+      >
         <Gantt
           tasks={items}
           viewMode={viewMode}
-          listCellWidth="240px"
-          columnWidth={columnWidth}
+          listCellWidth={`${colWidth}px`}
+          columnWidth={chartColumnWidth}
           rowHeight={44}
           barCornerRadius={4}
           todayColor="#f472b6"
-          onDateChange={async (t) => {
-            await patch.mutateAsync({
-              id: t.id,
-              startDate: t.start as unknown as string,
-              endDate: t.end as unknown as string,
-            });
-          }}
+          onDateChange={
+            canManage
+              ? async (t) => {
+                  await patch.mutateAsync({
+                    id: t.id,
+                    startDate: t.start as unknown as string,
+                    endDate: t.end as unknown as string,
+                  });
+                }
+              : undefined
+          }
           onProgressChange={async (t) => {
             await patch.mutateAsync({
               id: t.id,
@@ -147,8 +189,30 @@ export function ProjectGantt({
             });
           }}
         />
+
+        {/* Drag handle — sits at the right edge of the task list panel */}
+        <div
+          title="Drag to resize columns"
+          style={{ left: leftPanelPx - 3 }}
+          className="group absolute bottom-0 top-0 z-20 w-[7px] cursor-col-resize"
+          onMouseDown={(e) => {
+            isDragging.current = true;
+            dragStartX.current = e.clientX;
+            dragStartCol.current = colWidth;
+            setIsResizing(true);
+            e.preventDefault();
+          }}
+        >
+          {/* visible line */}
+          <div className="absolute bottom-0 left-[3px] top-0 w-px bg-ink-200 opacity-0 transition-opacity group-hover:opacity-100" />
+          {/* grip dots */}
+          <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col gap-[3px] opacity-0 transition-opacity group-hover:opacity-100">
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="h-1 w-1 rounded-full bg-ink-400" />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-

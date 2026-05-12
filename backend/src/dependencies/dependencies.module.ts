@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { WorkspacesModule } from '../workspaces/workspaces.module';
+import { Task, TaskSchema } from '../tasks/schemas/task.schema';
 import {
   TaskDependency,
   TaskDependencySchema,
@@ -12,6 +13,7 @@ import { DependenciesController } from './dependencies.controller';
   imports: [
     WorkspacesModule,
     MongooseModule.forFeature([
+      { name: Task.name, schema: TaskSchema },
       { name: TaskDependency.name, schema: TaskDependencySchema },
     ]),
   ],

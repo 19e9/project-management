@@ -52,6 +52,8 @@ export function useCreateTask(workspaceId: string, projectId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks', workspaceId, projectId] });
       qc.invalidateQueries({ queryKey: ['tasks', 'tree', workspaceId, projectId] });
+      qc.invalidateQueries({ queryKey: ['analytics', 'overview', workspaceId, projectId] });
+      qc.invalidateQueries({ queryKey: ['cpm', workspaceId, projectId] });
     },
   });
 }
@@ -110,9 +112,9 @@ export function useCreateDependency(workspaceId: string, projectId: string) {
   });
 }
 
-export function useCpm(workspaceId?: string, projectId?: string) {
+export function useCpm(workspaceId?: string, projectId?: string, enabled = true) {
   return useQuery({
-    enabled: !!workspaceId && !!projectId,
+    enabled: enabled && !!workspaceId && !!projectId,
     queryKey: ['cpm', workspaceId, projectId],
     queryFn: async () =>
       (await api.get(`${base(workspaceId!, projectId!)}/planning/cpm`)).data,

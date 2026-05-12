@@ -20,12 +20,14 @@ export function ProjectKanban({
   members,
   onStatusChange,
   onOpenTask,
+  canMove,
 }: {
   projectId: string;
   tasks: TaskItem[];
   members: WorkspaceMemberRow[];
   onStatusChange: (taskId: string, status: TaskItem['status']) => void;
   onOpenTask: (task: TaskItem) => void;
+  canMove: boolean;
 }) {
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [dragId, setDragId] = useState<string | null>(null);
@@ -141,6 +143,7 @@ export function ProjectKanban({
               }}
               onDrop={(e) => {
                 e.preventDefault();
+                if (!canMove) return;
                 const id = e.dataTransfer.getData('task/id');
                 if (!id) return;
                 onStatusChange(id, col.status as TaskItem['status']);
@@ -162,8 +165,9 @@ export function ProjectKanban({
                 {list.map((t) => (
                   <article
                     key={t.id}
-                    draggable
+                    draggable={canMove}
                     onDragStart={(e) => {
+                      if (!canMove) return;
                       setDragId(t.id);
                       e.dataTransfer.setData('task/id', t.id);
                       e.dataTransfer.effectAllowed = 'move';
@@ -178,7 +182,7 @@ export function ProjectKanban({
                         onOpenTask(t);
                       }
                     }}
-                    className={`cursor-grab rounded-xl border border-ink-200 bg-white p-3 text-left shadow-sm transition hover:border-brand-300 hover:shadow-md active:cursor-grabbing ${
+                    className={`${canMove ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} rounded-xl border border-ink-200 bg-white p-3 text-left shadow-sm transition hover:border-brand-300 hover:shadow-md ${
                       dragId === t.id ? 'opacity-60' : ''
                     }`}
                   >

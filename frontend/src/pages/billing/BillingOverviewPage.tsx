@@ -158,8 +158,8 @@ export default function BillingOverviewPage() {
             />
             <Kpi
               label="Cash velocity"
-              value="Trailing window"
-              hint={revenueGrowthHint ?? '—'}
+              value={revenueGrowthHint ?? '—'}
+              hint="vs trailing window start"
             />
             <Kpi
               label="ARPU"
@@ -195,11 +195,7 @@ export default function BillingOverviewPage() {
                 slices={[
                   { label: 'Free', value: b?.planDistribution.free ?? 0, color: '#94a3b8' },
                   { label: 'Pro', value: b?.planDistribution.pro ?? 0, color: '#818cf8' },
-                  {
-                    label: 'Enterprise',
-                    value: b?.planDistribution.enterprise ?? 0,
-                    color: '#fbbf24',
-                  },
+                  { label: 'Enterprise', value: b?.planDistribution.enterprise ?? 0, color: '#fbbf24' },
                 ]}
               />
             )}

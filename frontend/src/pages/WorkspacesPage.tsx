@@ -1,13 +1,21 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useCreateWorkspace, useWorkspaces } from '../features/workspaces/hooks';
+import { useMyDashboard } from '../features/dashboard/hooks';
+import {
+  useCreateWorkspace,
+  useDeleteWorkspace,
+  useUpdateWorkspace,
+  useWorkspaces,
+} from '../features/workspaces/hooks';
 
 export default function WorkspacesPage() {
   const { data: workspaces, isLoading } = useWorkspaces();
+  const { data: dashboard } = useMyDashboard();
   const create = useCreateWorkspace();
   const [name, setName] = useState('');
 
   const list = workspaces ?? [];
+  const isPlatformAdmin = dashboard?.myRole === 'platform_admin';
   const activeCount = list.filter((w: { status?: string }) => w.status === 'active').length;
 
   return (
@@ -118,7 +126,11 @@ export default function WorkspacesPage() {
           {!isLoading && list.length > 0 && (
             <ul className="divide-y divide-ink-100">
               {list.map((w: any) => (
-                <WorkspaceRow key={w.id} workspace={w} />
+                <WorkspaceRow
+                  key={w.id}
+                  workspace={w}
+                  canManage={isPlatformAdmin || w.role === 'owner'}
+                />
               ))}
             </ul>
           )}
@@ -159,7 +171,11 @@ function StatChip({
   );
 }
 
-function WorkspaceRow({ workspace: w }: { workspace: any }) {
+function WorkspaceRow({ workspace: w, canManage }: { workspace: any; canManage: boolean }) {
+  const update = useUpdateWorkspace(w.id);
+  const remove = useDeleteWorkspace(w.id);
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(w.name ?? '');
   const planStyles: Record<string, string> = {
     free: 'bg-ink-100 text-ink-700 ring-ink-200/80',
     pro: 'bg-brand-50 text-brand-800 ring-brand-100',
@@ -196,12 +212,65 @@ function WorkspaceRow({ workspace: w }: { workspace: any }) {
             </p>
           </div>
         </div>
-        <Link
-          to={`/dashboard/workspaces/${w.id}/projects`}
-          className="btn-brand shrink-0 px-5 py-2.5 text-sm sm:self-center"
-        >
-          Projects →
-        </Link>
+        <div className="flex shrink-0 flex-wrap gap-2 sm:self-center">
+          {canManage && editing ? (
+            <form
+              className="flex flex-wrap gap-2"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const name = draftName.trim();
+                if (!name) return;
+                await update.mutateAsync({ name });
+                setEditing(false);
+              }}
+            >
+              <input
+                className="input h-10 w-44 text-sm"
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+              />
+              <button type="submit" className="btn-secondary px-3 text-xs" disabled={update.isPending}>
+                Save
+              </button>
+              <button type="button" className="btn-secondary px-3 text-xs" onClick={() => setEditing(false)}>
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <>
+              {canManage && (
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-2 text-xs"
+                  onClick={() => {
+                    setDraftName(w.name ?? '');
+                    setEditing(true);
+                  }}
+                >
+                  Edit
+                </button>
+              )}
+              {canManage && (
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-2 text-xs text-rose-700"
+                  disabled={remove.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Delete workspace "${w.name}"?`)) remove.mutate();
+                  }}
+                >
+                  Delete
+                </button>
+              )}
+              <Link
+                to={`/dashboard/workspaces/${w.id}/projects`}
+                className="btn-brand px-5 py-2.5 text-sm"
+              >
+                Projects →
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     </li>
   );

@@ -124,20 +124,20 @@ export default function BillingPlansPage() {
                     Featured
                   </span>
                 )}
-                <div className="flex items-start justify-between gap-3">
-                  <div>
+                <div>
+                  <div className="flex items-center gap-2">
                     <h3 className="text-lg font-bold text-ink-900 dark:text-white">{p.displayName}</h3>
-                    <p className="font-mono text-[11px] text-ink-400">{p.key}</p>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ring-1 ring-inset ${
+                        p.isActive
+                          ? 'bg-emerald-500/10 text-emerald-800 ring-emerald-500/20 dark:text-emerald-200'
+                          : 'bg-ink-500/10 text-ink-600 ring-ink-500/20 dark:text-ink-300'
+                      }`}
+                    >
+                      {p.isActive ? 'Live' : 'Off'}
+                    </span>
                   </div>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ring-1 ring-inset ${
-                      p.isActive
-                        ? 'bg-emerald-500/10 text-emerald-800 ring-emerald-500/20 dark:text-emerald-200'
-                        : 'bg-ink-500/10 text-ink-600 ring-ink-500/20 dark:text-ink-300'
-                    }`}
-                  >
-                    {p.isActive ? 'live' : 'off'}
-                  </span>
+                  <p className="font-mono text-[11px] text-ink-400">{p.key}</p>
                 </div>
 
                 <div className="mt-6 grid grid-cols-2 gap-4">
@@ -182,7 +182,7 @@ export default function BillingPlansPage() {
                 <div className="mt-6 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className="rounded-full border border-ink-200 px-3 py-1.5 text-xs font-semibold hover:bg-ink-50 dark:border-white/10 dark:hover:bg-white/5"
+                    className="rounded-full border border-ink-200 px-3 py-1.5 text-xs font-semibold text-ink-900 hover:bg-ink-50 dark:border-white/20 dark:text-white dark:hover:bg-white/10"
                     onClick={() => setEditPlan(p)}
                   >
                     Edit

@@ -6,15 +6,23 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { Task, TaskDocument } from '../tasks/schemas/task.schema';
 import {
   TaskDependency,
   TaskDependencyDocument,
 } from './schemas/task-dependency.schema';
 import { CreateDependencyDto } from './dto/dependency.dto';
 
+interface WorkspaceActor {
+  userId: string;
+  workspaceRole?: 'owner' | 'admin' | 'member' | 'viewer' | 'client';
+  platformOverride?: boolean;
+}
+
 @Injectable()
 export class DependenciesService {
   constructor(
+    @InjectModel(Task.name) private readonly tasks: Model<TaskDocument>,
     @InjectModel(TaskDependency.name)
     private readonly deps: Model<TaskDependencyDocument>,
   ) {}
@@ -61,9 +69,20 @@ export class DependenciesService {
     return this.shape(created.toObject());
   }
 
-  async list(projectId: string) {
+  async list(projectId: string, actor?: WorkspaceActor) {
+    const filter: any = { projectId: new Types.ObjectId(projectId) };
+    if (!this.canSeeAll(actor)) {
+      const taskIds = await this.tasks.distinct('_id', {
+        projectId: new Types.ObjectId(projectId),
+        assigneeIds: new Types.ObjectId(actor!.userId),
+      });
+      filter.$or = [
+        { predecessorId: { $in: taskIds } },
+        { successorId: { $in: taskIds } },
+      ];
+    }
     const items = await this.deps
-      .find({ projectId: new Types.ObjectId(projectId) })
+      .find(filter)
       .lean();
     return items.map((d) => this.shape(d));
   }
@@ -80,6 +99,17 @@ export class DependenciesService {
       throw new NotFoundException({ code: 'DEPENDENCY_NOT_FOUND' });
     }
     return { ok: true };
+  }
+
+  private canSeeAll(actor?: WorkspaceActor) {
+    return (
+      actor?.platformOverride ||
+      actor?.workspaceRole === 'owner' ||
+      actor?.workspaceRole === 'admin' ||
+      actor?.workspaceRole === 'member' ||
+      actor?.workspaceRole === 'viewer' ||
+      actor?.workspaceRole === 'client'
+    );
   }
 
   private async findCyclePath(

@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -14,6 +15,7 @@ import {
   WorkspaceRoleGuard,
   WorkspaceRoles,
 } from '../common/guards/workspace-role.guard';
+import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto, ListTasksQueryDto, UpdateTaskDto } from './dto/task.dto';
 
@@ -24,56 +26,74 @@ import { CreateTaskDto, ListTasksQueryDto, UpdateTaskDto } from './dto/task.dto'
 export class TasksController {
   constructor(private readonly svc: TasksService) {}
 
-  @WorkspaceRoles('owner', 'member')
+  @WorkspaceRoles('owner', 'admin', 'member')
   @Post()
   create(
     @Param('workspaceId') wid: string,
     @Param('projectId') pid: string,
     @Body() dto: CreateTaskDto,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: any,
   ) {
-    return this.svc.create(wid, pid, dto);
+    return this.svc.create(wid, pid, dto, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member', 'viewer', 'client')
   @Get()
   list(
     @Param('projectId') pid: string,
     @Query() q: ListTasksQueryDto,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: any,
   ) {
-    return this.svc.list(pid, q);
+    return this.svc.list(pid, q, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member', 'viewer', 'client')
   @Get('tree')
-  tree(@Param('projectId') pid: string) {
-    return this.svc.tree(pid);
+  tree(@Param('projectId') pid: string, @CurrentUser() user: JwtPayload, @Req() req: any) {
+    return this.svc.tree(pid, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member', 'viewer', 'client')
   @Get(':taskId')
   detail(
     @Param('projectId') pid: string,
     @Param('taskId') tid: string,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: any,
   ) {
-    return this.svc.get(pid, tid);
+    return this.svc.get(pid, tid, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member')
+  @WorkspaceRoles('owner', 'admin', 'member')
   @Patch(':taskId')
   update(
     @Param('projectId') pid: string,
     @Param('taskId') tid: string,
     @Body() dto: UpdateTaskDto,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: any,
   ) {
-    return this.svc.update(pid, tid, dto);
+    return this.svc.update(pid, tid, dto, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member')
+  @WorkspaceRoles('owner', 'admin', 'member')
   @Delete(':taskId')
   remove(
     @Param('projectId') pid: string,
     @Param('taskId') tid: string,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: any,
   ) {
-    return this.svc.remove(pid, tid);
+    return this.svc.remove(pid, tid, actorFromRequest(user, req));
   }
+}
+
+function actorFromRequest(user: JwtPayload, req: any) {
+  return {
+    userId: user.sub,
+    workspaceRole: req.workspaceMember?.role,
+    platformOverride: !!req.workspaceMember?.platformOverride,
+  };
 }

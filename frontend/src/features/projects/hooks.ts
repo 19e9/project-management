@@ -20,6 +20,31 @@ export function useCreateProject(workspaceId: string) {
   });
 }
 
+export function useUpdateProject(workspaceId: string, projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { name?: string; description?: string }) =>
+      (await api.patch(`/workspaces/${workspaceId}/projects/${projectId}`, payload)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', workspaceId] });
+      qc.invalidateQueries({ queryKey: ['project', workspaceId, projectId] });
+      qc.invalidateQueries({ queryKey: ['me', 'dashboard'] });
+    },
+  });
+}
+
+export function useDeleteProject(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (projectId: string) =>
+      (await api.delete(`/workspaces/${workspaceId}/projects/${projectId}`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', workspaceId] });
+      qc.invalidateQueries({ queryKey: ['me', 'dashboard'] });
+    },
+  });
+}
+
 export function useProject(workspaceId?: string, projectId?: string) {
   return useQuery({
     enabled: !!workspaceId && !!projectId,

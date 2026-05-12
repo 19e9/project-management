@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { MeDashboardData } from '../hooks';
+import { type MeDashboardData, type UpcomingTask } from '../hooks';
 
 interface Props {
   data: MeDashboardData;
@@ -7,7 +7,7 @@ interface Props {
 }
 
 export function ClientDashboardView({ data, userName }: Props) {
-  const { workspaces, myProjects, taskStats } = data;
+  const { workspaces, myProjects, taskStats, upcomingTasks } = data;
 
   const totalTasks = myProjects.reduce((s, p) => s + p.taskCount, 0);
   const avgCompletion =
@@ -35,10 +35,27 @@ export function ClientDashboardView({ data, userName }: Props) {
           <path d="M12 8v5M12 16.5h.01" strokeLinecap="round" />
         </svg>
         <div>
-          <span className="font-semibold">Client read-only access.</span> You can view project progress
-          and task breakdowns. Contact your workspace owner to request member access for editing rights.
+          <span className="font-semibold">Client access.</span> You can view project progress
+          and follow status updates from your workspace team.
         </div>
       </div>
+
+      {upcomingTasks.length > 0 && (
+        <div className="card overflow-hidden">
+          <div className="border-b border-ink-200 px-5 py-4">
+            <h3 className="text-base font-semibold text-ink-900">Assigned to me</h3>
+            <p className="text-xs text-ink-500">Read-only tasks shared with you</p>
+          </div>
+          <ul className="divide-y divide-ink-200">
+            {upcomingTasks.map((t) => (
+              <AssignedTaskRow
+                key={t.id}
+                task={t}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Summary KPIs */}
       <div className="grid gap-4 sm:grid-cols-3">
@@ -160,5 +177,33 @@ export function ClientDashboardView({ data, userName }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+function AssignedTaskRow({
+  task,
+}: {
+  task: UpcomingTask;
+}) {
+  return (
+    <li className="px-5 py-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium text-ink-900">{task.title}</p>
+          <p className="mt-0.5 text-xs text-ink-500">
+            {task.projectName} · {task.workspaceName}
+          </p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-100">
+            <div className="h-full rounded-full bg-brand-gradient" style={{ width: `${task.progressPct}%` }} />
+          </div>
+        </div>
+        <Link
+          to={`/dashboard/workspaces/${task.workspaceId}/projects/${task.projectId}`}
+          className="btn-secondary px-3 py-1.5 text-xs"
+        >
+          Open
+        </Link>
+      </div>
+    </li>
   );
 }
