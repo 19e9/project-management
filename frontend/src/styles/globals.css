@@ -125,6 +125,61 @@
     background-size: 1000px 100%;
     @apply animate-shimmer;
   }
+
+  /* CMS & TipTap output */
+  .cms-body :where(p) {
+    @apply my-3 first:mt-0 last:mb-0;
+  }
+  .cms-body :where(h1) {
+    @apply mt-10 mb-4 text-3xl font-bold tracking-tight text-ink-900 first:mt-0;
+  }
+  .cms-body :where(h2) {
+    @apply mt-10 mb-3 text-2xl font-semibold tracking-tight text-ink-900 first:mt-0;
+  }
+  .cms-body :where(h3) {
+    @apply mt-8 mb-2 text-xl font-semibold text-ink-900 first:mt-0;
+  }
+  .cms-body :where(ul) {
+    @apply my-3 list-disc pl-6;
+  }
+  .cms-body :where(ol) {
+    @apply my-3 list-decimal pl-6;
+  }
+  .cms-body :where(li) {
+    @apply my-1;
+  }
+  .cms-body :where(a) {
+    @apply text-brand-700 underline underline-offset-2 hover:text-brand-800;
+  }
+  .cms-body :where(img) {
+    @apply my-4 max-h-[480px] max-w-full rounded-lg border border-ink-200 object-contain;
+  }
+  .cms-body :where(table) {
+    @apply my-4 w-full border-collapse text-sm;
+  }
+  .cms-body :where(th),
+  .cms-body :where(td) {
+    @apply border border-ink-200 px-3 py-2 align-top;
+  }
+  .cms-body :where(th) {
+    @apply bg-ink-50 text-left font-semibold text-ink-900;
+  }
+  .cms-body :where(blockquote) {
+    @apply my-4 border-l-4 border-brand-300 bg-ink-50/90 py-2 pl-4 pr-3 italic text-ink-700;
+  }
+  .cms-body :where(pre) {
+    @apply my-4 overflow-x-auto rounded-xl bg-ink-900 p-4 font-mono text-[13px] leading-relaxed text-ink-100;
+  }
+  .cms-body :where(pre code) {
+    @apply bg-transparent p-0 text-inherit;
+  }
+  .cms-body :where(code):not(pre code) {
+    @apply rounded-md bg-ink-100 px-1.5 py-0.5 font-mono text-[13px] text-rose-800;
+  }
+
+  .tiptap-editor.ProseMirror {
+    @apply rounded-lg border border-transparent bg-white focus:border-brand-400/40 focus:ring-2 focus:ring-brand-500/15;
+  }
 }
 
 @layer utilities {

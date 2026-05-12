@@ -28,6 +28,9 @@ Thumbs.db
 # Test / coverage
 coverage/
 
+# Runtime uploads (CMS site media)
+backend/uploads/
+
 # Expo / React Native
 expo-app/.expo/
 *.jks

@@ -3,17 +3,30 @@ import { cn } from '../../lib/cn';
 
 type Tone = 'success' | 'warning' | 'danger' | 'brand' | 'info' | 'neutral';
 
-export function Badge({ tone = 'neutral', children }: { tone?: Tone; children: ReactNode }) {
+const tones: Record<Tone, string> = {
+  neutral: 'bg-ink-100 text-ink-700 ring-ink-200',
+  warning: 'bg-amber-50 text-amber-900 ring-amber-100',
+  success: 'bg-emerald-50 text-emerald-900 ring-emerald-100',
+  danger: 'bg-rose-50 text-rose-900 ring-rose-100',
+  brand: 'bg-brand-50 text-brand-700 ring-brand-100',
+  info: 'bg-sky-50 text-sky-900 ring-sky-100',
+};
+
+export function Badge({
+  tone = 'neutral',
+  className,
+  children,
+}: {
+  tone?: Tone;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-        tone === 'success' && 'bg-emerald-100 text-emerald-700',
-        tone === 'warning' && 'bg-amber-100 text-amber-700',
-        tone === 'danger' && 'bg-rose-100 text-rose-700',
-        tone === 'brand' && 'bg-brand/10 text-brand',
-        tone === 'info' && 'bg-sky-100 text-sky-700',
-        tone === 'neutral' && 'bg-surface-3 text-muted',
+        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset',
+        tones[tone] ?? tones.neutral,
+        className,
       )}
     >
       {children}

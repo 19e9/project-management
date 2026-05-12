@@ -47,6 +47,10 @@ export function usePublicPricingPlans() {
       );
       return data;
     },
-    staleTime: 30_000,
+    staleTime: 0,
+    gcTime: 5 * 60_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }

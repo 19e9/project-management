@@ -39,9 +39,9 @@ export function Button({
         </span>
       ) : (
         <>
-          {leftIcon}
+          {leftIcon ? <span className="inline-flex shrink-0">{leftIcon}</span> : null}
           {children}
-          {rightIcon}
+          {rightIcon ? <span className="inline-flex shrink-0">{rightIcon}</span> : null}
         </>
       )}
     </button>

@@ -1,16 +1,13 @@
-export function formatNumber(n: number): string {
-  return new Intl.NumberFormat('tr-TR').format(n);
+export function formatNumber(value: number): string {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(value);
 }
 
-export function formatDate(dateStr: string, style: 'short' | 'long' = 'short'): string {
-  try {
-    const d = new Date(dateStr);
-    return new Intl.DateTimeFormat('tr-TR', {
-      day: 'numeric',
-      month: style === 'long' ? 'long' : 'short',
-      year: 'numeric',
-    }).format(d);
-  } catch {
-    return dateStr;
-  }
+export function formatDate(iso: string, style: 'short' | 'long' = 'short'): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: style === 'long' ? 'long' : 'short',
+    day: 'numeric',
+  });
 }

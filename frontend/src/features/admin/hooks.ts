@@ -623,6 +623,19 @@ export function useDeactivateSubscriptionPlan() {
   });
 }
 
+export function useDeleteSubscriptionPlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/admin/billing/plans/${id}`);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'billing'] });
+      void qc.invalidateQueries({ queryKey: ['public', 'pricing-plans'] });
+    },
+  });
+}
+
 export function useAdminActivity(limit = 30) {
   return useQuery({
     queryKey: ['admin', 'activity', limit],

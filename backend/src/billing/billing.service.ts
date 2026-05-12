@@ -49,6 +49,13 @@ import type {
 
 const DAY = 86_400_000;
 
+/** Keys seeded by `ensureDefaultPlans`; must never be removed from the database. */
+const PROTECTED_SUBSCRIPTION_PLAN_KEYS = new Set([
+  'free-default',
+  'pro-default',
+  'enterprise-default',
+]);
+
 type SeatAction = 'added' | 'removed' | 'role_changed' | 'reactivated';
 
 @Injectable()
@@ -1021,6 +1028,22 @@ export class BillingService implements OnModuleInit {
       { new: true },
     );
     if (!doc) throw new NotFoundException();
+    return { ok: true };
+  }
+
+  async deleteSubscriptionPlan(id: string) {
+    const plan = await this.plans.findById(id);
+    if (!plan) throw new NotFoundException();
+    if (PROTECTED_SUBSCRIPTION_PLAN_KEYS.has(plan.key)) {
+      throw new BadRequestException('Built-in default subscription plans cannot be deleted.');
+    }
+    const attached = await this.workspaces.countDocuments({ subscriptionPlanId: plan._id });
+    if (attached > 0) {
+      throw new BadRequestException(
+        `Cannot delete a plan assigned to ${attached} workspace(s). Reassign workspaces first.`,
+      );
+    }
+    await plan.deleteOne();
     return { ok: true };
   }
 

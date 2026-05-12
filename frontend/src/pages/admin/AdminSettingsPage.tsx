@@ -1,4 +1,5 @@
 import { useAdminPlatformSettings } from '../../features/admin/hooks';
+import { MarketingCmsSections } from './MarketingCmsSections';
 
 function fmtTtl(sec: number): string {
   if (sec < 120) return `${sec}s`;
@@ -65,6 +66,8 @@ export default function AdminSettingsPage() {
           değişkenleri ve yeniden başlatma ile yapılır.
         </p>
       </header>
+
+      <MarketingCmsSections />
 
       {q.isError && (
         <div

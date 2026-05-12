@@ -1,10 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Navbar } from '../components/marketing/Navbar';
-import { Footer } from '../components/marketing/Footer';
+import { MarketingPageShell } from '../components/marketing/MarketingPageShell';
+import { DynamicPricingSection } from '../components/marketing/DynamicPricingSection';
 import { HeroMockup } from '../components/marketing/HeroMockup';
 import {
   IconArrowRight,
-  IconBolt,
   IconChart,
   IconCheck,
   IconGantt,
@@ -18,18 +17,16 @@ import {
 
 export default function LandingPage() {
   return (
-    <div className="bg-white">
-      <Navbar />
+    <MarketingPageShell>
       <Hero />
       <LogoCloud />
       <Features />
       <HowItWorks />
       <DeepFeatures />
-      <Pricing />
+      <DynamicPricingSection />
       <SocialProof />
       <FinalCta />
-      <Footer />
-    </div>
+    </MarketingPageShell>
   );
 }
 
@@ -59,8 +56,8 @@ function Hero() {
           <span className="eyebrow animate-fade-in-up">
             <span className="grid h-1.5 w-1.5 place-items-center rounded-full bg-emerald-500" />
             New · Critical Path engine v1.0
-            <Link to="/pricing" className="text-brand-700 hover:underline">
-              See what's new →
+            <Link to="/#pricing" className="text-brand-700 hover:underline">
+              View pricing →
             </Link>
           </span>
 
@@ -80,13 +77,13 @@ function Hero() {
               Start free
               <IconArrowRight className="h-4 w-4" />
             </Link>
-            <Link to="/pricing" className="btn-secondary btn-lg">
+            <Link to="/#pricing" className="btn-secondary btn-lg">
               See pricing
             </Link>
           </div>
 
           <p className="mt-3 text-xs text-ink-500 animate-fade-in-up [animation-delay:320ms]">
-            No credit card required · Free up to 10 members & 3 projects
+            No credit card required to start · Compare live plans below.
           </p>
         </div>
 
@@ -461,136 +458,6 @@ function HistogramVisual() {
   );
 }
 
-/* ---------- PRICING ---------- */
-const TIERS = [
-  {
-    name: 'Free',
-    price: '$0',
-    period: 'forever',
-    description: 'For solo PMs and small teams getting organized.',
-    cta: 'Start free',
-    href: '/register',
-    features: [
-      'Up to 10 members',
-      '3 active projects',
-      'Tasks, dependencies, WBS',
-      'Gantt chart',
-      'Email support',
-    ],
-  },
-  {
-    name: 'Pro',
-    price: '$12',
-    period: 'per user / month',
-    description: 'For growing teams that ship under deadline pressure.',
-    highlighted: true,
-    cta: 'Start 14-day trial',
-    href: '/register',
-    features: [
-      'Up to 50 members',
-      '50 projects',
-      'Critical Path Method',
-      'Resource histogram',
-      'Priority support',
-    ],
-  },
-  {
-    name: 'Enterprise',
-    price: 'Custom',
-    period: 'volume pricing',
-    description: 'For organizations with compliance and scale needs.',
-    cta: 'Contact sales',
-    href: 'mailto:sales@example.com',
-    features: [
-      'Unlimited members & projects',
-      'SSO / SAML / SCIM',
-      'Audit log',
-      'SLA & DPA',
-      'Dedicated CSM',
-    ],
-  },
-];
-
-function Pricing() {
-  return (
-    <section id="pricing" className="section bg-ink-50/40">
-      <div className="container">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow">Pricing</span>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
-            Simple, fair, predictable.
-          </h2>
-          <p className="mt-4 text-ink-600">
-            Pay only for active members. Cancel anytime. No "contact us to upgrade" games.
-          </p>
-        </div>
-
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {TIERS.map((t) => (
-            <PricingCard key={t.name} tier={t} />
-          ))}
-        </div>
-
-        <p className="mt-8 text-center text-xs text-ink-500">
-          Prices in USD. Annual billing saves 20%. Need a custom plan?{' '}
-          <a href="mailto:sales@example.com" className="text-brand-700 hover:underline">
-            Talk to sales
-          </a>
-          .
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function PricingCard({ tier }: { tier: (typeof TIERS)[number] }) {
-  const isHi = !!tier.highlighted;
-  return (
-    <div
-      className={`relative flex flex-col rounded-2xl p-6 transition ${
-        isHi
-          ? 'border-2 border-brand-600 bg-white shadow-[0_30px_60px_-30px_rgba(79,70,229,0.45)]'
-          : 'card card-hover'
-      }`}
-    >
-      {isHi && (
-        <span className="absolute -top-3 left-6 inline-flex items-center gap-1 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white shadow-lift">
-          <IconBolt className="h-3.5 w-3.5" />
-          Most popular
-        </span>
-      )}
-      <div className="flex items-baseline justify-between">
-        <h3 className="text-lg font-semibold tracking-tight">{tier.name}</h3>
-        {isHi && <span className="badge-soft">Save 20% annually</span>}
-      </div>
-      <p className="mt-1 text-sm text-ink-600">{tier.description}</p>
-
-      <div className="mt-5 flex items-baseline gap-2">
-        <span className="text-4xl font-bold tracking-tight">{tier.price}</span>
-        <span className="text-sm text-ink-500">/ {tier.period}</span>
-      </div>
-
-      <ul className="mt-6 space-y-2.5 text-sm text-ink-700">
-        {tier.features.map((f) => (
-          <li key={f} className="flex items-start gap-2.5">
-            <span className="mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full bg-brand-50 text-brand-700">
-              <IconCheck className="h-3.5 w-3.5" />
-            </span>
-            {f}
-          </li>
-        ))}
-      </ul>
-
-      <a
-        href={tier.href}
-        className={`${isHi ? 'btn-brand' : 'btn-secondary'} mt-7 w-full justify-center`}
-      >
-        {tier.cta}
-      </a>
-    </div>
-  );
-}
-
 /* ---------- SOCIAL PROOF ---------- */
 function SocialProof() {
   return (
@@ -728,7 +595,7 @@ function FinalCta() {
                 <IconArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                to="/pricing"
+                to="/#pricing"
                 className="btn btn-lg w-full justify-center border border-white/15 text-white hover:bg-white/10 md:w-auto"
               >
                 Compare plans

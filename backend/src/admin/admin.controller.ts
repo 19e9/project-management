@@ -6,12 +6,19 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Res,
+  UploadedFile,
+  BadRequestException,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { randomUUID } from 'crypto';
+import { diskStorage } from 'multer';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { PlatformAdminGuard } from '../common/guards/platform-admin.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
@@ -31,6 +38,17 @@ import {
   StatusDistribution,
 } from './admin.service';
 import { AdminResetPasswordDto, PatchAdminUserDto } from './dto/admin-user.dto';
+import { CmsService } from '../cms/cms.service';
+import {
+  CreateSitePageDto,
+  PatchSitePageDto,
+  ReplaceSiteFooterDto,
+} from '../cms/dto/cms.dto';
+import {
+  ALLOWED_SITE_MEDIA_MIMES,
+  SITE_MEDIA_DIR,
+  extFromMime,
+} from '../cms/cms-upload.storage';
 
 @ApiBearerAuth()
 @ApiTags('admin')
@@ -40,6 +58,7 @@ export class AdminController {
   constructor(
     private readonly svc: AdminService,
     private readonly billingService: BillingService,
+    private readonly cms: CmsService,
   ) {}
 
   @Get('stats/overview')
@@ -148,6 +167,11 @@ export class AdminController {
     return this.billingService.deactivateSubscriptionPlan(id);
   }
 
+  @Delete('billing/plans/:id')
+  deleteSubscriptionPlan(@Param('id') id: string) {
+    return this.billingService.deleteSubscriptionPlan(id);
+  }
+
   @Post('billing/workspaces/:id/enterprise-contract')
   enterpriseContract(
     @Param('id') id: string,
@@ -208,5 +232,62 @@ export class AdminController {
   @Get('insights')
   insights(): Promise<AdminInsights> {
     return this.svc.insights();
+  }
+
+  @Post('cms/site-media')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: SITE_MEDIA_DIR,
+        filename: (_req, file, cb) => {
+          const ext = extFromMime(file.mimetype);
+          if (!ext) {
+            cb(new Error('Unsupported mime'), '');
+            return;
+          }
+          cb(null, `${randomUUID()}${ext}`);
+        },
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        cb(null, ALLOWED_SITE_MEDIA_MIMES.has(file.mimetype));
+      },
+    }),
+  )
+  uploadSiteMedia(@UploadedFile() file: Express.Multer.File) {
+    if (!file?.filename) {
+      throw new BadRequestException('Dosya yüklenemedi veya türü geçersiz.');
+    }
+    return { filename: file.filename };
+  }
+
+  @Get('site-pages')
+  sitePagesAdminList() {
+    return this.cms.adminListPages();
+  }
+
+  @Post('site-pages')
+  sitePagesAdminCreate(@Body() dto: CreateSitePageDto) {
+    return this.cms.adminCreatePage(dto);
+  }
+
+  @Patch('site-pages/:id')
+  sitePagesAdminPatch(@Param('id') id: string, @Body() dto: PatchSitePageDto) {
+    return this.cms.adminPatchPage(id, dto);
+  }
+
+  @Delete('site-pages/:id')
+  sitePagesAdminDelete(@Param('id') id: string) {
+    return this.cms.adminDeletePage(id);
+  }
+
+  @Get('site-footer')
+  siteFooterAdminGet() {
+    return this.cms.adminGetFooter();
+  }
+
+  @Put('site-footer')
+  siteFooterAdminPut(@Body() dto: ReplaceSiteFooterDto) {
+    return this.cms.adminReplaceFooter(dto);
   }
 }
