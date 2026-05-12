@@ -108,6 +108,53 @@ export class ProjectsService {
     return this.update(workspaceId, projectId, { status: 'archived' }, actor);
   }
 
+  async removeProjectMember(
+    workspaceId: string,
+    projectId: string,
+    targetUserId: string,
+    actor?: WorkspaceActor,
+  ) {
+    this.assertOwner(actor);
+    if (!Types.ObjectId.isValid(projectId) || !Types.ObjectId.isValid(targetUserId)) {
+      throw new NotFoundException({ code: 'PROJECT_MEMBER_NOT_FOUND' });
+    }
+    const workspaceObjectId = new Types.ObjectId(workspaceId);
+    const projectObjectId = new Types.ObjectId(projectId);
+    const userObjectId = new Types.ObjectId(targetUserId);
+    const project = await this.projects
+      .findOne({
+        _id: projectObjectId,
+        workspaceId: workspaceObjectId,
+        status: 'active',
+      })
+      .select('_id leadId')
+      .lean();
+    if (!project) throw new NotFoundException({ code: 'PROJECT_NOT_FOUND' });
+
+    const [leadUpdate, taskUpdate] = await Promise.all([
+      project.leadId && String(project.leadId) === targetUserId
+        ? this.projects.updateOne(
+            { _id: projectObjectId, workspaceId: workspaceObjectId },
+            { $unset: { leadId: '' } },
+          )
+        : Promise.resolve(null),
+      this.tasks.updateMany(
+        {
+          workspaceId: workspaceObjectId,
+          projectId: projectObjectId,
+          assigneeIds: userObjectId,
+        },
+        { $pull: { assigneeIds: userObjectId } },
+      ),
+    ]);
+
+    return {
+      ok: true,
+      projectLeadRemoved: Boolean(leadUpdate?.modifiedCount),
+      tasksUpdated: taskUpdate.modifiedCount,
+    };
+  }
+
   private canSeeWorkspaceWide(actor?: WorkspaceActor) {
     return actor?.platformOverride || actor?.workspaceRole === 'owner' || actor?.workspaceRole === 'admin';
   }
