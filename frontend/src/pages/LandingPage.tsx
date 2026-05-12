@@ -53,13 +53,6 @@ function Hero() {
 
       <div className="container relative pb-12 pt-14 md:pb-20 md:pt-20">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="eyebrow animate-fade-in-up">
-            <span className="grid h-1.5 w-1.5 place-items-center rounded-full bg-emerald-500" />
-            New · Critical Path engine v1.0
-            <Link to="/#pricing" className="text-brand-700 hover:underline">
-              View pricing →
-            </Link>
-          </span>
 
           <h1 className="h-display mt-6 text-balance animate-fade-in-up [animation-delay:80ms]">
             Plan, schedule and ship.
