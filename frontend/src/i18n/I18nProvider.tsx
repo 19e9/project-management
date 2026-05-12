@@ -18,7 +18,7 @@ export type Locale = 'en' | 'tr' | 'es' | 'it';
 export const localeOptions: Array<{ code: Locale; label: string; shortLabel: string }> = [
   { code: 'en', label: 'English', shortLabel: 'EN' },
   { code: 'tr', label: 'Turkish', shortLabel: 'TR' },
-  { code: 'es', label: 'Spanish', shortLabel: 'ES' },
+  { code: 'es', label: 'Spanish', shortLabel: 'SP' },
   { code: 'it', label: 'Italian', shortLabel: 'IT' },
 ];
 const dicts: Record<Locale, Msg> = { en, tr, es, it };
