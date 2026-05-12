@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -29,6 +30,12 @@ export class WorkspacesController {
 
   @Post()
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateWorkspaceDto) {
+    if (user.platformRole !== 'platform_admin') {
+      throw new ForbiddenException({
+        code: 'WORKSPACE_CREATION_RESTRICTED',
+        message: 'New users must be invited to an existing workspace before they can access projects.',
+      });
+    }
     return this.svc.create(user.sub, dto);
   }
 
