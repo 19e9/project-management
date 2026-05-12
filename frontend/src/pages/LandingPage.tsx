@@ -313,29 +313,30 @@ function HowItWorks() {
 
 /* ---------- DEEP FEATURE ROW ---------- */
 function DeepFeatures() {
+  const t = useT();
   return (
     <section className="section">
       <div className="container space-y-24">
         <DeepRow
-          eyebrow="Critical Path Method"
-          title="See the path that decides your deadline."
-          body="PlanForge runs CPM on every dependency change. Tasks with zero slack glow red on the Gantt. Compress the path with confidence — we surface where each day saved actually comes from."
+          eyebrow={t('marketing.deep1Eyebrow')}
+          title={t('marketing.deep1Title')}
+          body={t('marketing.deep1Body')}
           bullets={[
-            'Cycle detection on dependency creation',
-            'Forward & backward pass with lag/lead',
-            'Per-task ES, EF, LS, LF and slack',
+            t('marketing.deep1Bullet1'),
+            t('marketing.deep1Bullet2'),
+            t('marketing.deep1Bullet3'),
           ]}
           visual={<CpmVisual />}
         />
         <DeepRow
           reverse
-          eyebrow="Resource planning"
-          title="Stop discovering over-allocation in week three."
-          body="A resource histogram shows daily utilization per teammate. Add allocations from the task panel; we draw conflicts before they bite."
+          eyebrow={t('marketing.deep2Eyebrow')}
+          title={t('marketing.deep2Title')}
+          body={t('marketing.deep2Body')}
           bullets={[
-            'Daily utilization buckets',
-            'Capacity warnings inline',
-            'Drill-down from any task',
+            t('marketing.deep2Bullet1'),
+            t('marketing.deep2Bullet2'),
+            t('marketing.deep2Bullet3'),
           ]}
           visual={<HistogramVisual />}
         />
@@ -390,6 +391,7 @@ function DeepRow({
 }
 
 function CpmVisual() {
+  const t = useT();
   // simplified ES/EF chip board
   const tasks = [
     { name: 'Excavation', es: 0, ef: 4, slack: 0, critical: true },
@@ -401,9 +403,9 @@ function CpmVisual() {
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between text-xs text-ink-500">
-        <span>Critical path</span>
+        <span>{t('marketing.criticalPath')}</span>
         <span className="badge bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-100">
-          5 tasks · 25d
+          5 {t('marketing.tasksShort')} · 25d
         </span>
       </div>
       {tasks.map((t) => (
@@ -437,19 +439,20 @@ function CpmVisual() {
 }
 
 function HistogramVisual() {
+  const t = useT();
   const bars = [40, 60, 80, 110, 95, 70, 55, 90, 105, 75];
   return (
     <div>
       <div className="flex items-center justify-between text-xs text-ink-500">
-        <span>Daily utilization · last 10 days</span>
+        <span>{t('marketing.dailyUtilization')}</span>
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-brand-500" />
-            Booked
+            {t('marketing.booked')}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-rose-500" />
-            Over
+            {t('marketing.over')}
           </span>
         </div>
       </div>
@@ -574,6 +577,7 @@ function Testimonial({
 
 /* ---------- FINAL CTA ---------- */
 function FinalCta() {
+  const t = useT();
   return (
     <section className="section">
       <div className="container">
@@ -594,14 +598,13 @@ function FinalCta() {
             <div className="md:col-span-2">
               <span className="eyebrow border-white/15 bg-white/5 text-white/80">
                 <IconLayers className="h-3.5 w-3.5" />
-                Built for the next 1,000 deliveries
+                {t('marketing.finalEyebrow')}
               </span>
               <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
-                Ship the plan you actually believe in.
+                {t('marketing.finalTitle')}
               </h2>
               <p className="mt-4 max-w-xl text-pretty text-white/70">
-                Free forever for small teams. 14-day Pro trial when you're ready. No card up
-                front, no migration drama.
+                {t('marketing.finalBody')}
               </p>
             </div>
             <div className="flex flex-col gap-3 md:items-end">
@@ -609,16 +612,16 @@ function FinalCta() {
                 to="/register"
                 className="btn btn-lg w-full justify-center bg-white text-ink-900 hover:bg-ink-100 md:w-auto"
               >
-                Start free
+                {t('marketing.startFree')}
                 <IconArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 to="/#pricing"
                 className="btn btn-lg w-full justify-center border border-white/15 text-white hover:bg-white/10 md:w-auto"
               >
-                Compare plans
+                {t('marketing.comparePlans')}
               </Link>
-              <span className="text-xs text-white/50">Trusted by ambitious teams worldwide</span>
+              <span className="text-xs text-white/50">{t('marketing.trustedWorldwide')}</span>
             </div>
           </div>
         </div>

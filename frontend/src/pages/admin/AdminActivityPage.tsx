@@ -6,6 +6,7 @@ import {
   type ActivityEvent,
   type ActivityKind,
 } from '../../features/admin/hooks';
+import { useT } from '../../i18n/I18nProvider';
 
 const ALL_KINDS: ActivityKind[] = [
   'user_joined',
@@ -15,18 +16,18 @@ const ALL_KINDS: ActivityKind[] = [
   'task_updated',
 ];
 
-function kindLabel(kind: ActivityEvent['kind']): string {
+function kindLabel(kind: ActivityEvent['kind'], t: (key: string) => string): string {
   switch (kind) {
     case 'user_joined':
-      return 'User joined';
+      return t('app.userJoined');
     case 'workspace_created':
-      return 'Workspace created';
+      return t('app.workspaceCreated');
     case 'project_created':
-      return 'Project created';
+      return t('app.projectCreated');
     case 'task_completed':
-      return 'Task completed';
+      return t('app.taskCompleted');
     case 'task_updated':
-      return 'Task updated';
+      return t('app.taskUpdated');
     default:
       return kind;
   }
@@ -42,6 +43,7 @@ function windowCutoffMs(w: TimeWindow): number | null {
 }
 
 export default function AdminActivityPage() {
+  const t = useT();
   const limit = 100;
   const { data: events = [], isLoading, isError, error, refetch, dataUpdatedAt } =
     useAdminActivity(limit);
@@ -74,7 +76,7 @@ export default function AdminActivityPage() {
           e.actor?.displayName,
           e.target?.label,
           e.workspace?.name,
-          kindLabel(e.kind),
+          kindLabel(e.kind, t),
           e.kind,
         ]
           .filter(Boolean)
@@ -85,7 +87,7 @@ export default function AdminActivityPage() {
     }
 
     return list;
-  }, [events, search, timeWindow, allowedKinds]);
+  }, [events, search, timeWindow, allowedKinds, t]);
 
   function toggleKind(k: ActivityKind) {
     setAllowedKinds((prev) => {
@@ -121,18 +123,18 @@ export default function AdminActivityPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <span className="eyebrow">Admin</span>
+          <span className="eyebrow">{t('app.admin')}</span>
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-ink-900 md:text-3xl">
-            Activity log
+            {t('app.activityLog')}
           </h1>
           <p className="mt-1 text-sm text-ink-500">
-            Aggregated signals from users, workspaces, projects, and tasks (same pipeline as{' '}
+            {t('app.activityHint')} ({' '}
             <code className="rounded bg-ink-100 px-1.5 py-0.5 font-mono text-xs">GET /admin/activity</code>
             ).
           </p>
         </div>
         <button type="button" className="btn-secondary px-4 text-sm" onClick={() => refetch()}>
-          Refresh
+          {t('app.refresh')}
         </button>
       </header>
 
@@ -154,9 +156,9 @@ export default function AdminActivityPage() {
       <section className="card p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-100 pb-4">
           <div>
-            <h2 className="text-sm font-semibold text-ink-900">Filters</h2>
+            <h2 className="text-sm font-semibold text-ink-900">{t('app.filters')}</h2>
             <p className="text-xs text-ink-500">
-              Client-side on the last {limit} rows from the API (types support server filters later).
+              {t('app.filtersHint')}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -171,26 +173,26 @@ export default function AdminActivityPage() {
         <div className="mt-4 grid gap-4 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-5">
             <label className="label" htmlFor="act-search">
-              Search
+              {t('app.search')}
             </label>
             <input
               id="act-search"
               type="search"
               className="input text-sm"
-              placeholder="Actor, workspace, task, event type…"
+              placeholder={t('app.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <div className="lg:col-span-4">
-            <span className="label">Time window</span>
+            <span className="label">{t('app.timeWindow')}</span>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {(
                 [
-                  ['all', 'All time'],
+                  ['all', t('app.allTime')],
                   ['24h', '24h'],
-                  ['7d', '7 days'],
-                  ['30d', '30 days'],
+                  ['7d', t('app.days7')],
+                  ['30d', t('app.days30')],
                 ] as const
               ).map(([key, label]) => (
                 <button
@@ -209,7 +211,7 @@ export default function AdminActivityPage() {
             </div>
           </div>
           <div className="lg:col-span-3">
-            <span className="label">Showing</span>
+            <span className="label">{t('app.showing')}</span>
             <p className="mt-2 rounded-xl bg-ink-50 px-3 py-2 text-center font-mono text-sm font-semibold tabular-nums text-ink-900 ring-1 ring-inset ring-ink-100">
               {filtered.length}
               <span className="font-normal text-ink-500"> / {events.length}</span>
@@ -220,14 +222,14 @@ export default function AdminActivityPage() {
         <div className="mt-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-bold uppercase tracking-wide text-ink-500">
-              Event types
+              {t('app.eventTypes')}
             </span>
             <button
               type="button"
               className="text-[11px] font-semibold text-brand-700 hover:text-brand-900"
               onClick={selectAllKinds}
             >
-              Select all
+              {t('app.selectAll')}
             </button>
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -244,7 +246,7 @@ export default function AdminActivityPage() {
                       : 'bg-white text-ink-400 line-through ring-ink-200 hover:bg-ink-50'
                   }`}
                 >
-                  {kindLabel(k)}
+                  {kindLabel(k, t)}
                 </button>
               );
             })}
@@ -312,7 +314,7 @@ export default function AdminActivityPage() {
                     </td>
                     <td className="px-5 py-2.5">
                       <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-semibold text-ink-800">
-                        {kindLabel(e.kind)}
+                        {kindLabel(e.kind, t)}
                       </span>
                     </td>
                     <td className="max-w-[200px] truncate px-5 py-2.5 text-ink-800">
