@@ -1,0 +1,50 @@
+export default {
+  common: {
+    cancel: 'Annulla',
+    confirm: 'Conferma',
+    seeAll: 'Vedi tutto',
+  },
+  nav: {
+    projects: 'Progetti',
+    tasks: 'Attivita',
+    admin: 'Admin',
+  },
+  roles: {
+    client: 'Cliente',
+    owner: 'Proprietario',
+  },
+  states: {
+    notFoundTitle: 'Non trovato',
+    notFoundHint: 'Questo progetto non esiste oppure non hai accesso.',
+  },
+  dashboard: {
+    titleClient: 'Dashboard cliente',
+    readOnlyClientNotice: 'Vista sola lettura: puoi consultare le attivita.',
+    titleOwner: 'Panoramica workspace',
+    titleAdmin: 'Amministrazione piattaforma',
+    recentProjects: 'Progetti recenti',
+    activityFeed: 'Attivita',
+    kpiUsers: 'Utenti',
+    kpiWorkspaces: 'Workspace',
+    kpiActiveProjects: 'Progetti attivi',
+    kpiOpenTasks: 'Attivita aperte',
+    kpiOverdue: 'In ritardo',
+  },
+  projects: {
+    new: 'Nuovo progetto',
+    deadline: 'Scadenza',
+    teamSize: 'persone',
+    statusActive: 'Attivo',
+    boardView: 'Bacheca',
+    progress: 'Avanzamento',
+    owner: 'Responsabile',
+  },
+  tasks: {
+    new: 'Nuova attivita',
+    title: 'Titolo',
+    assignee: 'Assegnatario',
+    statusBacklog: 'Stato',
+    priorityHigh: 'Priorita',
+    dueDate: 'Scadenza',
+  },
+} as const;

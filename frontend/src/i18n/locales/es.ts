@@ -1,0 +1,50 @@
+export default {
+  common: {
+    cancel: 'Cancelar',
+    confirm: 'Confirmar',
+    seeAll: 'Ver todo',
+  },
+  nav: {
+    projects: 'Proyectos',
+    tasks: 'Tareas',
+    admin: 'Admin',
+  },
+  roles: {
+    client: 'Cliente',
+    owner: 'Propietario',
+  },
+  states: {
+    notFoundTitle: 'No encontrado',
+    notFoundHint: 'Este proyecto no existe o no tienes acceso.',
+  },
+  dashboard: {
+    titleClient: 'Panel de cliente',
+    readOnlyClientNotice: 'Vista de solo lectura: puedes explorar tareas.',
+    titleOwner: 'Resumen del espacio de trabajo',
+    titleAdmin: 'Administracion de plataforma',
+    recentProjects: 'Proyectos recientes',
+    activityFeed: 'Actividad',
+    kpiUsers: 'Usuarios',
+    kpiWorkspaces: 'Espacios de trabajo',
+    kpiActiveProjects: 'Proyectos activos',
+    kpiOpenTasks: 'Tareas abiertas',
+    kpiOverdue: 'Atrasadas',
+  },
+  projects: {
+    new: 'Nuevo proyecto',
+    deadline: 'Fecha limite',
+    teamSize: 'personas',
+    statusActive: 'Activo',
+    boardView: 'Tablero',
+    progress: 'Progreso',
+    owner: 'Responsable',
+  },
+  tasks: {
+    new: 'Nueva tarea',
+    title: 'Titulo',
+    assignee: 'Asignado',
+    statusBacklog: 'Estado',
+    priorityHigh: 'Prioridad',
+    dueDate: 'Vence',
+  },
+} as const;

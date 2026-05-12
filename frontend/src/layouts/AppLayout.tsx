@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'reac
 import { useAuth } from '../features/auth/AuthProvider';
 import { useMyDashboard } from '../features/dashboard/hooks';
 import { Logo } from '../components/ui/Logo';
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
@@ -56,6 +57,8 @@ export default function AppLayout() {
 
           {/* Right cluster */}
           <div className="flex items-center gap-2">
+            <LanguageSwitcher compact />
+
             {/* Role chip */}
             <RoleChip role={myRole} platformAdmin={isAdmin} />
 

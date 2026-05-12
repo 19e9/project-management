@@ -9,10 +9,19 @@ import {
 } from 'react';
 import tr from './locales/tr';
 import en from './locales/en';
+import es from './locales/es';
+import it from './locales/it';
 
 /** Nested message tree (locale files share shape but not literal string types). */
 type Msg = string | { [k: string]: Msg };
-const dicts: Record<'tr' | 'en', Msg> = { tr, en };
+export type Locale = 'en' | 'tr' | 'es' | 'it';
+export const localeOptions: Array<{ code: Locale; label: string; shortLabel: string }> = [
+  { code: 'en', label: 'English', shortLabel: 'EN' },
+  { code: 'tr', label: 'Turkish', shortLabel: 'TR' },
+  { code: 'es', label: 'Spanish', shortLabel: 'ES' },
+  { code: 'it', label: 'Italian', shortLabel: 'IT' },
+];
+const dicts: Record<Locale, Msg> = { en, tr, es, it };
 
 function lookup(dict: Msg, key: string): string | undefined {
   const parts = key.split('.');
@@ -28,8 +37,8 @@ function lookup(dict: Msg, key: string): string | undefined {
 }
 
 type I18nCtx = {
-  locale: 'tr' | 'en';
-  setLocale: (l: 'tr' | 'en') => void;
+  locale: Locale;
+  setLocale: (l: Locale) => void;
   t: (key: string) => string;
 };
 
@@ -38,14 +47,14 @@ const Ctx = createContext<I18nCtx | null>(null);
 const STORAGE = 'locale';
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<'tr' | 'en'>(() => {
+  const [locale, setLocaleState] = useState<Locale>(() => {
     try {
       const s = localStorage.getItem(STORAGE);
-      if (s === 'en' || s === 'tr') return s;
+      if (isLocale(s)) return s;
     } catch {
       /* ignore */
     }
-    return 'tr';
+    return 'en';
   });
 
   useEffect(() => {
@@ -57,7 +66,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, [locale]);
 
-  const setLocale = useCallback((l: 'tr' | 'en') => setLocaleState(l), []);
+  const setLocale = useCallback((l: Locale) => setLocaleState(l), []);
 
   const t = useCallback(
     (key: string) => {
@@ -86,4 +95,8 @@ export function useI18n(): I18nCtx {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error('useI18n must be used within I18nProvider');
   return ctx;
+}
+
+function isLocale(value: string | null): value is Locale {
+  return localeOptions.some((option) => option.code === value);
 }

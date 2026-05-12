@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Logo } from '../ui/Logo';
 import { IconArrowRight } from '../ui/Icons';
+import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 import { usePublicSiteFooter, usePublicSiteNav } from '../../features/cms/hooks';
 import { isExternalHref } from './MarketingLink';
 
@@ -96,6 +97,7 @@ export function Navbar() {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
+          <LanguageSwitcher compact />
           <Link to="/login" className="btn-ghost">
             Sign in
           </Link>
@@ -126,6 +128,7 @@ export function Navbar() {
           <div className="container space-y-1 py-4">
             {links.map((l) => renderNavLink(l, 'mobile'))}
             <div className="grid gap-2 pt-3">
+              <LanguageSwitcher />
               <Link to="/login" onClick={() => setOpen(false)} className="btn-secondary w-full">
                 Sign in
               </Link>
