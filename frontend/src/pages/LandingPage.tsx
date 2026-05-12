@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { MarketingPageShell } from '../components/marketing/MarketingPageShell';
 import { DynamicPricingSection } from '../components/marketing/DynamicPricingSection';
 import { HeroMockup } from '../components/marketing/HeroMockup';
@@ -16,6 +17,21 @@ import {
 } from '../components/ui/Icons';
 
 export default function LandingPage() {
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) return;
+    const id = decodeURIComponent(hash.slice(1));
+    const scrollToSection = () => {
+      document.getElementById(id)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    };
+    const frame = window.requestAnimationFrame(scrollToSection);
+    return () => window.cancelAnimationFrame(frame);
+  }, [hash]);
+
   return (
     <MarketingPageShell>
       <Hero />
