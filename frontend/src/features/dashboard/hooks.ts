@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
 
 export type MyRole = 'platform_admin' | 'owner' | 'member' | 'client';
@@ -72,5 +72,34 @@ export function useMyDashboard() {
     queryFn: async () => (await api.get<MeDashboardData>('/me/dashboard')).data,
     refetchInterval: 60_000,
     staleTime: 30_000,
+  });
+}
+
+export function useUpdateDashboardTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      workspaceId,
+      projectId,
+      taskId,
+      patch,
+    }: {
+      workspaceId: string;
+      projectId: string;
+      taskId: string;
+      patch: { status?: string; progressPct?: number };
+    }) =>
+      (
+        await api.patch(
+          `/workspaces/${workspaceId}/projects/${projectId}/tasks/${taskId}`,
+          patch,
+        )
+      ).data,
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['me', 'dashboard'] });
+      qc.invalidateQueries({ queryKey: ['tasks', vars.workspaceId, vars.projectId] });
+      qc.invalidateQueries({ queryKey: ['tasks', 'tree', vars.workspaceId, vars.projectId] });
+      qc.invalidateQueries({ queryKey: ['analytics', 'overview', vars.workspaceId, vars.projectId] });
+    },
   });
 }

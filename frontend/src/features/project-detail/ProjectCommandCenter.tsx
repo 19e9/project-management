@@ -29,6 +29,7 @@ export function ProjectCommandCenter({
   blocked,
   completionPct,
   cpmEnabled,
+  canManage,
   onQuickAction,
 }: {
   projectId: string;
@@ -41,6 +42,7 @@ export function ProjectCommandCenter({
   blocked: number;
   completionPct: number;
   cpmEnabled: boolean;
+  canManage: boolean;
   onQuickAction: (action: QuickAction) => void;
 }) {
   const overdue = useMemo(() => countOverdue(tasks), [tasks]);
@@ -50,13 +52,18 @@ export function ProjectCommandCenter({
   const [prefsPriority, setPrefsPriority] = useState<UiPriority | null>(() =>
     loadProjectUiPriority(projectId),
   );
-  const priorityLabel = (prefsPriority ?? priorityFromTasks ?? 'medium').replace('_', ' ');
+  const priorityLabel = ((canManage ? prefsPriority : null) ?? priorityFromTasks ?? 'medium').replace('_', ' ');
   const [sprintOpen, setSprintOpen] = useState(false);
   const [sprintDraft, setSprintDraft] = useState(() => loadSprintLabel(projectId));
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [budget, setBudget] = useState(() => loadBudgetPrefs(projectId));
 
-  const dueDays = daysUntil(projectEnd ?? undefined);
+  const visibleDueDate = canManage
+    ? projectEnd
+    : [...tasks]
+        .filter((task) => task.status !== 'done' && task.status !== 'cancelled')
+        .sort((a, b) => +new Date(a.endDate) - +new Date(b.endDate))[0]?.endDate;
+  const dueDays = daysUntil(visibleDueDate ?? undefined);
 
   const effectiveBudget =
     budget ??
@@ -73,7 +80,7 @@ export function ProjectCommandCenter({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="eyebrow">Project control center</span>
+              <span className="eyebrow">{canManage ? 'Project control center' : 'My project work'}</span>
               {!cpmEnabled && (
                 <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 ring-1 ring-inset ring-amber-200">
                   CPM locked on plan
@@ -86,10 +93,10 @@ export function ProjectCommandCenter({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <QuickBtn icon="＋" label="Task" onClick={() => onQuickAction({ type: 'task' })} />
-            <QuickBtn icon="◇" label="Milestone" onClick={() => onQuickAction({ type: 'milestone' })} />
-            <QuickBtn icon="✉" label="Invite" onClick={() => onQuickAction({ type: 'invite' })} />
-            <QuickBtn icon="⭳" label="Upload" onClick={() => onQuickAction({ type: 'docs' })} />
+            {canManage && <QuickBtn icon="+" label="Task" onClick={() => onQuickAction({ type: 'task' })} />}
+            {canManage && <QuickBtn icon="◇" label="Milestone" onClick={() => onQuickAction({ type: 'milestone' })} />}
+            {canManage && <QuickBtn icon="✉" label="Invite" onClick={() => onQuickAction({ type: 'invite' })} />}
+            {canManage && <QuickBtn icon="↧" label="Upload" onClick={() => onQuickAction({ type: 'docs' })} />}
             <QuickBtn icon="↗" label="Export" onClick={() => onQuickAction({ type: 'export' })} />
             <QuickBtn icon="▦" label="Kanban" onClick={() => onQuickAction({ type: 'kanban' })} />
             <QuickBtn icon="⌗" label="Report" onClick={() => onQuickAction({ type: 'report' })} />
@@ -97,35 +104,55 @@ export function ProjectCommandCenter({
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6">
-          <MetricTile label="Progress" value={`${progressPctRounded}%`} hint="Portfolio completion" tone="brand" />
-          <MetricTile label="Health" value={health} hint="Signals from blockers & overdue" tone="emerald" />
+          <MetricTile
+            label="Progress"
+            value={`${progressPctRounded}%`}
+            hint={canManage ? 'Portfolio completion' : 'Assigned work completion'}
+            tone="brand"
+          />
+          <MetricTile
+            label="Health"
+            value={health}
+            hint={canManage ? 'Signals from blockers & overdue' : 'Assigned task signals'}
+            tone="emerald"
+          />
           <MetricTile
             label="Due date"
             value={dueDays === null ? '—' : dueDays >= 0 ? `In ${dueDays}d` : `${Math.abs(dueDays)}d overdue`}
-            hint={projectEnd ? projectEnd.slice(0, 10) : 'Set project end date'}
+            hint={visibleDueDate ? visibleDueDate.slice(0, 10) : canManage ? 'Set project end date' : 'No assigned due date'}
             tone="cyan"
           />
           <MetricTile
             label="Budget"
             value={`$${effectiveBudget.spentUsd.toLocaleString()} / $${effectiveBudget.capUsd.toLocaleString()}`}
-            hint="Tap to simulate budget"
+            hint={canManage ? 'Tap to simulate budget' : 'Assigned work estimate'}
             tone="amber"
-            onClick={() => setBudgetOpen(true)}
+            onClick={canManage ? () => setBudgetOpen(true) : undefined}
           />
           <MetricTile label="Blockers" value={String(blocked)} hint="Workflow blocked column" tone="rose" />
           <MetricTile label="Overdue" value={String(overdue)} hint="Active tasks past end date" tone="orange" />
           <MetricTile
             label="Sprint"
             value={sprintDraft.trim() ? sprintDraft : '—'}
-            hint="Local sprint label"
+            hint={canManage ? 'Local sprint label' : 'Sprint label'}
             tone="slate"
-            onClick={() => setSprintOpen(true)}
+            onClick={canManage ? () => setSprintOpen(true) : undefined}
           />
-          <MetricTile label="Priority" value={priorityLabel} hint="Workspace override or highest task" tone="violet" />
+          <MetricTile
+            label="Priority"
+            value={priorityLabel}
+            hint={canManage ? 'Workspace override or highest task' : 'Highest assigned task'}
+            tone="violet"
+          />
           <MetricTile label="Risk" value={risk} hint="Heuristic from overdue + blocked" tone="red" />
           <MetricTile label="Active" value={String(overview?.inProgress ?? 0)} hint="In progress tasks" tone="blue" />
           <MetricTile label="Critical path" value={String(criticalCount)} hint={cpmEnabled ? 'Live CPM ids' : 'Preview ids'} tone="pink" />
-          <MetricTile label="Team" value={`${members.length}`} hint={`${members.length} seats active`} tone="ink">
+          <MetricTile
+            label={canManage ? 'Team' : 'Related team'}
+            value={`${members.length}`}
+            hint={canManage ? `${members.length} seats active` : `${members.length} assigned here`}
+            tone="ink"
+          >
             <div className="mt-2 flex -space-x-2">
               {members.slice(0, 6).map((m) => (
                 <span
@@ -146,7 +173,7 @@ export function ProjectCommandCenter({
         </div>
       </div>
 
-      {budgetOpen && (
+      {canManage && budgetOpen && (
         <BudgetModal
           initial={effectiveBudget}
           onSave={(b) => {
@@ -158,7 +185,7 @@ export function ProjectCommandCenter({
         />
       )}
 
-      {sprintOpen && (
+      {canManage && sprintOpen && (
         <div className="fixed inset-0 z-[60] grid place-items-center bg-ink-900/40 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl ring-1 ring-ink-200">
             <h3 className="text-base font-semibold text-ink-900">Sprint label</h3>
@@ -188,7 +215,8 @@ export function ProjectCommandCenter({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-ink-100 bg-ink-50/30 px-4 py-3 text-xs text-ink-600 sm:px-5">
+      {canManage && (
+        <div className="flex flex-wrap items-center gap-2 border-t border-ink-100 bg-ink-50/30 px-4 py-3 text-xs text-ink-600 sm:px-5">
         <span className="font-semibold text-ink-800">Priority override</span>
         {(['low', 'medium', 'high', 'critical'] as UiPriority[]).map((p) => (
           <button
@@ -217,7 +245,8 @@ export function ProjectCommandCenter({
         >
           Reset to tasks
         </button>
-      </div>
+        </div>
+      )}
     </section>
   );
 }

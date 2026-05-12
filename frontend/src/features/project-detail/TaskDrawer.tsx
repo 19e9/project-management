@@ -61,6 +61,7 @@ export function TaskDrawer({
   tasks,
   members,
   projectId,
+  canManage,
   onClose,
   patchTask,
   createTask,
@@ -70,6 +71,7 @@ export function TaskDrawer({
   tasks: TaskItem[];
   members: WorkspaceMemberRow[];
   projectId: string;
+  canManage: boolean;
   onClose: () => void;
   patchTask: (patch: Partial<TaskItem> & { id: string }) => Promise<unknown>;
   createTask: (body: Partial<TaskItem>) => Promise<unknown>;
@@ -134,6 +136,7 @@ export function TaskDrawer({
             <input
               className="w-full border-none bg-transparent text-lg font-bold text-ink-900 outline-none ring-0 placeholder:text-ink-400 focus:ring-0"
               value={task.title}
+              readOnly={!canManage}
               onChange={(e) => patchTask({ id: task.id, title: e.target.value })}
             />
             <p className="mt-1 truncate font-mono text-[11px] text-ink-500">{task.id}</p>
@@ -169,6 +172,7 @@ export function TaskDrawer({
                   className="input min-h-[88px] resize-y text-sm"
                   placeholder="Context, acceptance criteria, links…"
                   value={task.description ?? ''}
+                  readOnly={!canManage}
                   onChange={(e) => patchTask({ id: task.id, description: e.target.value || null })}
                 />
               </div>
@@ -195,6 +199,7 @@ export function TaskDrawer({
                   <select
                     className="input text-sm"
                     value={task.priority}
+                    disabled={!canManage}
                     onChange={(e) =>
                       patchTask({ id: task.id, priority: e.target.value as TaskItem['priority'] })
                     }
@@ -214,6 +219,7 @@ export function TaskDrawer({
                     type="date"
                     className="input text-sm"
                     value={isoDate(task.startDate)}
+                    disabled={!canManage}
                     onChange={(e) =>
                       patchTask({ id: task.id, startDate: dayToIso(e.target.value) })
                     }
@@ -225,6 +231,7 @@ export function TaskDrawer({
                     type="date"
                     className="input text-sm"
                     value={isoDate(task.endDate)}
+                    disabled={!canManage}
                     onChange={(e) =>
                       patchTask({ id: task.id, endDate: dayToIso(e.target.value) })
                     }
@@ -267,7 +274,7 @@ export function TaskDrawer({
                 />
               </div>
 
-              <div>
+              {canManage && <div>
                 <label className="label">Assignees</label>
                 <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-ink-200 bg-ink-50/30 p-2">
                   {members.map((m) => (
@@ -284,7 +291,7 @@ export function TaskDrawer({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </div>}
 
               <div>
                 <label className="label">Labels (local)</label>
@@ -328,7 +335,7 @@ export function TaskDrawer({
                 </form>
               </div>
 
-              <div>
+              {canManage && <div>
                 <label className="label">Watchers (local)</label>
                 <ul className="mt-2 space-y-1 rounded-xl border border-ink-200 bg-ink-50/30 p-2">
                   {members.map((m) => (
@@ -348,7 +355,7 @@ export function TaskDrawer({
                     </label>
                   ))}
                 </ul>
-              </div>
+              </div>}
 
               <div>
                 <label className="label">Subtasks ({subtasks.length})</label>
@@ -363,7 +370,7 @@ export function TaskDrawer({
                     </li>
                   ))}
                 </ul>
-                <form
+                {canManage && <form
                   className="mt-3 flex gap-2"
                   onSubmit={async (e) => {
                     e.preventDefault();
@@ -390,7 +397,7 @@ export function TaskDrawer({
                   <button type="submit" className="btn-primary shrink-0 px-3 text-xs">
                     Add
                   </button>
-                </form>
+                </form>}
               </div>
 
               <div className="rounded-xl border border-dashed border-ink-200 bg-ink-50/20 p-3 text-xs text-ink-600">

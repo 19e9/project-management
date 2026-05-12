@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthProvider';
 import { useMyDashboard } from '../features/dashboard/hooks';
 import { Logo } from '../components/ui/Logo';
@@ -7,13 +7,18 @@ import { Logo } from '../components/ui/Logo';
 export default function AppLayout() {
   const { user, signOut } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
   const { workspaceId } = useParams();
   const dash = useMyDashboard();
   const myRole = dash.data?.myRole;
   const isAdmin = user?.platformRole === 'platform_admin';
   const [menuOpen, setMenuOpen] = useState(false);
+  const currentWorkspaceId =
+    workspaceId ??
+    location.pathname.match(/\/dashboard\/workspaces\/([^/]+)/)?.[1] ??
+    dash.data?.workspaces[0]?.id;
 
-  const links = buildNavLinks({ isAdmin, myRole, workspaceId });
+  const links = buildNavLinks({ isAdmin, myRole, workspaceId: currentWorkspaceId });
 
   return (
     <div className="min-h-screen bg-ink-50/40">
@@ -196,7 +201,7 @@ function buildNavLinks({
   if (isAdmin) {
     return [
       { to: '/dashboard', label: 'Dashboard', end: true, icon: IconGrid },
-      { to: '/dashboard/workspaces', label: 'Workspaces', icon: IconBox },
+      { to: '/dashboard/workspaces', label: 'Workspaces', end: true, icon: IconBox },
       { to: '/dashboard/activity', label: 'Activity', icon: IconActivity },
       {
         to: '/dashboard/all-workspaces',
@@ -211,7 +216,7 @@ function buildNavLinks({
   if (myRole === 'owner') {
     return [
       { to: '/dashboard', label: 'Dashboard', end: true, icon: IconGrid },
-      { to: '/dashboard/workspaces', label: 'Workspaces', icon: IconBox },
+      { to: '/dashboard/workspaces', label: 'Workspaces', end: true, icon: IconBox },
       ...(workspaceId
         ? [{ to: `/dashboard/workspaces/${workspaceId}/projects`, label: 'Projects', icon: IconLayers }]
         : []),
@@ -220,7 +225,7 @@ function buildNavLinks({
   if (myRole === 'member') {
     return [
       { to: '/dashboard', label: 'My tasks', end: true, icon: IconCheck },
-      { to: '/dashboard/workspaces', label: 'Workspaces', icon: IconBox },
+      { to: '/dashboard/workspaces', label: 'Workspaces', end: true, icon: IconBox },
       ...(workspaceId
         ? [{ to: `/dashboard/workspaces/${workspaceId}/projects`, label: 'Projects', icon: IconLayers }]
         : []),
@@ -229,7 +234,9 @@ function buildNavLinks({
   // client
   return [
     { to: '/dashboard', label: 'Overview', end: true, icon: IconGrid },
-    { to: '/dashboard/workspaces', label: 'Projects', icon: IconLayers },
+    workspaceId
+      ? { to: `/dashboard/workspaces/${workspaceId}/projects`, label: 'Projects', icon: IconLayers }
+      : { to: '/dashboard/workspaces', label: 'Projects', end: true, icon: IconLayers },
   ];
 }
 

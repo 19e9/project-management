@@ -15,6 +15,7 @@
     "axios": "1.7.9",
     "clsx": "2.1.1",
     "gantt-task-react": "0.3.9",
+    "planforge-pm": "file:..",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-hook-form": "7.54.2",

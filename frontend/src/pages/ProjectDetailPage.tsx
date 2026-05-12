@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { useProject } from '../features/projects/hooks';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useMyDashboard } from '../features/dashboard/hooks';
+import { useDeleteProject, useProject, useUpdateProject } from '../features/projects/hooks';
 import {
   useAnalyticsOverview,
   useCpm,
@@ -15,6 +16,8 @@ import {
 } from '../features/tasks/hooks';
 import {
   useInviteWorkspaceMember,
+  useRemoveWorkspaceMember,
+  useUpdateWorkspaceMemberRole,
   useWorkspace,
   useWorkspaceMembers,
 } from '../features/workspaces/hooks';
@@ -63,31 +66,43 @@ export default function ProjectDetailPage() {
     workspaceId: string;
     projectId: string;
   }>();
+  const nav = useNavigate();
   const [tab, setTab] = useState<TabId>('overview');
 
   const { data: workspace } = useWorkspace(workspaceId);
+  const { data: dashboard } = useMyDashboard();
   const { data: project } = useProject(workspaceId, projectId);
   const { data: tasks = [] } = useTasks(workspaceId, projectId);
   const { data: tree = [] } = useTaskTree(workspaceId, projectId);
   const { data: deps = [] } = useDependencies(workspaceId, projectId);
   const overview = useAnalyticsOverview(workspaceId, projectId);
-  const cpm = useCpm(workspaceId, projectId);
+  const cpmEnabled = workspace?.entitlements?.cpmEnabled;
+  const cpm = useCpm(workspaceId, projectId, !!cpmEnabled);
   const createTask = useCreateTask(workspaceId!, projectId!);
+  const updateProject = useUpdateProject(workspaceId!, projectId!);
+  const deleteProject = useDeleteProject(workspaceId!);
   const createDep = useCreateDependency(workspaceId!, projectId!);
   const deleteTask = useDeleteTask(workspaceId!, projectId!);
   const patchTaskMut = usePatchTask(workspaceId!, projectId!);
   const { data: members = [] } = useWorkspaceMembers(workspaceId);
   const inviteMutation = useInviteWorkspaceMember(workspaceId!);
+  const updateMemberRole = useUpdateWorkspaceMemberRole(workspaceId!);
+  const removeMember = useRemoveWorkspaceMember(workspaceId!);
 
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'owner' | 'member' | 'client'>('member');
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [memberActionError, setMemberActionError] = useState<string | null>(null);
   const [taskFormKey, setTaskFormKey] = useState(0);
   const [newTaskDefaultTitle, setNewTaskDefaultTitle] = useState('');
+  const [quickActionError, setQuickActionError] = useState<string | null>(null);
+  const [projectEditOpen, setProjectEditOpen] = useState(false);
+  const [projectNameDraft, setProjectNameDraft] = useState('');
+  const [projectDescriptionDraft, setProjectDescriptionDraft] = useState('');
   const taskAnchorRef = useRef<HTMLDivElement | null>(null);
 
-  const cpmEnabled = workspace?.entitlements?.cpmEnabled;
   const criticalIds: string[] = cpm.data?.criticalTaskIds ?? [];
   const drawerTask = drawerTaskId ? (tasks.find((t) => t.id === drawerTaskId) ?? null) : null;
 
@@ -95,22 +110,56 @@ export default function ProjectDetailPage() {
   const blocked = overview.data?.blocked ?? 0;
   const completionPct = overview.data?.completionPct ?? 0;
   const overdueCount = countOverdue(tasks);
+  const workspaceRole = dashboard?.workspaces.find((w) => w.id === workspaceId)?.role;
+  const canManageProject = dashboard?.myRole === 'platform_admin' || workspaceRole === 'owner';
+  const projectMemberIds = new Set(tasks.flatMap((task) => task.assigneeIds ?? []));
+  const projectMembers = members.filter((member) => projectMemberIds.has(member.userId));
+  const taskDrawerMembers = canManageProject ? members : projectMembers;
 
-  function handleQuickAction(action: QuickAction) {
+  async function handleQuickAction(action: QuickAction) {
+    setQuickActionError(null);
     switch (action.type) {
       case 'task':
+        if (!canManageProject) return;
+        {
+          const { startDate, endDate, durationDays } = defaultNewTaskWindow(
+            project?.startDate,
+            project?.endDate,
+          );
+          await createTask.mutateAsync({
+            title: `Task ${tasks.length + 1}`,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            durationDays,
+            parentTaskId: null,
+          });
+        }
         setTab('tasks');
         setNewTaskDefaultTitle('');
         setTaskFormKey((k) => k + 1);
         queueMicrotask(() => taskAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
         break;
       case 'milestone':
+        if (!canManageProject) return;
+        {
+          const { startDate } = defaultNewTaskWindow(project?.startDate, project?.endDate);
+          await createTask.mutateAsync({
+            title: `Milestone ${tasks.length + 1}`,
+            startDate: startDate.toISOString(),
+            endDate: startDate.toISOString(),
+            durationDays: 1,
+            parentTaskId: null,
+          });
+        }
         setTab('tasks');
         setNewTaskDefaultTitle('Milestone: ');
         setTaskFormKey((k) => k + 1);
         queueMicrotask(() => taskAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
         break;
       case 'invite':
+        if (!canManageProject) return;
+        setInviteError(null);
+        setMemberActionError(null);
         setInviteOpen(true);
         break;
       case 'docs':
@@ -127,6 +176,19 @@ export default function ProjectDetailPage() {
         break;
       default:
         break;
+    }
+  }
+
+  async function runQuickAction(action: QuickAction) {
+    try {
+      await handleQuickAction(action);
+    } catch (err: any) {
+      setQuickActionError(
+        err?.response?.data?.message ??
+          err?.response?.data?.code ??
+          err?.message ??
+          'Could not add task.',
+      );
     }
   }
 
@@ -149,27 +211,97 @@ export default function ProjectDetailPage() {
             { label: project?.name ?? 'Project' },
           ]}
         />
+        <div className="flex flex-wrap gap-2">
+          {canManageProject && (
+            <button
+              type="button"
+              className="btn-secondary h-10 px-4 text-sm"
+              onClick={() => {
+                setProjectNameDraft(project?.name ?? '');
+                setProjectDescriptionDraft(project?.description ?? '');
+                setProjectEditOpen(true);
+              }}
+            >
+              Edit project
+            </button>
+          )}
+          {canManageProject && (
+            <button
+              type="button"
+              className="btn-secondary h-10 px-4 text-sm text-rose-700"
+              disabled={deleteProject.isPending}
+              onClick={async () => {
+                if (!window.confirm(`Delete project "${project?.name ?? 'Project'}"?`)) return;
+                await deleteProject.mutateAsync(projectId!);
+                nav(`/dashboard/workspaces/${workspaceId}/projects`);
+              }}
+            >
+              Delete project
+            </button>
+          )}
         <Link
           to={`/dashboard/workspaces/${workspaceId}/projects`}
           className="btn-secondary h-10 shrink-0 px-4 text-sm"
         >
           ← Back to projects
         </Link>
+        </div>
       </div>
+
+      {projectEditOpen && (
+        <div className="rounded-2xl border border-ink-200 bg-white p-5 shadow-card">
+          <form
+            className="grid gap-4 md:grid-cols-2 md:items-end"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const name = projectNameDraft.trim();
+              if (!name) return;
+              await updateProject.mutateAsync({
+                name,
+                description: projectDescriptionDraft.trim(),
+              });
+              setProjectEditOpen(false);
+            }}
+          >
+            <div>
+              <label className="label">Project name</label>
+              <input className="input" value={projectNameDraft} onChange={(e) => setProjectNameDraft(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Description</label>
+              <input className="input" value={projectDescriptionDraft} onChange={(e) => setProjectDescriptionDraft(e.target.value)} />
+            </div>
+            <div className="flex gap-2 md:col-span-2">
+              <button type="submit" className="btn-primary px-4 text-sm" disabled={updateProject.isPending}>
+                Save project
+              </button>
+              <button type="button" className="btn-secondary px-4 text-sm" onClick={() => setProjectEditOpen(false)}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <ProjectCommandCenter
         projectId={projectId!}
         projectName={project?.name ?? 'Project'}
         projectEnd={project?.endDate ?? null}
         tasks={tasks}
-        members={members}
+        members={projectMembers}
         overview={overview.data}
         criticalCount={criticalCount}
         blocked={blocked}
         completionPct={completionPct}
         cpmEnabled={!!cpmEnabled}
-        onQuickAction={handleQuickAction}
+        canManage={!!canManageProject}
+        onQuickAction={runQuickAction}
       />
+      {quickActionError && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+          {quickActionError}
+        </div>
+      )}
 
       {project?.code && (
         <p className="text-xs text-ink-500">
@@ -210,7 +342,7 @@ export default function ProjectDetailPage() {
               projectId={projectId!}
               overview={overview.data}
               tasks={tasks}
-              members={members}
+              members={projectMembers}
               criticalIds={criticalIds}
             />
           )}
@@ -222,7 +354,11 @@ export default function ProjectDetailPage() {
                 subtitle="Drag :: handles to reorganize parents. Drop on the dashed strip to promote to root."
               />
               <div className="mt-4 rounded-2xl border border-ink-100 bg-ink-50/30 p-4 sm:p-5">
-                <WbsTree nodes={tree as any} criticalIds={criticalIds} onReparent={reparentTask} />
+                <WbsTree
+                  nodes={tree as any}
+                  criticalIds={criticalIds}
+                  onReparent={canManageProject ? reparentTask : undefined}
+                />
               </div>
             </>
           )}
@@ -238,7 +374,8 @@ export default function ProjectDetailPage() {
                   workspaceId={workspaceId!}
                   projectId={projectId!}
                   criticalIds={criticalIds}
-                  members={members}
+                  members={projectMembers}
+                  canManage={!!canManageProject}
                 />
               </div>
             </>
@@ -260,7 +397,8 @@ export default function ProjectDetailPage() {
                 tasks={tasks}
                 deps={deps}
                 criticalIds={criticalIds}
-                members={members}
+                members={projectMembers}
+                canManage={!!canManageProject}
                 newTaskDefaultTitle={newTaskDefaultTitle}
                 onCreateTask={(payload) => createTask.mutateAsync(payload)}
                 onCreateDep={(body) => createDep.mutateAsync(body)}
@@ -274,7 +412,7 @@ export default function ProjectDetailPage() {
             <ProjectKanban
               projectId={projectId!}
               tasks={tasks}
-              members={members}
+              members={projectMembers}
               onStatusChange={(id, status) => patchTaskMut.mutate({ id, status })}
               onOpenTask={(t) => setDrawerTaskId(t.id)}
             />
@@ -301,8 +439,9 @@ export default function ProjectDetailPage() {
         open={drawerTaskId !== null}
         task={drawerTask}
         tasks={tasks}
-        members={members}
+        members={taskDrawerMembers}
         projectId={projectId!}
+        canManage={!!canManageProject}
         onClose={() => setDrawerTaskId(null)}
         patchTask={(patch) => patchTaskMut.mutateAsync(patch)}
         createTask={(body) => createTask.mutateAsync(body)}
@@ -312,16 +451,27 @@ export default function ProjectDetailPage() {
         <div className="fixed inset-0 z-[70] grid place-items-center bg-ink-900/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-ink-200">
             <h3 className="text-lg font-semibold text-ink-900">Invite teammate</h3>
-            <p className="mt-1 text-xs text-ink-500">Uses workspace invite API (owner only).</p>
+            <p className="mt-1 text-xs text-ink-500">Invite or manage workspace access.</p>
             <form
               className="mt-4 space-y-3"
               onSubmit={async (e) => {
                 e.preventDefault();
+                setInviteError(null);
                 const email = inviteEmail.trim();
                 if (!email) return;
-                await inviteMutation.mutateAsync({ email, role: inviteRole });
-                setInviteEmail('');
-                setInviteOpen(false);
+                try {
+                  await inviteMutation.mutateAsync({ email, role: inviteRole });
+                  setInviteEmail('');
+                  setInviteOpen(false);
+                  setMemberActionError(null);
+                } catch (err: any) {
+                  setInviteError(
+                    err?.response?.data?.message ??
+                      err?.response?.data?.code ??
+                      err?.message ??
+                      'Could not invite this user.',
+                  );
+                }
               }}
             >
               <div>
@@ -346,6 +496,11 @@ export default function ProjectDetailPage() {
                   <option value="owner">Owner</option>
                 </select>
               </div>
+              {inviteError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+                  {inviteError}
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -359,6 +514,68 @@ export default function ProjectDetailPage() {
                 </button>
               </div>
             </form>
+
+            <div className="mt-5 border-t border-ink-100 pt-4">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h4 className="text-sm font-semibold text-ink-900">Workspace members</h4>
+                <span className="text-[11px] font-medium text-ink-500">{members.length} active</span>
+              </div>
+              <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                {members.map((m) => (
+                  <MemberManagerRow
+                    key={m.userId}
+                    member={m}
+                    isPrimaryOwner={m.userId === workspace?.ownerId}
+                    rolePending={updateMemberRole.isPending}
+                    removePending={removeMember.isPending}
+                    onRoleChange={async (role) => {
+                      setMemberActionError(null);
+                      try {
+                        await updateMemberRole.mutateAsync({ userId: m.userId, role });
+                      } catch (err: any) {
+                        setMemberActionError(
+                          err?.response?.data?.message ??
+                            err?.response?.data?.code ??
+                            err?.message ??
+                            'Could not update this member.',
+                        );
+                      }
+                    }}
+                    onRemove={async () => {
+                      if (window.confirm(`Remove ${m.displayName} from this workspace?`)) {
+                        setMemberActionError(null);
+                        try {
+                          await removeMember.mutateAsync(m.userId);
+                          setInviteOpen(false);
+                        } catch (err: any) {
+                          setMemberActionError(
+                            err?.response?.data?.message ??
+                              err?.response?.data?.code ??
+                              err?.message ??
+                              'Could not remove this member.',
+                          );
+                        }
+                      }
+                    }}
+                  />
+                ))}
+                {members.length === 0 && (
+                  <li className="rounded-xl border border-dashed border-ink-200 px-4 py-8 text-center text-sm text-ink-500">
+                    No members loaded.
+                  </li>
+                )}
+              </ul>
+              {memberActionError && (
+                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+                  {memberActionError}
+                </div>
+              )}
+              <div className="mt-4 flex justify-end">
+                <button type="button" className="btn-secondary px-4 text-sm" onClick={() => setInviteOpen(false)}>
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -388,6 +605,58 @@ function Breadcrumb({
         </span>
       ))}
     </nav>
+  );
+}
+
+function MemberManagerRow({
+  member,
+  isPrimaryOwner,
+  rolePending,
+  removePending,
+  onRoleChange,
+  onRemove,
+}: {
+  member: import('../features/workspaces/hooks').WorkspaceMemberRow;
+  isPrimaryOwner: boolean;
+  rolePending: boolean;
+  removePending: boolean;
+  onRoleChange: (role: 'owner' | 'member' | 'client') => Promise<void>;
+  onRemove: () => Promise<void>;
+}) {
+  return (
+    <li className="flex flex-col gap-2 rounded-xl border border-ink-100 bg-ink-50/30 px-3 py-2 sm:flex-row sm:items-center">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="truncate text-sm font-semibold text-ink-900">{member.displayName}</span>
+          {isPrimaryOwner && (
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-100">
+              primary owner
+            </span>
+          )}
+        </div>
+        <div className="truncate text-xs text-ink-500">{member.email}</div>
+      </div>
+      <select
+        className="input h-9 min-w-[120px] py-1 text-xs"
+        value={member.role}
+        disabled={rolePending || isPrimaryOwner}
+        title={isPrimaryOwner ? 'Only a platform admin can change the current workspace owner role' : undefined}
+        onChange={(e) => onRoleChange(e.target.value as 'owner' | 'member' | 'client')}
+      >
+        <option value="member">Member</option>
+        <option value="client">Client</option>
+        <option value="owner">Owner</option>
+      </select>
+      <button
+        type="button"
+        className="btn-secondary h-9 px-3 text-xs text-rose-700"
+        disabled={removePending || isPrimaryOwner}
+        title={isPrimaryOwner ? 'Only a platform admin can remove the current workspace owner' : 'Remove from workspace'}
+        onClick={onRemove}
+      >
+        Remove
+      </button>
+    </li>
   );
 }
 
@@ -483,6 +752,7 @@ function TasksPanel({
   deps,
   criticalIds,
   members,
+  canManage,
   newTaskDefaultTitle,
   onCreateTask,
   onCreateDep,
@@ -499,6 +769,7 @@ function TasksPanel({
   }[];
   criticalIds: string[];
   members: import('../features/workspaces/hooks').WorkspaceMemberRow[];
+  canManage: boolean;
   newTaskDefaultTitle: string;
   onCreateTask: (payload: any) => Promise<void>;
   onCreateDep: (b: { predecessorId: string; successorId: string }) => Promise<void>;
@@ -509,12 +780,14 @@ function TasksPanel({
 
   return (
     <div className="space-y-6">
-      <NewTaskForm
-        tasks={tasks}
-        defaultTitle={newTaskDefaultTitle}
-        onCreate={onCreateTask}
-      />
-      <NewDependencyForm tasks={tasks} onCreate={onCreateDep} />
+      {canManage && (
+        <NewTaskForm
+          tasks={tasks}
+          defaultTitle={newTaskDefaultTitle}
+          onCreate={onCreateTask}
+        />
+      )}
+      {canManage && <NewDependencyForm tasks={tasks} onCreate={onCreateDep} />}
 
       <div className="overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-card">
         <div className="border-b border-ink-200 bg-ink-50/40 px-5 py-4">
@@ -578,23 +851,25 @@ function TasksPanel({
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <button
-                      type="button"
-                      className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        onDeleteTask(t.id);
-                      }}
-                    >
-                      Delete
-                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          onDeleteTask(t.id);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
               {tasks.length === 0 && (
                 <tr>
                   <td colSpan={10} className="px-5 py-12 text-center text-sm text-ink-500">
-                    No tasks yet. Use the form above to add one.
+                    No assigned tasks yet.
                   </td>
                 </tr>
               )}
@@ -672,6 +947,8 @@ function NewTaskForm({
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [duration, setDuration] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setTitle(defaultTitle);
@@ -687,19 +964,32 @@ function NewTaskForm({
         className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:items-end"
         onSubmit={async (e) => {
           e.preventDefault();
+          setError(null);
           if (!title.trim() || !start || !end) return;
-          await onCreate({
-            title: title.trim(),
-            startDate: new Date(start),
-            endDate: new Date(end),
-            durationDays: duration,
-            parentTaskId: parentTaskId || null,
-          });
-          setTitle(defaultTitle);
-          setParentTaskId('');
-          setStart('');
-          setEnd('');
-          setDuration(1);
+          setIsSubmitting(true);
+          try {
+            await onCreate({
+              title: title.trim(),
+              startDate: new Date(start),
+              endDate: new Date(end),
+              durationDays: duration,
+              parentTaskId: parentTaskId || null,
+            });
+            setTitle(defaultTitle);
+            setParentTaskId('');
+            setStart('');
+            setEnd('');
+            setDuration(1);
+          } catch (err: any) {
+            setError(
+              err?.response?.data?.message ??
+                err?.response?.data?.code ??
+                err?.message ??
+                'Could not add task.',
+            );
+          } finally {
+            setIsSubmitting(false);
+          }
         }}
       >
         <div className="sm:col-span-2 lg:col-span-4">
@@ -770,10 +1060,15 @@ function NewTaskForm({
           />
         </div>
         <div className="lg:col-span-2">
-          <button type="submit" className="btn-primary w-full lg:w-auto">
-            Add task
+          <button type="submit" className="btn-primary w-full lg:w-auto" disabled={isSubmitting}>
+            {isSubmitting ? 'Adding...' : 'Add task'}
           </button>
         </div>
+        {error && (
+          <div className="sm:col-span-2 lg:col-span-12 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+            {error}
+          </div>
+        )}
       </form>
     </div>
   );
@@ -835,6 +1130,27 @@ function NewDependencyForm({
       </form>
     </div>
   );
+}
+
+function defaultNewTaskWindow(
+  projectStart?: string | Date | null,
+  projectEnd?: string | Date | null,
+) {
+  const today = stripTime(new Date());
+  const parsedStart = projectStart ? stripTime(new Date(projectStart)) : null;
+  const parsedEnd = projectEnd ? stripTime(new Date(projectEnd)) : null;
+  const startDate = parsedStart && parsedStart > today ? parsedStart : today;
+  const endDate = parsedEnd && parsedEnd >= startDate ? parsedEnd : startDate;
+  const durationDays = Math.max(
+    1,
+    Math.ceil((+endDate - +startDate) / (24 * 60 * 60 * 1000)) || 1,
+  );
+
+  return { startDate, endDate, durationDays };
+}
+
+function stripTime(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 function fmt(value: string | Date | undefined | null) {

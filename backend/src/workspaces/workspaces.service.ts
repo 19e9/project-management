@@ -1,6 +1,6 @@
 import {
   BadRequestException,
-  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -33,6 +33,12 @@ export interface WorkspaceMemberListItem {
   avatarUrl?: string;
   role: 'owner' | 'member' | 'client';
   status: 'invited' | 'active' | 'removed';
+}
+
+interface WorkspaceActor {
+  userId: string;
+  workspaceRole?: 'owner' | 'member' | 'client';
+  platformOverride?: boolean;
 }
 
 @Injectable()
@@ -81,7 +87,7 @@ export class WorkspacesService {
       .lean();
     if (!memberships.length) return [];
     const workspaces = await this.workspaces
-      .find({ _id: { $in: memberships.map((m) => m.workspaceId) } })
+      .find({ _id: { $in: memberships.map((m) => m.workspaceId) }, status: 'active' })
       .lean();
     const roleByWs = new Map(
       memberships.map((m) => [String(m.workspaceId), m.role]),
@@ -107,6 +113,14 @@ export class WorkspacesService {
       .lean();
     if (!w) throw new NotFoundException({ code: 'WORKSPACE_NOT_FOUND' });
     return this.shape(w);
+  }
+
+  async archive(workspaceId: string) {
+    const w = await this.workspaces
+      .findByIdAndUpdate(workspaceId, { status: 'suspended' }, { new: true })
+      .lean();
+    if (!w) throw new NotFoundException({ code: 'WORKSPACE_NOT_FOUND' });
+    return { ok: true };
   }
 
   async listMembers(workspaceId: string): Promise<WorkspaceMemberListItem[]> {
@@ -163,21 +177,19 @@ export class WorkspacesService {
       workspaceId: ws._id,
       userId: user._id,
     });
-    if (exists && exists.status === 'active') {
-      throw new ConflictException({ code: 'ALREADY_MEMBER' });
-    }
     const billableAfter = dto.role === 'owner' || dto.role === 'member';
     if (exists) {
       const prevBillable = exists.role === 'owner' || exists.role === 'member';
+      const prevRole = exists.role;
       exists.role = dto.role;
       exists.status = 'active';
       await exists.save();
-      if (prevBillable !== billableAfter) {
+      if (prevBillable !== billableAfter || prevRole !== dto.role) {
         await this.billing.recordSeatEvent({
           workspaceId,
           userId: String(user._id),
           role: dto.role,
-          action: 'role_changed',
+          action: prevRole === dto.role ? 'added' : 'role_changed',
           billableAfter,
         });
       }
@@ -203,7 +215,9 @@ export class WorkspacesService {
     workspaceId: string,
     targetUserId: string,
     dto: UpdateMemberRoleDto,
+    actor?: WorkspaceActor,
   ) {
+    await this.assertPrimaryOwnerCanBeChanged(workspaceId, targetUserId, actor);
     const m = await this.members.findOne({
       workspaceId: new Types.ObjectId(workspaceId),
       userId: new Types.ObjectId(targetUserId),
@@ -226,7 +240,8 @@ export class WorkspacesService {
     return m.toObject();
   }
 
-  async removeMember(workspaceId: string, targetUserId: string) {
+  async removeMember(workspaceId: string, targetUserId: string, actor?: WorkspaceActor) {
+    await this.assertPrimaryOwnerCanBeChanged(workspaceId, targetUserId, actor);
     const m = await this.members.findOne({
       workspaceId: new Types.ObjectId(workspaceId),
       userId: new Types.ObjectId(targetUserId),
@@ -247,6 +262,24 @@ export class WorkspacesService {
       });
     }
     return { ok: true };
+  }
+
+  private async assertPrimaryOwnerCanBeChanged(
+    workspaceId: string,
+    targetUserId: string,
+    actor?: WorkspaceActor,
+  ) {
+    const workspace = await this.workspaces
+      .findById(workspaceId)
+      .select('ownerId')
+      .lean();
+    if (!workspace) throw new NotFoundException({ code: 'WORKSPACE_NOT_FOUND' });
+    if (String(workspace.ownerId) === targetUserId && !actor?.platformOverride) {
+      throw new ForbiddenException({
+        code: 'PRIMARY_OWNER_LOCKED',
+        message: 'The current workspace owner role can only be changed by a platform admin.',
+      });
+    }
   }
 
   private shape(w: any) {

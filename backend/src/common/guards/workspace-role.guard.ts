@@ -42,7 +42,16 @@ export class WorkspaceRoleGuard implements CanActivate {
     if (!Types.ObjectId.isValid(workspaceId)) {
       throw new ForbiddenException({ code: 'INVALID_WORKSPACE' });
     }
-
+    if (req.user?.platformRole === 'platform_admin' && allowed.includes('owner')) {
+      req.workspaceMember = {
+        workspaceId: new Types.ObjectId(workspaceId),
+        userId: new Types.ObjectId(userId),
+        role: 'owner',
+        status: 'active',
+        platformOverride: true,
+      };
+      return true;
+    }
     const member = await this.members
       .findOne({
         workspaceId: new Types.ObjectId(workspaceId),

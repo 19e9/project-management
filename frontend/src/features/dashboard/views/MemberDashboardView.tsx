@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { MeDashboardData, UpcomingTask } from '../hooks';
+import { useUpdateDashboardTask, type MeDashboardData, type UpcomingTask } from '../hooks';
 
 interface Props {
   data: MeDashboardData;
@@ -8,6 +8,15 @@ interface Props {
 
 export function MemberDashboardView({ data, userName }: Props) {
   const { taskStats, upcomingTasks, myProjects, workspaces } = data;
+  const updateTask = useUpdateDashboardTask();
+
+  const workTask = (task: UpcomingTask, patch: { status?: string; progressPct?: number }) =>
+    updateTask.mutate({
+      workspaceId: task.workspaceId,
+      projectId: task.projectId,
+      taskId: task.id,
+      patch,
+    });
 
   const overdueTasks = upcomingTasks.filter((t) => t.isOverdue);
   const soonTasks = upcomingTasks.filter((t) => !t.isOverdue && t.daysUntilDue <= 7);
@@ -110,6 +119,8 @@ export function MemberDashboardView({ data, userName }: Props) {
               tasks={overdueTasks}
               borderColor="border-rose-200"
               bgColor="bg-rose-50/40"
+              onWork={workTask}
+              workingTaskId={updateTask.variables?.taskId}
             />
           )}
           {soonTasks.length > 0 && (
@@ -120,6 +131,8 @@ export function MemberDashboardView({ data, userName }: Props) {
               tasks={soonTasks}
               borderColor="border-amber-200"
               bgColor="bg-amber-50/40"
+              onWork={workTask}
+              workingTaskId={updateTask.variables?.taskId}
             />
           )}
           {upcomingTasks.length === 0 && (
@@ -140,6 +153,8 @@ export function MemberDashboardView({ data, userName }: Props) {
               tasks={laterTasks.slice(0, 5)}
               borderColor="border-ink-200"
               bgColor="bg-white"
+              onWork={workTask}
+              workingTaskId={updateTask.variables?.taskId}
             />
           )}
           {/* Blocked tasks */}
@@ -275,7 +290,7 @@ function StatusBar({ label, count, total, color }: { label: string; count: numbe
 }
 
 function TaskGroup({
-  title, badge, badgeColor, tasks, borderColor, bgColor,
+  title, badge, badgeColor, tasks, borderColor, bgColor, onWork, workingTaskId,
 }: {
   title: string;
   badge: string;
@@ -283,6 +298,8 @@ function TaskGroup({
   tasks: UpcomingTask[];
   borderColor: string;
   bgColor: string;
+  onWork: (task: UpcomingTask, patch: { status?: string; progressPct?: number }) => void;
+  workingTaskId?: string;
 }) {
   return (
     <div className={`overflow-hidden rounded-2xl border ${borderColor} ${bgColor}`}>
@@ -308,6 +325,34 @@ function TaskGroup({
             </div>
             <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/60">
               <div className="h-full rounded-full bg-brand-500" style={{ width: `${t.progressPct}%` }} />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Link
+                to={`/dashboard/workspaces/${t.workspaceId}/projects/${t.projectId}`}
+                className="btn-secondary px-3 py-1 text-[11px]"
+              >
+                Open
+              </Link>
+              {t.status === 'not_started' && (
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-1 text-[11px]"
+                  disabled={workingTaskId === t.id}
+                  onClick={() => onWork(t, { status: 'in_progress', progressPct: Math.max(t.progressPct, 10) })}
+                >
+                  Start
+                </button>
+              )}
+              {t.status !== 'done' && (
+                <button
+                  type="button"
+                  className="btn-primary px-3 py-1 text-[11px]"
+                  disabled={workingTaskId === t.id}
+                  onClick={() => onWork(t, { status: 'done', progressPct: 100 })}
+                >
+                  Done
+                </button>
+              )}
             </div>
           </li>
         ))}

@@ -3,16 +3,23 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Task, TaskDocument } from '../tasks/schemas/task.schema';
 
+interface WorkspaceActor {
+  userId: string;
+  workspaceRole?: 'owner' | 'member' | 'client';
+  platformOverride?: boolean;
+}
+
 @Injectable()
 export class AnalyticsService {
   constructor(
     @InjectModel(Task.name) private readonly tasks: Model<TaskDocument>,
   ) {}
 
-  async overview(projectId: string) {
+  async overview(projectId: string, actor?: WorkspaceActor) {
     const pid = new Types.ObjectId(projectId);
+    const filter = this.taskFilter(pid, actor);
     const items = await this.tasks
-      .find({ projectId: pid })
+      .find(filter)
       .select('status progressPct startDate endDate')
       .lean();
 
@@ -60,10 +67,11 @@ export class AnalyticsService {
    *   - Ideal line: linear from total at projectStart to 0 at projectEnd
    *   - Actual line: tasks remaining (not done) for each day, computed by endDate
    */
-  async burndown(projectId: string) {
+  async burndown(projectId: string, actor?: WorkspaceActor) {
     const pid = new Types.ObjectId(projectId);
+    const filter = this.taskFilter(pid, actor);
     const items = await this.tasks
-      .find({ projectId: pid })
+      .find(filter)
       .select('status startDate endDate')
       .lean();
     if (items.length === 0) return { ideal: [], actual: [] };
@@ -94,5 +102,13 @@ export class AnalyticsService {
       });
     }
     return { ideal, actual };
+  }
+
+  private taskFilter(projectId: Types.ObjectId, actor?: WorkspaceActor) {
+    const filter: any = { projectId };
+    if (!(actor?.platformOverride || actor?.workspaceRole === 'owner' || actor?.workspaceRole === 'client')) {
+      filter.assigneeIds = new Types.ObjectId(actor!.userId);
+    }
+    return filter;
   }
 }

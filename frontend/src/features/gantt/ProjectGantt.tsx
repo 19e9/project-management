@@ -22,11 +22,13 @@ export function ProjectGantt({
   projectId,
   criticalIds = [],
   members = [],
+  canManage = false,
 }: {
   workspaceId: string;
   projectId: string;
   criticalIds?: string[];
   members?: WorkspaceMemberRow[];
+  canManage?: boolean;
 }) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const [colWidth, setColWidth] = useState(COL_DEFAULT);
@@ -169,13 +171,17 @@ export function ProjectGantt({
           rowHeight={44}
           barCornerRadius={4}
           todayColor="#f472b6"
-          onDateChange={async (t) => {
-            await patch.mutateAsync({
-              id: t.id,
-              startDate: t.start as unknown as string,
-              endDate: t.end as unknown as string,
-            });
-          }}
+          onDateChange={
+            canManage
+              ? async (t) => {
+                  await patch.mutateAsync({
+                    id: t.id,
+                    startDate: t.start as unknown as string,
+                    endDate: t.end as unknown as string,
+                  });
+                }
+              : undefined
+          }
           onProgressChange={async (t) => {
             await patch.mutateAsync({
               id: t.id,

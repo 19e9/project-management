@@ -113,16 +113,24 @@ export class MeDashboardService {
 
     // ── Workspaces ──────────────────────────────────────────
     const wsList = await this.workspaces
-      .find({ _id: { $in: wsIds } })
+      .find({ _id: { $in: wsIds }, status: 'active' })
       .lean();
+    const activeWsIds = wsList.map((w) => w._id);
+    if (activeWsIds.length === 0) {
+      return { ...this.empty(myRole), myRole };
+    }
+    const activeProjectIds = await this.projects.distinct('_id', {
+      workspaceId: { $in: activeWsIds },
+      status: 'active',
+    });
 
     const [memberCounts, projectCounts, taskStatusAgg] = await Promise.all([
       this.members.aggregate<{ _id: Types.ObjectId; count: number }>([
-        { $match: { workspaceId: { $in: wsIds }, status: 'active' } },
+        { $match: { workspaceId: { $in: activeWsIds }, status: 'active' } },
         { $group: { _id: '$workspaceId', count: { $sum: 1 } } },
       ]),
       this.projects.aggregate<{ _id: Types.ObjectId; count: number; active: number }>([
-        { $match: { workspaceId: { $in: wsIds } } },
+        { $match: { workspaceId: { $in: activeWsIds }, status: 'active' } },
         {
           $group: {
             _id: '$workspaceId',
@@ -137,7 +145,17 @@ export class MeDashboardService {
         done: number;
         total: number;
       }>([
-        { $match: { workspaceId: { $in: wsIds } } },
+        { $match: { workspaceId: { $in: activeWsIds } } },
+        {
+          $lookup: {
+            from: 'projects',
+            localField: 'projectId',
+            foreignField: '_id',
+            as: 'project',
+          },
+        },
+        { $unwind: '$project' },
+        { $match: { 'project.status': 'active' } },
         {
           $group: {
             _id: '$workspaceId',
@@ -157,6 +175,17 @@ export class MeDashboardService {
     const projMap = new Map(projectCounts.map((p) => [String(p._id), p]));
     const tMap = new Map(taskStatusAgg.map((t) => [String(t._id), t]));
     const roleMap = new Map(myMemberships.map((m) => [String(m.workspaceId), m.role]));
+    const activeWsIdSet = new Set(activeWsIds.map((id) => String(id)));
+    const broadProjectWsIds = myMemberships
+      .filter(
+        (m) =>
+          activeWsIdSet.has(String(m.workspaceId)) &&
+          (user.platformRole === 'platform_admin' || m.role === 'owner' || m.role === 'client'),
+      )
+      .map((m) => m.workspaceId);
+    const assignedOnlyWsIds = myMemberships
+      .filter((m) => activeWsIdSet.has(String(m.workspaceId)) && m.role === 'member')
+      .map((m) => m.workspaceId);
 
     const workspaces: WorkspaceSummary[] = wsList.map((w) => {
       const ti = tMap.get(String(w._id));
@@ -184,18 +213,30 @@ export class MeDashboardService {
     // ── My task stats ────────────────────────────────────────
     const [myTaskAgg, myOverdue, myUpcomingSoon] = await Promise.all([
       this.tasks.aggregate<{ _id: string; count: number }>([
-        { $match: { assigneeIds: uid, workspaceId: { $in: wsIds } } },
+        { $match: { assigneeIds: uid, workspaceId: { $in: activeWsIds }, projectId: { $in: activeProjectIds } } },
+        {
+          $lookup: {
+            from: 'projects',
+            localField: 'projectId',
+            foreignField: '_id',
+            as: 'project',
+          },
+        },
+        { $unwind: '$project' },
+        { $match: { 'project.status': 'active' } },
         { $group: { _id: '$status', count: { $sum: 1 } } },
       ]),
       this.tasks.countDocuments({
         assigneeIds: uid,
-        workspaceId: { $in: wsIds },
+        workspaceId: { $in: activeWsIds },
+        projectId: { $in: activeProjectIds },
         status: { $nin: ['done', 'cancelled'] },
         endDate: { $lt: now },
       }),
       this.tasks.countDocuments({
         assigneeIds: uid,
-        workspaceId: { $in: wsIds },
+        workspaceId: { $in: activeWsIds },
+        projectId: { $in: activeProjectIds },
         status: { $nin: ['done', 'cancelled'] },
         endDate: { $gte: now, $lte: in7d },
       }),
@@ -225,26 +266,28 @@ export class MeDashboardService {
     const rawUpcoming = await this.tasks
       .find({
         assigneeIds: uid,
-        workspaceId: { $in: wsIds },
+        workspaceId: { $in: activeWsIds },
+        projectId: { $in: activeProjectIds },
         status: { $nin: ['done', 'cancelled'] },
-        endDate: { $gte: now, $lte: new Date(+in7d + 14 * MS_PER_DAY) },
+        endDate: { $gte: now },
       })
       .sort({ endDate: 1 })
-      .limit(10)
+      .limit(20)
       .lean();
 
     const overdueRaw = await this.tasks
       .find({
         assigneeIds: uid,
-        workspaceId: { $in: wsIds },
+        workspaceId: { $in: activeWsIds },
+        projectId: { $in: activeProjectIds },
         status: { $nin: ['done', 'cancelled'] },
         endDate: { $lt: now },
       })
       .sort({ endDate: 1 })
-      .limit(5)
+      .limit(10)
       .lean();
 
-    const allUpcomingRaw = [...overdueRaw, ...rawUpcoming].slice(0, 10);
+    const allUpcomingRaw = [...overdueRaw, ...rawUpcoming].slice(0, 20);
 
     const projIds = Array.from(
       new Set(allUpcomingRaw.map((t) => String(t.projectId))),
@@ -288,20 +331,54 @@ export class MeDashboardService {
     });
 
     // ── My projects ──────────────────────────────────────────
+    const myProjectFilter: any = { status: 'active' };
+    const projectVisibility: any[] = [];
+    if (broadProjectWsIds.length > 0) {
+      projectVisibility.push({ workspaceId: { $in: broadProjectWsIds } });
+    }
+    if (assignedOnlyWsIds.length > 0) {
+      const assignedProjectIds = await this.tasks.distinct('projectId', {
+        assigneeIds: uid,
+        workspaceId: { $in: assignedOnlyWsIds },
+        projectId: { $in: activeProjectIds },
+      });
+      projectVisibility.push({ _id: { $in: assignedProjectIds } });
+    }
+    if (projectVisibility.length === 0) {
+      myProjectFilter._id = { $in: [] };
+    } else if (projectVisibility.length === 1) {
+      Object.assign(myProjectFilter, projectVisibility[0]);
+    } else {
+      myProjectFilter.$or = projectVisibility;
+    }
+
     const myProjectDocs = await this.projects
-      .find({ workspaceId: { $in: wsIds }, status: 'active' })
+      .find(myProjectFilter)
       .sort({ createdAt: -1 })
       .limit(12)
       .lean();
 
     const myProjIds = myProjectDocs.map((p) => p._id);
+    const broadProjectIdSet = new Set(
+      myProjectDocs
+        .filter((p) => broadProjectWsIds.some((wsId) => String(wsId) === String(p.workspaceId)))
+        .map((p) => String(p._id)),
+    );
     const projTaskAgg = await this.tasks.aggregate<{
       _id: Types.ObjectId;
       total: number;
       done: number;
       overdue: number;
     }>([
-      { $match: { projectId: { $in: myProjIds } } },
+      {
+        $match: {
+          projectId: { $in: myProjIds },
+          $or: [
+            { projectId: { $in: [...broadProjectIdSet].map((id) => new Types.ObjectId(id)) } },
+            { assigneeIds: uid },
+          ],
+        },
+      },
       {
         $group: {
           _id: '$projectId',

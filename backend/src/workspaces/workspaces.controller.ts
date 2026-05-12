@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -51,6 +52,13 @@ export class WorkspacesController {
   }
 
   @UseGuards(WorkspaceRoleGuard)
+  @WorkspaceRoles('owner')
+  @Delete(':workspaceId')
+  archive(@Param('workspaceId') id: string) {
+    return this.svc.archive(id);
+  }
+
+  @UseGuards(WorkspaceRoleGuard)
   @WorkspaceRoles('owner', 'member', 'client')
   @Get(':workspaceId/members')
   listMembers(@Param('workspaceId') id: string): Promise<WorkspaceMemberListItem[]> {
@@ -71,14 +79,24 @@ export class WorkspacesController {
     @Param('workspaceId') id: string,
     @Param('userId') userId: string,
     @Body() dto: UpdateMemberRoleDto,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: any,
   ) {
-    return this.svc.updateMemberRole(id, userId, dto);
+    return this.svc.updateMemberRole(id, userId, dto, actorFromRequest(user, req));
   }
 
   @UseGuards(WorkspaceRoleGuard)
   @WorkspaceRoles('owner')
   @Delete(':workspaceId/members/:userId')
-  remove(@Param('workspaceId') id: string, @Param('userId') userId: string) {
-    return this.svc.removeMember(id, userId);
+  remove(@Param('workspaceId') id: string, @Param('userId') userId: string, @CurrentUser() user: JwtPayload, @Req() req: any) {
+    return this.svc.removeMember(id, userId, actorFromRequest(user, req));
   }
+}
+
+function actorFromRequest(user: JwtPayload, req: any) {
+  return {
+    userId: user.sub,
+    workspaceRole: req.workspaceMember?.role,
+    platformOverride: !!req.workspaceMember?.platformOverride,
+  };
 }

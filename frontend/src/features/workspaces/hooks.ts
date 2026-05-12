@@ -17,6 +17,30 @@ export function useCreateWorkspace() {
   });
 }
 
+export function useUpdateWorkspace(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { name?: string }) =>
+      (await api.patch(`/workspaces/${workspaceId}`, payload)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workspaces'] });
+      qc.invalidateQueries({ queryKey: ['workspace', workspaceId] });
+      qc.invalidateQueries({ queryKey: ['me', 'dashboard'] });
+    },
+  });
+}
+
+export function useDeleteWorkspace(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.delete(`/workspaces/${workspaceId}`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workspaces'] });
+      qc.invalidateQueries({ queryKey: ['me', 'dashboard'] });
+    },
+  });
+}
+
 export function useWorkspace(workspaceId: string | undefined) {
   return useQuery({
     enabled: !!workspaceId,
@@ -50,7 +74,41 @@ export function useInviteWorkspaceMember(workspaceId: string) {
   return useMutation({
     mutationFn: async (body: { email: string; role: 'owner' | 'member' | 'client' }) =>
       (await api.post(`/workspaces/${workspaceId}/invites`, body)).data,
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
+      qc.invalidateQueries({ queryKey: ['workspaces'] });
+      qc.invalidateQueries({ queryKey: ['me', 'dashboard'] });
+    },
+  });
+}
+
+export function useUpdateWorkspaceMemberRole(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      role,
+    }: {
+      userId: string;
+      role: 'owner' | 'member' | 'client';
+    }) => (await api.patch(`/workspaces/${workspaceId}/members/${userId}`, { role })).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
+      qc.invalidateQueries({ queryKey: ['workspaces'] });
+      qc.invalidateQueries({ queryKey: ['me', 'dashboard'] });
+    },
+  });
+}
+
+export function useRemoveWorkspaceMember(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) =>
+      (await api.delete(`/workspaces/${workspaceId}/members/${userId}`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });
+      qc.invalidateQueries({ queryKey: ['workspaces'] });
+      qc.invalidateQueries({ queryKey: ['me', 'dashboard'] });
+    },
   });
 }

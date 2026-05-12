@@ -25,7 +25,7 @@ export class PlanningController {
     private readonly workspaces: WorkspacesService,
   ) {}
 
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner')
   @Get('cpm')
   async cpmGet(
     @Param('workspaceId') wid: string,
@@ -35,7 +35,7 @@ export class PlanningController {
     return this.cpm.getCachedOrCompute(pid);
   }
 
-  @WorkspaceRoles('owner', 'member')
+  @WorkspaceRoles('owner')
   @Post('cpm/recompute')
   async cpmRecompute(
     @Param('workspaceId') wid: string,
