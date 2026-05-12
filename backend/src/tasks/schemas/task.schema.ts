@@ -44,6 +44,9 @@ export class Task {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   assigneeIds!: Types.ObjectId[];
 
+  @Prop({ type: Types.ObjectId, ref: 'User', index: true })
+  createdById?: Types.ObjectId;
+
   @Prop({ type: Number, default: 0, min: 0, max: 100 })
   progressPct!: number;
 

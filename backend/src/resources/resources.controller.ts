@@ -23,7 +23,7 @@ import { CreateAllocationDto, UpdateAllocationDto } from './dto/allocation.dto';
 export class ResourcesController {
   constructor(private readonly svc: ResourcesService) {}
 
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Post('allocations')
   create(
     @Param('workspaceId') wid: string,
@@ -33,13 +33,13 @@ export class ResourcesController {
     return this.svc.create(wid, pid, dto);
   }
 
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Get('allocations')
   list(@Param('projectId') pid: string) {
     return this.svc.list(pid);
   }
 
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Patch('allocations/:id')
   update(
     @Param('projectId') pid: string,
@@ -49,7 +49,7 @@ export class ResourcesController {
     return this.svc.update(pid, id, dto);
   }
 
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Delete('allocations/:id')
   remove(
     @Param('projectId') pid: string,
@@ -58,7 +58,7 @@ export class ResourcesController {
     return this.svc.remove(pid, id);
   }
 
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Get('resources/histogram')
   histogram(@Param('projectId') pid: string) {
     return this.svc.histogram(pid);

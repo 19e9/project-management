@@ -11,8 +11,8 @@ export class WorkspaceMember {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   userId!: Types.ObjectId;
 
-  @Prop({ enum: ['owner', 'member', 'client'], required: true })
-  role!: 'owner' | 'member' | 'client';
+  @Prop({ enum: ['owner', 'admin', 'member', 'viewer', 'client'], required: true })
+  role!: 'owner' | 'admin' | 'member' | 'viewer' | 'client';
 
   @Prop({ enum: ['invited', 'active', 'removed'], default: 'active' })
   status!: 'invited' | 'active' | 'removed';

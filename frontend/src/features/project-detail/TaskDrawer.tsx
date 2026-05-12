@@ -62,6 +62,8 @@ export function TaskDrawer({
   members,
   projectId,
   canManage,
+  canUpdateProgress,
+  canComment,
   onClose,
   patchTask,
   createTask,
@@ -72,6 +74,8 @@ export function TaskDrawer({
   members: WorkspaceMemberRow[];
   projectId: string;
   canManage: boolean;
+  canUpdateProgress: boolean;
+  canComment: boolean;
   onClose: () => void;
   patchTask: (patch: Partial<TaskItem> & { id: string }) => Promise<unknown>;
   createTask: (body: Partial<TaskItem>) => Promise<unknown>;
@@ -183,6 +187,7 @@ export function TaskDrawer({
                   <select
                     className="input text-sm"
                     value={task.status}
+                    disabled={!canUpdateProgress}
                     onChange={(e) =>
                       patchTask({ id: task.id, status: e.target.value as TaskItem['status'] })
                     }
@@ -251,6 +256,7 @@ export function TaskDrawer({
                   min={0}
                   max={100}
                   value={task.progressPct ?? 0}
+                  disabled={!canUpdateProgress}
                   onChange={(e) =>
                     patchTask({ id: task.id, progressPct: parseInt(e.target.value, 10) })
                   }
@@ -429,7 +435,7 @@ export function TaskDrawer({
                   onChange={(e) => setAuthorName(e.target.value)}
                 />
               </div>
-              <form
+              {canComment && <form
                 className="space-y-2"
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -449,7 +455,12 @@ export function TaskDrawer({
                 <button type="submit" className="btn-primary text-sm">
                   Post comment
                 </button>
-              </form>
+              </form>}
+              {!canComment && (
+                <div className="rounded-xl border border-ink-200 bg-ink-50 px-3 py-2 text-sm text-ink-600">
+                  Viewers can read comments but cannot post updates.
+                </div>
+              )}
               <ul className="space-y-3">
                 {comments.map((c) => (
                   <li key={c.id} className="rounded-xl border border-ink-100 bg-ink-50/40 p-3">
@@ -458,13 +469,15 @@ export function TaskDrawer({
                       <span>{new Date(c.createdAt).toLocaleString()}</span>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap text-sm text-ink-800">{c.body}</p>
-                    <button
-                      type="button"
-                      className="mt-2 text-[11px] font-semibold text-rose-600"
-                      onClick={() => deleteComment(c.id)}
-                    >
-                      Remove
-                    </button>
+                    {canComment && (
+                      <button
+                        type="button"
+                        className="mt-2 text-[11px] font-semibold text-rose-600"
+                        onClick={() => deleteComment(c.id)}
+                      >
+                        Remove
+                      </button>
+                    )}
                   </li>
                 ))}
                 {comments.length === 0 && (

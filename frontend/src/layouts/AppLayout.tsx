@@ -163,6 +163,13 @@ function RoleChip({ role, platformAdmin }: { role?: string; platformAdmin: boole
         Workspace owner
       </span>
     );
+  if (role === 'admin')
+    return (
+      <span className="hidden items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-100 sm:inline-flex">
+        <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+        Workspace admin
+      </span>
+    );
   if (role === 'member')
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100 sm:inline-flex">
@@ -170,11 +177,11 @@ function RoleChip({ role, platformAdmin }: { role?: string; platformAdmin: boole
         Member
       </span>
     );
-  if (role === 'client')
+  if (role === 'viewer' || role === 'client')
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600 sm:inline-flex">
         <span className="h-1.5 w-1.5 rounded-full bg-ink-400" />
-        Client
+        Viewer
       </span>
     );
   return null;
@@ -213,7 +220,7 @@ function buildNavLinks({
       { to: '/dashboard/settings', label: 'Settings', icon: IconCog },
     ];
   }
-  if (myRole === 'owner') {
+  if (myRole === 'owner' || myRole === 'admin') {
     return [
       { to: '/dashboard', label: 'Dashboard', end: true, icon: IconGrid },
       { to: '/dashboard/workspaces', label: 'Workspaces', end: true, icon: IconBox },
@@ -231,7 +238,7 @@ function buildNavLinks({
         : []),
     ];
   }
-  // client
+  // viewer / legacy client
   return [
     { to: '/dashboard', label: 'Overview', end: true, icon: IconGrid },
     workspaceId

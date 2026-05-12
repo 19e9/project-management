@@ -13,7 +13,7 @@ import {
   WorkspaceMemberDocument,
 } from '../../workspaces/schemas/workspace-member.schema';
 
-export type WsRole = 'owner' | 'member' | 'client';
+export type WsRole = 'owner' | 'admin' | 'member' | 'viewer' | 'client';
 export const WORKSPACE_ROLES_KEY = 'workspaceRoles';
 export const WorkspaceRoles = (...roles: WsRole[]) =>
   SetMetadata(WORKSPACE_ROLES_KEY, roles);
@@ -31,7 +31,7 @@ export class WorkspaceRoleGuard implements CanActivate {
       this.reflector.getAllAndOverride<WsRole[]>(WORKSPACE_ROLES_KEY, [
         ctx.getHandler(),
         ctx.getClass(),
-      ]) ?? (['owner', 'member'] as WsRole[]);
+      ]) ?? (['owner', 'admin', 'member'] as WsRole[]);
 
     const req = ctx.switchToHttp().getRequest();
     const userId: string | undefined = req.user?.sub;

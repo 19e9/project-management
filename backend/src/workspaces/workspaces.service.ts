@@ -22,6 +22,7 @@ import {
   UpdateWorkspaceDto,
   InviteMemberDto,
   UpdateMemberRoleDto,
+  type WorkspaceRole,
 } from './dto/workspace.dto';
 import { BillingService } from '../billing/billing.service';
 
@@ -31,14 +32,18 @@ export interface WorkspaceMemberListItem {
   email: string;
   displayName: string;
   avatarUrl?: string;
-  role: 'owner' | 'member' | 'client';
+  role: WorkspaceRole;
   status: 'invited' | 'active' | 'removed';
 }
 
 interface WorkspaceActor {
   userId: string;
-  workspaceRole?: 'owner' | 'member' | 'client';
+  workspaceRole?: WorkspaceRole;
   platformOverride?: boolean;
+}
+
+function isBillableRole(role: WorkspaceRole) {
+  return role === 'owner' || role === 'admin' || role === 'member';
 }
 
 @Injectable()
@@ -151,7 +156,8 @@ export class WorkspacesService {
     });
   }
 
-  async inviteMember(workspaceId: string, dto: InviteMemberDto) {
+  async inviteMember(workspaceId: string, dto: InviteMemberDto, actor?: WorkspaceActor) {
+    this.assertRoleChangeAllowed(dto.role, actor);
     const ws = await this.workspaces.findById(workspaceId);
     if (!ws) throw new NotFoundException({ code: 'WORKSPACE_NOT_FOUND' });
 
@@ -177,9 +183,10 @@ export class WorkspacesService {
       workspaceId: ws._id,
       userId: user._id,
     });
-    const billableAfter = dto.role === 'owner' || dto.role === 'member';
+    const billableAfter = isBillableRole(dto.role);
     if (exists) {
-      const prevBillable = exists.role === 'owner' || exists.role === 'member';
+      this.assertRoleChangeAllowed(dto.role, actor, exists.role);
+      const prevBillable = isBillableRole(exists.role);
       const prevRole = exists.role;
       exists.role = dto.role;
       exists.status = 'active';
@@ -223,11 +230,12 @@ export class WorkspacesService {
       userId: new Types.ObjectId(targetUserId),
     });
     if (!m) throw new NotFoundException({ code: 'MEMBER_NOT_FOUND' });
+    this.assertRoleChangeAllowed(dto.role, actor, m.role);
     const oldRole = m.role;
-    const oldBillable = oldRole === 'owner' || oldRole === 'member';
+    const oldBillable = isBillableRole(oldRole);
     m.role = dto.role;
     await m.save();
-    const newBillable = dto.role === 'owner' || dto.role === 'member';
+    const newBillable = isBillableRole(dto.role);
     if (oldBillable !== newBillable || oldRole !== dto.role) {
       await this.billing.recordSeatEvent({
         workspaceId,
@@ -248,7 +256,8 @@ export class WorkspacesService {
       status: 'active',
     });
     if (!m) throw new NotFoundException({ code: 'MEMBER_NOT_FOUND' });
-    const wasBillable = m.role === 'owner' || m.role === 'member';
+    this.assertRoleChangeAllowed('viewer', actor, m.role);
+    const wasBillable = isBillableRole(m.role);
     const role = m.role;
     m.status = 'removed';
     await m.save();
@@ -262,6 +271,26 @@ export class WorkspacesService {
       });
     }
     return { ok: true };
+  }
+
+  private assertRoleChangeAllowed(
+    nextRole: WorkspaceRole,
+    actor?: WorkspaceActor,
+    currentRole?: WorkspaceRole,
+  ) {
+    if (actor?.platformOverride || actor?.workspaceRole === 'owner') return;
+    if (actor?.workspaceRole !== 'admin') {
+      throw new ForbiddenException({
+        code: 'ROLE_CHANGE_NOT_ALLOWED',
+        message: 'Only workspace owners and admins can manage members.',
+      });
+    }
+    if (nextRole === 'owner' || currentRole === 'owner') {
+      throw new ForbiddenException({
+        code: 'OWNER_ROLE_REQUIRED',
+        message: 'Only workspace owners can grant or change owner access.',
+      });
+    }
   }
 
   private async assertPrimaryOwnerCanBeChanged(

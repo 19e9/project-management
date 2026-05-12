@@ -15,7 +15,7 @@ import { CreateDependencyDto } from './dto/dependency.dto';
 
 interface WorkspaceActor {
   userId: string;
-  workspaceRole?: 'owner' | 'member' | 'client';
+  workspaceRole?: 'owner' | 'admin' | 'member' | 'viewer' | 'client';
   platformOverride?: boolean;
 }
 
@@ -102,7 +102,14 @@ export class DependenciesService {
   }
 
   private canSeeAll(actor?: WorkspaceActor) {
-    return actor?.platformOverride || actor?.workspaceRole === 'owner' || actor?.workspaceRole === 'client';
+    return (
+      actor?.platformOverride ||
+      actor?.workspaceRole === 'owner' ||
+      actor?.workspaceRole === 'admin' ||
+      actor?.workspaceRole === 'member' ||
+      actor?.workspaceRole === 'viewer' ||
+      actor?.workspaceRole === 'client'
+    );
   }
 
   private async findCyclePath(

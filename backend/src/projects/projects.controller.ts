@@ -25,7 +25,7 @@ import { CreateProjectDto, UpdateProjectDto } from './dto/project.dto';
 export class ProjectsController {
   constructor(private readonly svc: ProjectsService) {}
 
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Post()
   create(
     @Param('workspaceId') wid: string,
@@ -36,13 +36,13 @@ export class ProjectsController {
     return this.svc.create(wid, dto, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member', 'viewer', 'client')
   @Get()
   list(@Param('workspaceId') wid: string, @CurrentUser() user: JwtPayload, @Req() req: any) {
     return this.svc.list(wid, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member', 'viewer', 'client')
   @Get(':projectId')
   detail(
     @Param('workspaceId') wid: string,
@@ -53,7 +53,7 @@ export class ProjectsController {
     return this.svc.getOrFail(wid, pid, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Patch(':projectId')
   update(
     @Param('workspaceId') wid: string,
@@ -65,7 +65,7 @@ export class ProjectsController {
     return this.svc.update(wid, pid, dto, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Delete(':projectId')
   archive(
     @Param('workspaceId') wid: string,

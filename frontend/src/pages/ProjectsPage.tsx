@@ -22,15 +22,18 @@ export default function ProjectsPage() {
   const list = projects ?? [];
   const loading = wsLoading || projLoading;
   const workspaceRole = dashboard?.workspaces.find((w) => w.id === workspaceId)?.role;
-  const canManageProjects = dashboard?.myRole === 'platform_admin' || workspaceRole === 'owner';
+  const canManageProjects =
+    dashboard?.myRole === 'platform_admin' ||
+    workspaceRole === 'owner' ||
+    workspaceRole === 'admin';
   const maxProjects = workspace?.entitlements?.maxProjects ?? null;
   const atProjectLimit = canManageProjects && maxProjects !== null && list.length >= maxProjects;
   const emptyTitle = canManageProjects ? 'No projects yet' : 'No visible projects yet';
   const emptyDescription = canManageProjects
     ? 'Add your first project with the form on the left, then shape the WBS and schedule.'
-    : workspaceRole === 'client'
+    : workspaceRole === 'viewer' || workspaceRole === 'client'
       ? 'Your workspace owner has not shared any active projects in this workspace yet.'
-      : 'You have not been assigned to any active project tasks in this workspace yet.';
+      : 'Open a project to view and update your assigned work.';
 
   return (
     <div className="space-y-8">

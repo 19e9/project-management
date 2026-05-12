@@ -16,7 +16,7 @@ import {
 
 interface WorkspaceActor {
   userId: string;
-  workspaceRole?: 'owner' | 'member' | 'client';
+  workspaceRole?: 'owner' | 'admin' | 'member' | 'viewer' | 'client';
   platformOverride?: boolean;
 }
 
@@ -57,13 +57,6 @@ export class ProjectsService {
       workspaceId: new Types.ObjectId(workspaceId),
       status: 'active',
     };
-    if (actor?.workspaceRole === 'member') {
-      const assignedProjectIds = await this.tasks.distinct('projectId', {
-        workspaceId: new Types.ObjectId(workspaceId),
-        assigneeIds: new Types.ObjectId(actor!.userId),
-      });
-      projectFilter._id = { $in: assignedProjectIds };
-    }
     const items = await this.projects
       .find(projectFilter)
       .sort({ createdAt: -1 })
@@ -83,13 +76,6 @@ export class ProjectsService {
       })
       .lean();
     if (!p) throw new NotFoundException({ code: 'PROJECT_NOT_FOUND' });
-    if (actor?.workspaceRole === 'member') {
-      const assignedCount = await this.tasks.countDocuments({
-        projectId: new Types.ObjectId(projectId),
-        assigneeIds: new Types.ObjectId(actor!.userId),
-      });
-      if (!assignedCount) throw new NotFoundException({ code: 'PROJECT_NOT_FOUND' });
-    }
     return this.shape(p);
   }
 
@@ -114,14 +100,14 @@ export class ProjectsService {
   }
 
   private canSeeWorkspaceWide(actor?: WorkspaceActor) {
-    return actor?.platformOverride || actor?.workspaceRole === 'owner';
+    return actor?.platformOverride || actor?.workspaceRole === 'owner' || actor?.workspaceRole === 'admin';
   }
 
   private assertOwner(actor?: WorkspaceActor) {
     if (!this.canSeeWorkspaceWide(actor)) {
       throw new ForbiddenException({
         code: 'OWNER_REQUIRED',
-        message: 'Only workspace owners can manage projects.',
+        message: 'Only workspace owners and admins can manage projects.',
       });
     }
   }

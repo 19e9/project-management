@@ -321,7 +321,7 @@ export class BillingService implements OnModuleInit {
   async recordSeatEvent(opts: {
     workspaceId: string;
     userId: string;
-    role: 'owner' | 'member' | 'client';
+    role: 'owner' | 'admin' | 'member' | 'viewer' | 'client';
     action: SeatAction;
     billableAfter: boolean;
     at?: Date;
@@ -412,7 +412,7 @@ export class BillingService implements OnModuleInit {
                 _id: '$workspaceId',
                 billable: {
                   $sum: {
-                    $cond: [{ $in: ['$role', ['owner', 'member']] }, 1, 0],
+                    $cond: [{ $in: ['$role', ['owner', 'admin', 'member']] }, 1, 0],
                   },
                 },
                 clients: {
@@ -472,7 +472,7 @@ export class BillingService implements OnModuleInit {
                 _id: '$workspaceId',
                 billable: {
                   $sum: {
-                    $cond: [{ $in: ['$role', ['owner', 'member']] }, 1, 0],
+                    $cond: [{ $in: ['$role', ['owner', 'admin', 'member']] }, 1, 0],
                   },
                 },
               },
@@ -924,7 +924,7 @@ export class BillingService implements OnModuleInit {
     const seats = await this.members.countDocuments({
       workspaceId: ws._id,
       status: 'active',
-      role: { $in: ['owner', 'member'] },
+      role: { $in: ['owner', 'admin', 'member'] },
     });
     const allPlanDocs = await this.plans.find({}).lean();
     const planById = new Map(allPlanDocs.map((p) => [String(p._id), p]));

@@ -38,7 +38,7 @@ export class WorkspacesController {
   }
 
   @UseGuards(WorkspaceRoleGuard)
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member', 'viewer', 'client')
   @Get(':workspaceId')
   detail(@Param('workspaceId') id: string) {
     return this.svc.getOrFail(id);
@@ -59,21 +59,21 @@ export class WorkspacesController {
   }
 
   @UseGuards(WorkspaceRoleGuard)
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member', 'viewer', 'client')
   @Get(':workspaceId/members')
   listMembers(@Param('workspaceId') id: string): Promise<WorkspaceMemberListItem[]> {
     return this.svc.listMembers(id);
   }
 
   @UseGuards(WorkspaceRoleGuard)
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Post(':workspaceId/invites')
-  invite(@Param('workspaceId') id: string, @Body() dto: InviteMemberDto) {
-    return this.svc.inviteMember(id, dto);
+  invite(@Param('workspaceId') id: string, @Body() dto: InviteMemberDto, @CurrentUser() user: JwtPayload, @Req() req: any) {
+    return this.svc.inviteMember(id, dto, actorFromRequest(user, req));
   }
 
   @UseGuards(WorkspaceRoleGuard)
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Patch(':workspaceId/members/:userId')
   updateRole(
     @Param('workspaceId') id: string,
@@ -86,7 +86,7 @@ export class WorkspacesController {
   }
 
   @UseGuards(WorkspaceRoleGuard)
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin')
   @Delete(':workspaceId/members/:userId')
   remove(@Param('workspaceId') id: string, @Param('userId') userId: string, @CurrentUser() user: JwtPayload, @Req() req: any) {
     return this.svc.removeMember(id, userId, actorFromRequest(user, req));

@@ -11,8 +11,8 @@ export class SeatEvent {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
   userId!: Types.ObjectId;
 
-  @Prop({ enum: ['owner', 'member', 'client'] })
-  role!: 'owner' | 'member' | 'client';
+  @Prop({ enum: ['owner', 'admin', 'member', 'viewer', 'client'] })
+  role!: 'owner' | 'admin' | 'member' | 'viewer' | 'client';
 
   @Prop({ enum: ['added', 'removed', 'role_changed', 'reactivated'], required: true })
   action!: 'added' | 'removed' | 'role_changed' | 'reactivated';

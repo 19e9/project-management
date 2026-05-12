@@ -20,6 +20,9 @@ export default function DashboardPage() {
   if (myRole === 'owner') {
     return <OwnerDashboardView data={data} userName={user?.displayName} />;
   }
+  if (myRole === 'admin') {
+    return <OwnerDashboardView data={data} userName={user?.displayName} />;
+  }
   if (myRole === 'member') {
     return <MemberDashboardView data={data} userName={user?.displayName} />;
   }

@@ -12,14 +12,14 @@ import { Task, TaskDocument } from '../tasks/schemas/task.schema';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-export type MyRole = 'platform_admin' | 'owner' | 'member' | 'client';
+export type MyRole = 'platform_admin' | 'owner' | 'admin' | 'member' | 'viewer' | 'client';
 
 export interface WorkspaceSummary {
   id: string;
   name: string;
   plan: 'free' | 'pro' | 'enterprise';
   status: 'active' | 'suspended';
-  role: 'owner' | 'member' | 'client';
+  role: 'owner' | 'admin' | 'member' | 'viewer' | 'client';
   memberCount: number;
   projectCount: number;
   activeTaskCount: number;
@@ -95,7 +95,7 @@ export class MeDashboardService {
 
     const user = await this.users.findById(uid).select('platformRole').lean();
     if (!user) {
-      return this.empty('client');
+      return this.empty('viewer');
     }
 
     const myMemberships = await this.members
@@ -180,12 +180,17 @@ export class MeDashboardService {
       .filter(
         (m) =>
           activeWsIdSet.has(String(m.workspaceId)) &&
-          (user.platformRole === 'platform_admin' || m.role === 'owner' || m.role === 'client'),
+          (
+            user.platformRole === 'platform_admin' ||
+            m.role === 'owner' ||
+            m.role === 'admin' ||
+            m.role === 'member' ||
+            m.role === 'viewer' ||
+            m.role === 'client'
+          ),
       )
       .map((m) => m.workspaceId);
-    const assignedOnlyWsIds = myMemberships
-      .filter((m) => activeWsIdSet.has(String(m.workspaceId)) && m.role === 'member')
-      .map((m) => m.workspaceId);
+    const assignedOnlyWsIds: Types.ObjectId[] = [];
 
     const workspaces: WorkspaceSummary[] = wsList.map((w) => {
       const ti = tMap.get(String(w._id));
@@ -195,7 +200,7 @@ export class MeDashboardService {
         name: w.name,
         plan: w.plan,
         status: w.status,
-        role: (roleMap.get(String(w._id)) ?? 'client') as 'owner' | 'member' | 'client',
+        role: (roleMap.get(String(w._id)) ?? 'viewer') as 'owner' | 'admin' | 'member' | 'viewer' | 'client',
         memberCount: memMap.get(String(w._id)) ?? 0,
         projectCount: projMap.get(String(w._id))?.count ?? 0,
         activeTaskCount: ti?.active ?? 0,
@@ -429,7 +434,9 @@ export class MeDashboardService {
     if (platformRole === 'platform_admin') return 'platform_admin';
     const roles = memberships.map((m) => m.role);
     if (roles.includes('owner')) return 'owner';
+    if (roles.includes('admin')) return 'admin';
     if (roles.includes('member')) return 'member';
+    if (roles.includes('viewer')) return 'viewer';
     return 'client';
   }
 

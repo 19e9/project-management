@@ -26,17 +26,19 @@ import { CreateTaskDto, ListTasksQueryDto, UpdateTaskDto } from './dto/task.dto'
 export class TasksController {
   constructor(private readonly svc: TasksService) {}
 
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin', 'member')
   @Post()
   create(
     @Param('workspaceId') wid: string,
     @Param('projectId') pid: string,
     @Body() dto: CreateTaskDto,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: any,
   ) {
-    return this.svc.create(wid, pid, dto);
+    return this.svc.create(wid, pid, dto, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member', 'viewer', 'client')
   @Get()
   list(
     @Param('projectId') pid: string,
@@ -47,13 +49,13 @@ export class TasksController {
     return this.svc.list(pid, q, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member', 'viewer', 'client')
   @Get('tree')
   tree(@Param('projectId') pid: string, @CurrentUser() user: JwtPayload, @Req() req: any) {
     return this.svc.tree(pid, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member', 'viewer', 'client')
   @Get(':taskId')
   detail(
     @Param('projectId') pid: string,
@@ -64,7 +66,7 @@ export class TasksController {
     return this.svc.get(pid, tid, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner', 'member', 'client')
+  @WorkspaceRoles('owner', 'admin', 'member')
   @Patch(':taskId')
   update(
     @Param('projectId') pid: string,
@@ -76,13 +78,15 @@ export class TasksController {
     return this.svc.update(pid, tid, dto, actorFromRequest(user, req));
   }
 
-  @WorkspaceRoles('owner')
+  @WorkspaceRoles('owner', 'admin', 'member')
   @Delete(':taskId')
   remove(
     @Param('projectId') pid: string,
     @Param('taskId') tid: string,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: any,
   ) {
-    return this.svc.remove(pid, tid);
+    return this.svc.remove(pid, tid, actorFromRequest(user, req));
   }
 }
 

@@ -30,6 +30,7 @@ export function ProjectCommandCenter({
   completionPct,
   cpmEnabled,
   canManage,
+  canCreateTask,
   onQuickAction,
 }: {
   projectId: string;
@@ -43,6 +44,7 @@ export function ProjectCommandCenter({
   completionPct: number;
   cpmEnabled: boolean;
   canManage: boolean;
+  canCreateTask: boolean;
   onQuickAction: (action: QuickAction) => void;
 }) {
   const overdue = useMemo(() => countOverdue(tasks), [tasks]);
@@ -93,8 +95,8 @@ export function ProjectCommandCenter({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {canManage && <QuickBtn icon="+" label="Task" onClick={() => onQuickAction({ type: 'task' })} />}
-            {canManage && <QuickBtn icon="◇" label="Milestone" onClick={() => onQuickAction({ type: 'milestone' })} />}
+            {canCreateTask && <QuickBtn icon="+" label="Task" onClick={() => onQuickAction({ type: 'task' })} />}
+            {canCreateTask && <QuickBtn icon="◇" label="Milestone" onClick={() => onQuickAction({ type: 'milestone' })} />}
             {canManage && <QuickBtn icon="✉" label="Invite" onClick={() => onQuickAction({ type: 'invite' })} />}
             {canManage && <QuickBtn icon="↧" label="Upload" onClick={() => onQuickAction({ type: 'docs' })} />}
             <QuickBtn icon="↗" label="Export" onClick={() => onQuickAction({ type: 'export' })} />

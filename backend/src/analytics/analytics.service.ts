@@ -5,7 +5,7 @@ import { Task, TaskDocument } from '../tasks/schemas/task.schema';
 
 interface WorkspaceActor {
   userId: string;
-  workspaceRole?: 'owner' | 'member' | 'client';
+  workspaceRole?: 'owner' | 'admin' | 'member' | 'viewer' | 'client';
   platformOverride?: boolean;
 }
 
@@ -106,9 +106,6 @@ export class AnalyticsService {
 
   private taskFilter(projectId: Types.ObjectId, actor?: WorkspaceActor) {
     const filter: any = { projectId };
-    if (!(actor?.platformOverride || actor?.workspaceRole === 'owner' || actor?.workspaceRole === 'client')) {
-      filter.assigneeIds = new Types.ObjectId(actor!.userId);
-    }
     return filter;
   }
 }

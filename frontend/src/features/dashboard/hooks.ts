@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
 
-export type MyRole = 'platform_admin' | 'owner' | 'member' | 'client';
+export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer' | 'client';
+export type MyRole = 'platform_admin' | WorkspaceRole;
 
 export interface WorkspaceSummary {
   id: string;
   name: string;
   plan: 'free' | 'pro' | 'enterprise';
   status: 'active' | 'suspended';
-  role: 'owner' | 'member' | 'client';
+  role: WorkspaceRole;
   memberCount: number;
   projectCount: number;
   activeTaskCount: number;

@@ -15,7 +15,7 @@ const ASSIGNEE_UPDATE_FIELDS = new Set(['status', 'progressPct']);
 
 interface TaskUpdateActor {
   userId: string;
-  workspaceRole?: 'owner' | 'member' | 'client';
+  workspaceRole?: 'owner' | 'admin' | 'member' | 'viewer' | 'client';
   platformOverride?: boolean;
 }
 
@@ -26,7 +26,7 @@ export class TasksService {
     @InjectModel(Task.name) private readonly tasks: Model<TaskDocument>,
   ) {}
 
-  async create(workspaceId: string, projectId: string, dto: CreateTaskDto) {
+  async create(workspaceId: string, projectId: string, dto: CreateTaskDto, actor?: TaskUpdateActor) {
     if (!Types.ObjectId.isValid(projectId)) {
       throw new NotFoundException({ code: 'PROJECT_NOT_FOUND' });
     }
@@ -63,6 +63,7 @@ export class TasksService {
       priority: dto.priority ?? 'medium',
       status: dto.status ?? 'not_started',
       assigneeIds: (dto.assigneeIds ?? []).map((id) => new Types.ObjectId(id)),
+      createdById: actor?.userId ? new Types.ObjectId(actor.userId) : undefined,
       progressPct: dto.progressPct ?? 0,
       sortOrder: dto.sortOrder ?? 0,
     });
@@ -148,11 +149,12 @@ export class TasksService {
 
     const canFullyEdit =
       actor?.platformOverride ||
-      actor?.workspaceRole === 'owner';
-    if (actor?.workspaceRole === 'client' && !canFullyEdit) {
+      actor?.workspaceRole === 'owner' ||
+      actor?.workspaceRole === 'admin';
+    if ((actor?.workspaceRole === 'viewer' || actor?.workspaceRole === 'client') && !canFullyEdit) {
       throw new ForbiddenException({
         code: 'TASK_UPDATE_NOT_ALLOWED',
-        message: 'Clients can view project progress but cannot update tasks.',
+        message: 'Viewers can view project progress but cannot update tasks.',
       });
     }
     if (!canFullyEdit) {
@@ -190,7 +192,29 @@ export class TasksService {
     return this.shape(t);
   }
 
-  async remove(projectId: string, taskId: string) {
+  async remove(projectId: string, taskId: string, actor?: TaskUpdateActor) {
+    const existing = await this.tasks
+      .findOne({
+        _id: new Types.ObjectId(taskId),
+        projectId: new Types.ObjectId(projectId),
+      })
+      .select('assigneeIds createdById')
+      .lean();
+    if (!existing) {
+      throw new NotFoundException({ code: 'TASK_NOT_FOUND' });
+    }
+    const canFullyEdit =
+      actor?.platformOverride ||
+      actor?.workspaceRole === 'owner' ||
+      actor?.workspaceRole === 'admin';
+    const assigned = (existing.assigneeIds ?? []).some((id: Types.ObjectId) => String(id) === actor?.userId);
+    const createdByActor = existing.createdById && String(existing.createdById) === actor?.userId;
+    if (!canFullyEdit && !assigned && !createdByActor) {
+      throw new ForbiddenException({
+        code: 'TASK_DELETE_NOT_ALLOWED',
+        message: 'Members can only delete their own tasks.',
+      });
+    }
     const r = await this.tasks.deleteOne({
       _id: new Types.ObjectId(taskId),
       projectId: new Types.ObjectId(projectId),
@@ -202,7 +226,14 @@ export class TasksService {
   }
 
   private canSeeAllTasks(actor?: TaskUpdateActor) {
-    return actor?.platformOverride || actor?.workspaceRole === 'owner' || actor?.workspaceRole === 'client';
+    return (
+      actor?.platformOverride ||
+      actor?.workspaceRole === 'owner' ||
+      actor?.workspaceRole === 'admin' ||
+      actor?.workspaceRole === 'member' ||
+      actor?.workspaceRole === 'viewer' ||
+      actor?.workspaceRole === 'client'
+    );
   }
 
   shape(t: any) {

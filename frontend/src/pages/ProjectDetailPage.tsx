@@ -92,7 +92,7 @@ export default function ProjectDetailPage() {
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'owner' | 'member' | 'client'>('member');
+  const [inviteRole, setInviteRole] = useState<'owner' | 'admin' | 'member' | 'viewer'>('member');
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [memberActionError, setMemberActionError] = useState<string | null>(null);
   const [taskFormKey, setTaskFormKey] = useState(0);
@@ -111,7 +111,14 @@ export default function ProjectDetailPage() {
   const completionPct = overview.data?.completionPct ?? 0;
   const overdueCount = countOverdue(tasks);
   const workspaceRole = dashboard?.workspaces.find((w) => w.id === workspaceId)?.role;
-  const canManageProject = dashboard?.myRole === 'platform_admin' || workspaceRole === 'owner';
+  const canManageProject =
+    dashboard?.myRole === 'platform_admin' ||
+    workspaceRole === 'owner' ||
+    workspaceRole === 'admin';
+  const canCreateTask = canManageProject || workspaceRole === 'member';
+  const canUpdateTaskProgress = canCreateTask;
+  const canComment = workspaceRole !== 'viewer' && workspaceRole !== 'client';
+  const canGrantOwner = dashboard?.myRole === 'platform_admin' || workspaceRole === 'owner';
   const projectMemberIds = new Set(tasks.flatMap((task) => task.assigneeIds ?? []));
   const projectMembers = members.filter((member) => projectMemberIds.has(member.userId));
   const taskDrawerMembers = canManageProject ? members : projectMembers;
@@ -120,7 +127,7 @@ export default function ProjectDetailPage() {
     setQuickActionError(null);
     switch (action.type) {
       case 'task':
-        if (!canManageProject) return;
+        if (!canCreateTask) return;
         {
           const { startDate, endDate, durationDays } = defaultNewTaskWindow(
             project?.startDate,
@@ -140,7 +147,7 @@ export default function ProjectDetailPage() {
         queueMicrotask(() => taskAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
         break;
       case 'milestone':
-        if (!canManageProject) return;
+        if (!canCreateTask) return;
         {
           const { startDate } = defaultNewTaskWindow(project?.startDate, project?.endDate);
           await createTask.mutateAsync({
@@ -295,6 +302,7 @@ export default function ProjectDetailPage() {
         completionPct={completionPct}
         cpmEnabled={!!cpmEnabled}
         canManage={!!canManageProject}
+        canCreateTask={!!canCreateTask}
         onQuickAction={runQuickAction}
       />
       {quickActionError && (
@@ -399,6 +407,7 @@ export default function ProjectDetailPage() {
                 criticalIds={criticalIds}
                 members={projectMembers}
                 canManage={!!canManageProject}
+                canCreate={!!canCreateTask}
                 newTaskDefaultTitle={newTaskDefaultTitle}
                 onCreateTask={(payload) => createTask.mutateAsync(payload)}
                 onCreateDep={(body) => createDep.mutateAsync(body)}
@@ -415,6 +424,7 @@ export default function ProjectDetailPage() {
               members={projectMembers}
               onStatusChange={(id, status) => patchTaskMut.mutate({ id, status })}
               onOpenTask={(t) => setDrawerTaskId(t.id)}
+              canMove={!!canUpdateTaskProgress}
             />
           )}
 
@@ -442,6 +452,8 @@ export default function ProjectDetailPage() {
         members={taskDrawerMembers}
         projectId={projectId!}
         canManage={!!canManageProject}
+        canUpdateProgress={!!canUpdateTaskProgress}
+        canComment={canComment}
         onClose={() => setDrawerTaskId(null)}
         patchTask={(patch) => patchTaskMut.mutateAsync(patch)}
         createTask={(body) => createTask.mutateAsync(body)}
@@ -491,9 +503,10 @@ export default function ProjectDetailPage() {
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as typeof inviteRole)}
                 >
+                  <option value="admin">Admin</option>
                   <option value="member">Member</option>
-                  <option value="client">Client</option>
-                  <option value="owner">Owner</option>
+                  <option value="viewer">Viewer</option>
+                  {canGrantOwner && <option value="owner">Owner</option>}
                 </select>
               </div>
               {inviteError && (
@@ -528,6 +541,7 @@ export default function ProjectDetailPage() {
                     isPrimaryOwner={m.userId === workspace?.ownerId}
                     rolePending={updateMemberRole.isPending}
                     removePending={removeMember.isPending}
+                    canGrantOwner={canGrantOwner}
                     onRoleChange={async (role) => {
                       setMemberActionError(null);
                       try {
@@ -613,6 +627,7 @@ function MemberManagerRow({
   isPrimaryOwner,
   rolePending,
   removePending,
+  canGrantOwner,
   onRoleChange,
   onRemove,
 }: {
@@ -620,7 +635,8 @@ function MemberManagerRow({
   isPrimaryOwner: boolean;
   rolePending: boolean;
   removePending: boolean;
-  onRoleChange: (role: 'owner' | 'member' | 'client') => Promise<void>;
+  canGrantOwner: boolean;
+  onRoleChange: (role: 'owner' | 'admin' | 'member' | 'viewer') => Promise<void>;
   onRemove: () => Promise<void>;
 }) {
   return (
@@ -641,11 +657,12 @@ function MemberManagerRow({
         value={member.role}
         disabled={rolePending || isPrimaryOwner}
         title={isPrimaryOwner ? 'Only a platform admin can change the current workspace owner role' : undefined}
-        onChange={(e) => onRoleChange(e.target.value as 'owner' | 'member' | 'client')}
+        onChange={(e) => onRoleChange(e.target.value as 'owner' | 'admin' | 'member' | 'viewer')}
       >
+        <option value="admin">Admin</option>
         <option value="member">Member</option>
-        <option value="client">Client</option>
-        <option value="owner">Owner</option>
+        <option value="viewer">Viewer</option>
+        {(canGrantOwner || member.role === 'owner') && <option value="owner">Owner</option>}
       </select>
       <button
         type="button"
@@ -753,6 +770,7 @@ function TasksPanel({
   criticalIds,
   members,
   canManage,
+  canCreate,
   newTaskDefaultTitle,
   onCreateTask,
   onCreateDep,
@@ -770,6 +788,7 @@ function TasksPanel({
   criticalIds: string[];
   members: import('../features/workspaces/hooks').WorkspaceMemberRow[];
   canManage: boolean;
+  canCreate: boolean;
   newTaskDefaultTitle: string;
   onCreateTask: (payload: any) => Promise<void>;
   onCreateDep: (b: { predecessorId: string; successorId: string }) => Promise<void>;
@@ -780,7 +799,7 @@ function TasksPanel({
 
   return (
     <div className="space-y-6">
-      {canManage && (
+      {canCreate && (
         <NewTaskForm
           tasks={tasks}
           defaultTitle={newTaskDefaultTitle}
