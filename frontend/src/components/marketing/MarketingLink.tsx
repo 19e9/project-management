@@ -19,15 +19,26 @@ export function MarketingLink({
   onClick?: () => void;
 }) {
   const h = href.trim();
+  const handleClick = () => {
+    onClick?.();
+    const hash = h.startsWith('/#') ? h.slice(2) : h.startsWith('#') ? h.slice(1) : '';
+    if (!hash) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(decodeURIComponent(hash))?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  };
   if (!h || isExternalHref(h)) {
     return (
-      <a href={h || '#'} className={className} onClick={onClick} rel="noopener noreferrer">
+      <a href={h || '#'} className={className} onClick={handleClick} rel="noopener noreferrer">
         {children}
       </a>
     );
   }
   return (
-    <Link to={h} className={className} onClick={onClick}>
+    <Link to={h} className={className} onClick={handleClick}>
       {children}
     </Link>
   );

@@ -41,9 +41,23 @@ export function Navbar() {
 
   const navClassMobile = 'block rounded-xl px-3 py-2.5 text-sm font-medium text-ink-700 hover:bg-ink-100';
 
+  function scrollToHash(href: string) {
+    const hash = href.startsWith('/#') ? href.slice(2) : href.startsWith('#') ? href.slice(1) : '';
+    if (!hash) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(decodeURIComponent(hash))?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  }
+
   function renderNavLink(item: NavItem, variant: 'desktop' | 'mobile') {
     const cls = variant === 'desktop' ? navClassDesktop : navClassMobile;
-    const close = () => setOpen(false);
+    const close = () => {
+      setOpen(false);
+      scrollToHash(item.href);
+    };
     if (isExternalHref(item.href)) {
       return (
         <a key={item.key} href={item.href} className={cls} onClick={close}>
