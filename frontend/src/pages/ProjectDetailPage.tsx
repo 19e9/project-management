@@ -21,6 +21,7 @@ import {
 } from '../features/tasks/hooks';
 import {
   useInviteWorkspaceMember,
+  useRemoveWorkspaceMember,
   useWorkspace,
   useWorkspaceMembers,
 } from '../features/workspaces/hooks';
@@ -90,6 +91,7 @@ export default function ProjectDetailPage() {
   const { data: members = [] } = useWorkspaceMembers(workspaceId);
   const inviteMutation = useInviteWorkspaceMember(workspaceId!);
   const removeProjectMember = useRemoveProjectMember(workspaceId!, projectId!);
+  const removeWorkspaceMember = useRemoveWorkspaceMember(workspaceId!);
 
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -572,6 +574,42 @@ export default function ProjectDetailPage() {
                   {memberActionError}
                 </div>
               )}
+              <div className="mt-5 border-t border-ink-100 pt-4">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <h4 className="text-sm font-semibold text-ink-900">Workspace access</h4>
+                  <span className="text-[11px] font-medium text-ink-500">{members.length} active</span>
+                </div>
+                <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                  {members.map((m) => (
+                    <WorkspaceAccessRow
+                      key={m.userId}
+                      member={m}
+                      isPrimaryOwner={m.userId === workspace?.ownerId}
+                      removePending={removeWorkspaceMember.isPending}
+                      onRemove={async () => {
+                        if (window.confirm(`Remove ${m.displayName} from this workspace? They will lose access to all projects in this workspace.`)) {
+                          setMemberActionError(null);
+                          try {
+                            await removeWorkspaceMember.mutateAsync(m.userId);
+                          } catch (err: any) {
+                            setMemberActionError(
+                              err?.response?.data?.message ??
+                                err?.response?.data?.code ??
+                                err?.message ??
+                                'Could not remove this member from the workspace.',
+                            );
+                          }
+                        }
+                      }}
+                    />
+                  ))}
+                  {members.length === 0 && (
+                    <li className="rounded-xl border border-dashed border-ink-200 px-4 py-8 text-center text-sm text-ink-500">
+                      No workspace members loaded.
+                    </li>
+                  )}
+                </ul>
+              </div>
               <div className="mt-4 flex justify-end">
                 <button type="button" className="btn-secondary px-4 text-sm" onClick={() => setInviteOpen(false)}>
                   Done
@@ -645,6 +683,46 @@ function ProjectMemberRow({
         onClick={onRemove}
       >
         Remove from project
+      </button>
+    </li>
+  );
+}
+
+function WorkspaceAccessRow({
+  member,
+  isPrimaryOwner,
+  removePending,
+  onRemove,
+}: {
+  member: import('../features/workspaces/hooks').WorkspaceMemberRow;
+  isPrimaryOwner: boolean;
+  removePending: boolean;
+  onRemove: () => Promise<void>;
+}) {
+  return (
+    <li className="flex flex-col gap-2 rounded-xl border border-ink-100 bg-white px-3 py-2 sm:flex-row sm:items-center">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="truncate text-sm font-semibold text-ink-900">{member.displayName}</span>
+          {isPrimaryOwner && (
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-100">
+              primary owner
+            </span>
+          )}
+        </div>
+        <div className="truncate text-xs text-ink-500">{member.email}</div>
+      </div>
+      <span className="badge bg-ink-50 text-ink-700 ring-1 ring-inset ring-ink-200">
+        {member.role}
+      </span>
+      <button
+        type="button"
+        className="btn-secondary h-9 px-3 text-xs text-rose-700"
+        disabled={removePending || isPrimaryOwner}
+        title={isPrimaryOwner ? 'Only a platform admin can remove the current workspace owner' : 'Remove from workspace'}
+        onClick={onRemove}
+      >
+        Remove from workspace
       </button>
     </li>
   );
