@@ -27,8 +27,8 @@ export default function WorkspacesPage() {
             Workspaces
           </h1>
           <p className="mt-1 max-w-xl text-sm text-ink-500">
-            Each workspace keeps its own members, projects, and permissions. Spin one up for a new
-            client or delivery team.
+            Each workspace keeps its own members, projects, and permissions. New users get access
+            after an owner or admin invites them.
           </p>
         </div>
         <Link to="/dashboard" className="btn-secondary h-10 px-4 text-sm">
@@ -50,45 +50,56 @@ export default function WorkspacesPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
-        <section className="card p-5 lg:col-span-5">
-          <div className="border-b border-ink-100 pb-4">
-            <h2 className="text-base font-semibold text-ink-900">Create workspace</h2>
-            <p className="mt-1 text-xs text-ink-500">
-              Pick a short, recognizable name (company or project code).
-            </p>
-          </div>
-          <form
-            className="mt-5 space-y-4"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!name.trim()) return;
-              await create.mutateAsync(name.trim());
-              setName('');
-            }}
-          >
-            <div>
-              <label htmlFor="ws-name" className="label">
-                Workspace name
-              </label>
-              <input
-                id="ws-name"
-                className="input"
-                placeholder="e.g. Acme Construction"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="organization"
-              />
+        {isPlatformAdmin ? (
+          <section className="card p-5 lg:col-span-5">
+            <div className="border-b border-ink-100 pb-4">
+              <h2 className="text-base font-semibold text-ink-900">Create workspace</h2>
+              <p className="mt-1 text-xs text-ink-500">
+                Platform admins can provision a workspace for a new client or delivery team.
+              </p>
             </div>
-            <button
-              type="submit"
-              className="btn-brand w-full sm:w-auto"
-              disabled={create.isPending || !name.trim()}
+            <form
+              className="mt-5 space-y-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!name.trim()) return;
+                await create.mutateAsync(name.trim());
+                setName('');
+              }}
             >
-              {create.isPending ? 'Creating…' : 'Create workspace'}
-            </button>
-          </form>
-        </section>
-
+              <div>
+                <label htmlFor="ws-name" className="label">
+                  Workspace name
+                </label>
+                <input
+                  id="ws-name"
+                  className="input"
+                  placeholder="e.g. Acme Construction"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="organization"
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn-brand w-full sm:w-auto"
+                disabled={create.isPending || !name.trim()}
+              >
+                {create.isPending ? 'Creating...' : 'Create workspace'}
+              </button>
+            </form>
+          </section>
+        ) : (
+          <section className="card p-5 lg:col-span-5">
+            <div className="rounded-2xl border border-dashed border-ink-200 bg-ink-50/40 p-5">
+              <h2 className="text-base font-semibold text-ink-900">Waiting for access</h2>
+              <p className="mt-2 text-sm text-ink-500">
+                You cannot create a workspace from this account. Ask a workspace owner or admin to
+                invite you, then your projects and tasks will appear here.
+              </p>
+            </div>
+          </section>
+        )}
         <section className="card overflow-hidden lg:col-span-7">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 bg-ink-50/30 px-5 py-4">
             <div>
@@ -118,7 +129,8 @@ export default function WorkspacesPage() {
               </div>
               <h3 className="mt-4 font-semibold text-ink-900">Henüz çalışma alanı yok</h3>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">
-                Soldaki formdan ilk alanınızı oluşturun; ardından projeler ve görevler ekleyebilirsiniz.
+                Ask a workspace owner or admin to invite you. Once assigned, your projects and tasks
+                will appear here.
               </p>
             </div>
           )}
@@ -183,7 +195,9 @@ function WorkspaceRow({ workspace: w, canManage }: { workspace: any; canManage: 
   };
   const roleStyles: Record<string, string> = {
     owner: 'bg-amber-50 text-amber-800 ring-amber-100',
+    admin: 'bg-indigo-50 text-indigo-800 ring-indigo-100',
     member: 'bg-cyan-50 text-cyan-800 ring-cyan-100',
+    viewer: 'bg-ink-50 text-ink-600 ring-ink-200',
     client: 'bg-ink-50 text-ink-600 ring-ink-200',
   };
   const plan = String(w.plan ?? 'free');
@@ -275,3 +289,4 @@ function WorkspaceRow({ workspace: w, canManage }: { workspace: any; canManage: 
     </li>
   );
 }
+

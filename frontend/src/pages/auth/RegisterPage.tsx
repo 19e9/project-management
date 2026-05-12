@@ -45,8 +45,8 @@ export default function RegisterPage() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <AuthBrandPanel
-        title="Create your workspace."
-        subtitle="Free forever for small teams. Your first project is 5 minutes away."
+        title="Create your account."
+        subtitle="Join a workspace after an owner or admin invites you."
       />
 
       <main className="relative flex min-h-screen flex-col">
@@ -71,7 +71,7 @@ export default function RegisterPage() {
             <div className="mt-8 lg:mt-16">
               <h1 className="text-3xl font-bold tracking-tight">Create your account</h1>
               <p className="mt-2 text-sm text-ink-500">
-                Free forever — no credit card required.
+                Your workspace access starts after an owner or admin assigns you.
               </p>
             </div>
 
@@ -205,7 +205,7 @@ export default function RegisterPage() {
               </button>
 
               <ul className="mt-1 grid grid-cols-2 gap-2 text-xs text-ink-500 sm:grid-cols-3">
-                {['No card required', 'Free forever', 'Cancel anytime'].map((b) => (
+                {['No card required', 'Invite based access', 'Role controlled'].map((b) => (
                   <li key={b} className="flex items-center gap-1.5">
                     <IconCheck className="h-3.5 w-3.5 text-emerald-600" />
                     {b}

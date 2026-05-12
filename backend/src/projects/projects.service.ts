@@ -57,6 +57,11 @@ export class ProjectsService {
       workspaceId: new Types.ObjectId(workspaceId),
       status: 'active',
     };
+    if (this.shouldRestrictToAssignedProjects(actor)) {
+      projectFilter._id = {
+        $in: await this.visibleProjectIdsForActor(workspaceId, actor),
+      };
+    }
     const items = await this.projects
       .find(projectFilter)
       .sort({ createdAt: -1 })
@@ -76,6 +81,10 @@ export class ProjectsService {
       })
       .lean();
     if (!p) throw new NotFoundException({ code: 'PROJECT_NOT_FOUND' });
+    if (this.shouldRestrictToAssignedProjects(actor)) {
+      const hasAccess = await this.actorCanSeeProject(workspaceId, projectId, actor);
+      if (!hasAccess) throw new NotFoundException({ code: 'PROJECT_NOT_FOUND' });
+    }
     return this.shape(p);
   }
 
@@ -101,6 +110,51 @@ export class ProjectsService {
 
   private canSeeWorkspaceWide(actor?: WorkspaceActor) {
     return actor?.platformOverride || actor?.workspaceRole === 'owner' || actor?.workspaceRole === 'admin';
+  }
+
+  private shouldRestrictToAssignedProjects(actor?: WorkspaceActor) {
+    return !this.canSeeWorkspaceWide(actor) && actor?.workspaceRole === 'member';
+  }
+
+  private async visibleProjectIdsForActor(workspaceId: string, actor?: WorkspaceActor) {
+    if (!actor?.userId) return [];
+    const workspaceObjectId = new Types.ObjectId(workspaceId);
+    const userObjectId = new Types.ObjectId(actor.userId);
+    const [leadProjectIds, taskProjectIds] = await Promise.all([
+      this.projects.distinct('_id', {
+        workspaceId: workspaceObjectId,
+        status: 'active',
+        leadId: userObjectId,
+      }),
+      this.tasks.distinct('projectId', {
+        workspaceId: workspaceObjectId,
+        assigneeIds: userObjectId,
+      }),
+    ]);
+    return Array.from(new Set([...leadProjectIds, ...taskProjectIds].map((id) => String(id)))).map(
+      (id) => new Types.ObjectId(id),
+    );
+  }
+
+  private async actorCanSeeProject(workspaceId: string, projectId: string, actor?: WorkspaceActor) {
+    if (!actor?.userId) return false;
+    const workspaceObjectId = new Types.ObjectId(workspaceId);
+    const projectObjectId = new Types.ObjectId(projectId);
+    const userObjectId = new Types.ObjectId(actor.userId);
+    const [leadProject, assignedTaskCount] = await Promise.all([
+      this.projects.exists({
+        _id: projectObjectId,
+        workspaceId: workspaceObjectId,
+        status: 'active',
+        leadId: userObjectId,
+      }),
+      this.tasks.countDocuments({
+        workspaceId: workspaceObjectId,
+        projectId: projectObjectId,
+        assigneeIds: userObjectId,
+      }),
+    ]);
+    return !!leadProject || assignedTaskCount > 0;
   }
 
   private assertOwner(actor?: WorkspaceActor) {
