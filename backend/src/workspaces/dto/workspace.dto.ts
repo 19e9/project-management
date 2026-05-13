@@ -3,6 +3,10 @@ import { IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class
 export const WORKSPACE_ROLES = ['owner', 'admin', 'member', 'viewer', 'client'] as const;
 export type WorkspaceRole = (typeof WORKSPACE_ROLES)[number];
 
+/** Roles allowed when adding someone via POST .../invites (not owner/admin promotion). */
+export const INVITE_WORKSPACE_ROLES = ['member', 'viewer'] as const;
+export type InviteWorkspaceRole = (typeof INVITE_WORKSPACE_ROLES)[number];
+
 export class CreateWorkspaceDto {
   @IsString()
   @MinLength(2)
@@ -22,8 +26,8 @@ export class InviteMemberDto {
   @IsEmail()
   email!: string;
 
-  @IsIn(WORKSPACE_ROLES)
-  role!: WorkspaceRole;
+  @IsIn([...INVITE_WORKSPACE_ROLES])
+  role!: InviteWorkspaceRole;
 }
 
 export class UpdateMemberRoleDto {

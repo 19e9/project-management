@@ -3,6 +3,8 @@ import { api } from '../../lib/api-client';
 
 export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer' | 'client';
 
+export type InviteWorkspaceRole = 'member' | 'viewer';
+
 export function useWorkspaces() {
   return useQuery({
     queryKey: ['workspaces'],
@@ -74,7 +76,7 @@ export function useWorkspaceMembers(workspaceId: string | undefined) {
 export function useInviteWorkspaceMember(workspaceId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { email: string; role: WorkspaceRole }) =>
+    mutationFn: async (body: { email: string; role: InviteWorkspaceRole }) =>
       (await api.post(`/workspaces/${workspaceId}/invites`, body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workspace', workspaceId, 'members'] });

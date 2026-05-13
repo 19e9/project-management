@@ -98,7 +98,7 @@ export default function ProjectDetailPage() {
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'owner' | 'admin' | 'member' | 'viewer'>('member');
+  const [inviteRole, setInviteRole] = useState<'member' | 'viewer'>('member');
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [memberActionError, setMemberActionError] = useState<string | null>(null);
   const [taskFormKey, setTaskFormKey] = useState(0);
@@ -505,12 +505,10 @@ export default function ProjectDetailPage() {
                 <select
                   className="input text-sm"
                   value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as typeof inviteRole)}
+                  onChange={(e) => setInviteRole(e.target.value as 'member' | 'viewer')}
                 >
-                  <option value="admin">{t('roles.optionAdmin')}</option>
                   <option value="member">{t('roles.optionMember')}</option>
                   <option value="viewer">{t('roles.optionViewer')}</option>
-                  {canGrantOwner && <option value="owner">{t('roles.optionOwner')}</option>}
                 </select>
               </div>
               {inviteError && (
