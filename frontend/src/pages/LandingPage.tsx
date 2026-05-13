@@ -71,6 +71,7 @@ function Hero() {
 
       <div className="container relative pb-12 pt-14 md:pb-20 md:pt-20">
         <div className="mx-auto max-w-3xl text-center">
+
           <span className="eyebrow animate-fade-in-up">
             <span className="grid h-1.5 w-1.5 place-items-center rounded-full bg-emerald-500" />
             {t('marketing.eyebrow')}
