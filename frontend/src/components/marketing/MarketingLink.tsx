@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { marketingNavTo } from './marketingNavTarget';
 
 export function isExternalHref(href: string): boolean {
   const h = href.trim();
@@ -38,7 +39,7 @@ export function MarketingLink({
     );
   }
   return (
-    <Link to={h} className={className} onClick={handleClick}>
+    <Link to={marketingNavTo(h)} className={className} onClick={handleClick}>
       {children}
     </Link>
   );

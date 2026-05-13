@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { MarketingPageShell } from '../components/marketing/MarketingPageShell';
 import { DynamicPricingSection } from '../components/marketing/DynamicPricingSection';
+import { marketingNavTo } from '../components/marketing/marketingNavTarget';
 import { HeroMockup } from '../components/marketing/HeroMockup';
 import {
   IconArrowRight,
@@ -66,7 +67,7 @@ function Hero() {
               {t('marketing.startFree')}
               <IconArrowRight className="h-4 w-4" />
             </Link>
-            <Link to="/#pricing" className="btn-secondary btn-lg">
+            <Link to={marketingNavTo('/#pricing')} className="btn-secondary btn-lg">
               {t('marketing.seePricing')}
             </Link>
           </div>
@@ -131,7 +132,7 @@ const FEATURE_ICONS = [
 function Features() {
   const t = useT();
   return (
-    <section id="features" className="section">
+    <section id="features" className="section scroll-mt-24">
       <div className="container">
         <div className="mx-auto max-w-2xl text-center">
           <span className="eyebrow">{t('marketing.featuresEyebrow')}</span>
@@ -183,7 +184,7 @@ function HowItWorks() {
   ] as const;
 
   return (
-    <section id="how" className="relative section bg-ink-50/40">
+    <section id="how" className="relative section scroll-mt-24 bg-ink-50/40">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ink-300 to-transparent"
         aria-hidden
@@ -377,7 +378,7 @@ function HistogramVisual() {
 function SocialProof() {
   const t = useT();
   return (
-    <section id="proof" className="section">
+    <section id="proof" className="section scroll-mt-24">
       <div className="container">
         <div className="grid gap-10 lg:grid-cols-3">
           <div className="lg:col-span-1">
@@ -473,7 +474,7 @@ function FinalCta() {
                 <IconArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                to="/#pricing"
+                to={marketingNavTo('/#pricing')}
                 className="btn btn-lg w-full justify-center border border-white/15 text-white hover:bg-white/10 md:w-auto"
               >
                 {t('marketing.comparePlans')}

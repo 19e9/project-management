@@ -4,6 +4,7 @@ import { Logo } from '../ui/Logo';
 import { IconArrowRight } from '../ui/Icons';
 import { usePublicSiteFooter, usePublicSiteNav } from '../../features/cms/hooks';
 import { isExternalHref } from './MarketingLink';
+import { marketingNavTo } from './marketingNavTarget';
 import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 import { useI18n, useT } from '../../i18n/I18nProvider';
 import { landingAnchorTranslationKey } from '../../i18n/marketingLandingAnchors';
@@ -61,10 +62,11 @@ export function Navbar() {
         </a>
       );
     }
+    const to = marketingNavTo(item.href);
     return (
       <NavLink
         key={item.key}
-        to={item.href}
+        to={to}
         className={({ isActive }) =>
           `${cls}${isActive ? ' bg-ink-100 text-ink-900' : ''}`
         }
