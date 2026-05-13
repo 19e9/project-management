@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { MarketingPageShell } from '../components/marketing/MarketingPageShell';
 import { DynamicPricingSection } from '../components/marketing/DynamicPricingSection';
 import { HeroMockup } from '../components/marketing/HeroMockup';
@@ -18,21 +18,6 @@ import {
 import { useT } from '../i18n/I18nProvider';
 
 export default function LandingPage() {
-  const { hash } = useLocation();
-
-  useEffect(() => {
-    if (!hash) return;
-    const id = decodeURIComponent(hash.slice(1));
-    const scrollToSection = () => {
-      document.getElementById(id)?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    };
-    const frame = window.requestAnimationFrame(scrollToSection);
-    return () => window.cancelAnimationFrame(frame);
-  }, [hash]);
-
   return (
     <MarketingPageShell>
       <Hero />
@@ -47,16 +32,11 @@ export default function LandingPage() {
   );
 }
 
-/* ---------- HERO ---------- */
 function Hero() {
   const t = useT();
   return (
     <section className="relative overflow-hidden">
-      {/* background */}
-      <div
-        className="pointer-events-none absolute inset-0 bg-radial-fade"
-        aria-hidden
-      />
+      <div className="pointer-events-none absolute inset-0 bg-radial-fade" aria-hidden />
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-[640px] opacity-[0.35]"
         style={{
@@ -71,19 +51,10 @@ function Hero() {
 
       <div className="container relative pb-12 pt-14 md:pb-20 md:pt-20">
         <div className="mx-auto max-w-3xl text-center">
-
-          <span className="eyebrow animate-fade-in-up">
-            <span className="grid h-1.5 w-1.5 place-items-center rounded-full bg-emerald-500" />
-            {t('marketing.eyebrow')}
-            <Link to="/#pricing" className="text-brand-700 hover:underline">
-              {t('marketing.viewPricing')} →
-            </Link>
-          </span>
-
           <h1 className="h-display mt-6 text-balance animate-fade-in-up [animation-delay:80ms]">
-            {t('marketing.heroTitle')}
+            {t('marketing.heroTitle1')}
             <br />
-            <span className="gradient-text">{t('marketing.heroAccent')}</span>
+            <span className="gradient-text">{t('marketing.heroSubtitle')}</span>
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-ink-600 animate-fade-in-up [animation-delay:160ms]">
@@ -101,11 +72,10 @@ function Hero() {
           </div>
 
           <p className="mt-3 text-xs text-ink-500 animate-fade-in-up [animation-delay:320ms]">
-            {t('marketing.heroNote')}
+            {t('marketing.heroFootnote')}
           </p>
         </div>
 
-        {/* Mockup */}
         <div className="relative mx-auto mt-14 max-w-6xl animate-fade-in-up [animation-delay:400ms]">
           <HeroMockup />
         </div>
@@ -114,7 +84,6 @@ function Hero() {
   );
 }
 
-/* ---------- LOGO CLOUD ---------- */
 function LogoCloud() {
   const t = useT();
   const brands: { name: string; href: string }[] = [
@@ -129,7 +98,7 @@ function LogoCloud() {
     <section className="border-y border-ink-200/70 bg-ink-50/40 py-10">
       <div className="container">
         <p className="text-center text-xs font-semibold uppercase tracking-widest text-ink-500">
-          {t('marketing.trusted')}
+          {t('marketing.logoCloud')}
         </p>
         <div className="mt-6 grid grid-cols-2 items-center gap-x-10 gap-y-6 sm:grid-cols-3 md:grid-cols-6">
           {brands.map(({ name, href }) => (
@@ -150,45 +119,14 @@ function LogoCloud() {
   );
 }
 
-/* ---------- FEATURES ---------- */
-const FEATURES = [
-  {
-    icon: IconGantt,
-    titleKey: 'marketing.feature1Title',
-    bodyKey: 'marketing.feature1Body',
-    color: 'from-brand-500/15 to-brand-500/0 text-brand-700',
-  },
-  {
-    icon: IconRoute,
-    titleKey: 'marketing.feature2Title',
-    bodyKey: 'marketing.feature2Body',
-    color: 'from-rose-500/15 to-rose-500/0 text-rose-700',
-  },
-  {
-    icon: IconTree,
-    titleKey: 'marketing.feature3Title',
-    bodyKey: 'marketing.feature3Body',
-    color: 'from-accent-500/15 to-accent-500/0 text-accent-700',
-  },
-  {
-    icon: IconUsers,
-    titleKey: 'marketing.feature4Title',
-    bodyKey: 'marketing.feature4Body',
-    color: 'from-violet-500/15 to-violet-500/0 text-violet-700',
-  },
-  {
-    icon: IconChart,
-    titleKey: 'marketing.feature5Title',
-    bodyKey: 'marketing.feature5Body',
-    color: 'from-emerald-500/15 to-emerald-500/0 text-emerald-700',
-  },
-  {
-    icon: IconShield,
-    titleKey: 'marketing.feature6Title',
-    bodyKey: 'marketing.feature6Body',
-    color: 'from-amber-500/15 to-amber-500/0 text-amber-700',
-  },
-];
+const FEATURE_ICONS = [
+  { icon: IconGantt, titleKey: 'marketing.featureGanttTitle', bodyKey: 'marketing.featureGanttBody', color: 'from-brand-500/15 to-brand-500/0 text-brand-700' },
+  { icon: IconRoute, titleKey: 'marketing.featureCpmTitle', bodyKey: 'marketing.featureCpmBody', color: 'from-rose-500/15 to-rose-500/0 text-rose-700' },
+  { icon: IconTree, titleKey: 'marketing.featureWbsTitle', bodyKey: 'marketing.featureWbsBody', color: 'from-accent-500/15 to-accent-500/0 text-accent-700' },
+  { icon: IconUsers, titleKey: 'marketing.featureResTitle', bodyKey: 'marketing.featureResBody', color: 'from-violet-500/15 to-violet-500/0 text-violet-700' },
+  { icon: IconChart, titleKey: 'marketing.featureAnalyticsTitle', bodyKey: 'marketing.featureAnalyticsBody', color: 'from-emerald-500/15 to-emerald-500/0 text-emerald-700' },
+  { icon: IconShield, titleKey: 'marketing.featureMultiTenantTitle', bodyKey: 'marketing.featureMultiTenantBody', color: 'from-amber-500/15 to-amber-500/0 text-amber-700' },
+] as const;
 
 function Features() {
   const t = useT();
@@ -198,21 +136,16 @@ function Features() {
         <div className="mx-auto max-w-2xl text-center">
           <span className="eyebrow">{t('marketing.featuresEyebrow')}</span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
-            {t('marketing.featuresTitle')}
+            {t('marketing.featuresHeading1')}
             <br />
-            <span className="text-ink-500">{t('marketing.featuresSubtitle')}</span>
+            <span className="text-ink-500">{t('marketing.featuresHeading2')}</span>
           </h2>
-          <p className="mt-4 text-pretty text-ink-600">
-            {t('marketing.featuresBody')}
-          </p>
+          <p className="mt-4 text-pretty text-ink-600">{t('marketing.featuresIntro')}</p>
         </div>
 
         <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ icon: Icon, titleKey, bodyKey, color }) => (
-            <article
-              key={titleKey}
-              className="card card-hover group relative overflow-hidden p-6"
-            >
+          {FEATURE_ICONS.map(({ icon: Icon, titleKey, bodyKey, color }) => (
+            <article key={titleKey} className="card card-hover group relative overflow-hidden p-6">
               <div
                 className={`absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gradient-to-br ${color} blur-2xl transition duration-500 group-hover:scale-110`}
                 aria-hidden
@@ -228,7 +161,7 @@ function Features() {
                 <h3 className="mt-5 text-lg font-semibold tracking-tight">{t(titleKey)}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-ink-600">{t(bodyKey)}</p>
                 <div className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-ink-700 opacity-0 transition group-hover:opacity-100">
-                  {t('marketing.learnMore')}
+                  {t('marketing.featuresCardCta')}
                   <IconArrowRight className="h-3.5 w-3.5" />
                 </div>
               </div>
@@ -240,31 +173,14 @@ function Features() {
   );
 }
 
-/* ---------- HOW IT WORKS ---------- */
 function HowItWorks() {
   const t = useT();
   const steps = [
-    {
-      n: '01',
-      titleKey: 'marketing.step1Title',
-      bodyKey: 'marketing.step1Body',
-    },
-    {
-      n: '02',
-      titleKey: 'marketing.step2Title',
-      bodyKey: 'marketing.step2Body',
-    },
-    {
-      n: '03',
-      titleKey: 'marketing.step3Title',
-      bodyKey: 'marketing.step3Body',
-    },
-    {
-      n: '04',
-      titleKey: 'marketing.step4Title',
-      bodyKey: 'marketing.step4Body',
-    },
-  ];
+    { n: '01', titleKey: 'marketing.step1Title', bodyKey: 'marketing.step1Body' },
+    { n: '02', titleKey: 'marketing.step2Title', bodyKey: 'marketing.step2Body' },
+    { n: '03', titleKey: 'marketing.step3Title', bodyKey: 'marketing.step3Body' },
+    { n: '04', titleKey: 'marketing.step4Title', bodyKey: 'marketing.step4Body' },
+  ] as const;
 
   return (
     <section id="how" className="relative section bg-ink-50/40">
@@ -274,13 +190,9 @@ function HowItWorks() {
       />
       <div className="container">
         <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow">{t('marketing.howEyebrow')}</span>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
-            {t('marketing.howTitle')}
-          </h2>
-          <p className="mt-4 text-ink-600">
-            {t('marketing.howBody')}
-          </p>
+          <span className="eyebrow">{t('marketing.hiwEyebrow')}</span>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">{t('marketing.hiwHeading')}</h2>
+          <p className="mt-4 text-ink-600">{t('marketing.hiwIntro')}</p>
         </div>
 
         <ol className="relative mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -289,17 +201,13 @@ function HowItWorks() {
             aria-hidden
           />
           {steps.map((s, i) => (
-            <li
-              key={s.n}
-              className="relative card p-6"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
+            <li key={s.n} className="relative card p-6" style={{ animationDelay: `${i * 80}ms` }}>
               <div className="flex items-center justify-between">
                 <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-gradient text-xs font-bold text-white shadow-lift">
                   {s.n}
                 </span>
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">
-                  {t('marketing.step')} {i + 1}/4
+                  {t('marketing.stepBadge', { n: i + 1 })}
                 </span>
               </div>
               <h3 className="mt-5 text-lg font-semibold tracking-tight">{t(s.titleKey)}</h3>
@@ -312,33 +220,24 @@ function HowItWorks() {
   );
 }
 
-/* ---------- DEEP FEATURE ROW ---------- */
 function DeepFeatures() {
   const t = useT();
   return (
     <section className="section">
       <div className="container space-y-24">
         <DeepRow
-          eyebrow={t('marketing.deep1Eyebrow')}
-          title={t('marketing.deep1Title')}
-          body={t('marketing.deep1Body')}
-          bullets={[
-            t('marketing.deep1Bullet1'),
-            t('marketing.deep1Bullet2'),
-            t('marketing.deep1Bullet3'),
-          ]}
+          eyebrow={t('marketing.deepCpmEyebrow')}
+          title={t('marketing.deepCpmTitle')}
+          body={t('marketing.deepCpmBody')}
+          bullets={[t('marketing.deepCpmB1'), t('marketing.deepCpmB2'), t('marketing.deepCpmB3')]}
           visual={<CpmVisual />}
         />
         <DeepRow
           reverse
-          eyebrow={t('marketing.deep2Eyebrow')}
-          title={t('marketing.deep2Title')}
-          body={t('marketing.deep2Body')}
-          bullets={[
-            t('marketing.deep2Bullet1'),
-            t('marketing.deep2Bullet2'),
-            t('marketing.deep2Bullet3'),
-          ]}
+          eyebrow={t('marketing.deepResEyebrow')}
+          title={t('marketing.deepResTitle')}
+          body={t('marketing.deepResBody')}
+          bullets={[t('marketing.deepResB1'), t('marketing.deepResB2'), t('marketing.deepResB3')]}
           visual={<HistogramVisual />}
         />
       </div>
@@ -358,7 +257,7 @@ function DeepRow({
   title: string;
   body: string;
   bullets: string[];
-  visual: React.ReactNode;
+  visual: ReactNode;
   reverse?: boolean;
 }) {
   return (
@@ -380,10 +279,7 @@ function DeepRow({
       </div>
       <div className={reverse ? 'lg:col-start-1' : ''}>
         <div className="relative">
-          <div
-            className="pointer-events-none absolute -inset-6 rounded-3xl bg-brand-500/10 blur-2xl"
-            aria-hidden
-          />
+          <div className="pointer-events-none absolute -inset-6 rounded-3xl bg-brand-500/10 blur-2xl" aria-hidden />
           <div className="relative card overflow-hidden p-4">{visual}</div>
         </div>
       </div>
@@ -393,44 +289,42 @@ function DeepRow({
 
 function CpmVisual() {
   const t = useT();
-  // simplified ES/EF chip board
   const tasks = [
-    { name: 'Excavation', es: 0, ef: 4, slack: 0, critical: true },
-    { name: 'Slab pour', es: 4, ef: 10, slack: 0, critical: true },
-    { name: 'Framing', es: 10, ef: 25, slack: 0, critical: true },
-    { name: 'Site logistics', es: 4, ef: 8, slack: 6, critical: false },
-    { name: 'Permits', es: 0, ef: 3, slack: 12, critical: false },
+    { nameKey: 'marketing.demoTaskExcavation' as const, es: 0, ef: 4, slack: 0, critical: true },
+    { nameKey: 'marketing.demoTaskSlab' as const, es: 4, ef: 10, slack: 0, critical: true },
+    { nameKey: 'marketing.demoTaskFraming' as const, es: 10, ef: 25, slack: 0, critical: true },
+    { nameKey: 'marketing.demoTaskLogistics' as const, es: 4, ef: 8, slack: 6, critical: false },
+    { nameKey: 'marketing.demoTaskPermits' as const, es: 0, ef: 3, slack: 12, critical: false },
   ];
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between text-xs text-ink-500">
-        <span>{t('marketing.criticalPath')}</span>
+        <span>{t('marketing.demoCriticalPath')}</span>
         <span className="badge bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-100">
-          5 {t('marketing.tasksShort')} · 25d
+          {t('marketingUi.cpmDemoBadge', { tasks: 5, days: 25 })}
         </span>
       </div>
-      {tasks.map((t) => (
+      {tasks.map((row) => (
         <div
-          key={t.name}
+          key={row.nameKey}
           className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm ${
-            t.critical
-              ? 'border-rose-200 bg-rose-50/60'
-              : 'border-ink-200 bg-white'
+            row.critical ? 'border-rose-200 bg-rose-50/60' : 'border-ink-200 bg-white'
           }`}
         >
           <div className="flex items-center gap-3">
-            <span
-              className={`h-2 w-2 rounded-full ${
-                t.critical ? 'bg-rose-500' : 'bg-ink-300'
-              }`}
-            />
-            <span className="font-medium text-ink-900">{t.name}</span>
+            <span className={`h-2 w-2 rounded-full ${row.critical ? 'bg-rose-500' : 'bg-ink-300'}`} />
+            <span className="font-medium text-ink-900">{t(row.nameKey)}</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-ink-500">
-            <span>ES {t.es}d</span>
-            <span>EF {t.ef}d</span>
             <span>
-              Slack <strong className={t.critical ? 'text-rose-600' : 'text-ink-700'}>{t.slack}d</strong>
+              {t('marketing.esAbbr')} {row.es}d
+            </span>
+            <span>
+              {t('marketing.efAbbr')} {row.ef}d
+            </span>
+            <span>
+              {t('marketing.demoSlack')}{' '}
+              <strong className={row.critical ? 'text-rose-600' : 'text-ink-700'}>{row.slack}d</strong>
             </span>
           </div>
         </div>
@@ -445,15 +339,15 @@ function HistogramVisual() {
   return (
     <div>
       <div className="flex items-center justify-between text-xs text-ink-500">
-        <span>{t('marketing.dailyUtilization')}</span>
+        <span>{t('marketing.demoDailyUtil')}</span>
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-brand-500" />
-            {t('marketing.booked')}
+            {t('marketing.demoBooked')}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-rose-500" />
-            {t('marketing.over')}
+            {t('marketing.demoOver')}
           </span>
         </div>
       </div>
@@ -468,60 +362,40 @@ function HistogramVisual() {
                 }`}
                 style={{ height: `${Math.min(100, v)}%` }}
               />
-              <span className="text-[10px] text-ink-400">D{i + 1}</span>
+              <span className="text-[10px] text-ink-400">{t('marketing.demoDayAxis', { n: i + 1 })}</span>
             </div>
           );
         })}
       </div>
       <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50/60 p-2.5 text-xs text-rose-700">
-        ⚠ Maria is 110% allocated on D4 — consider rebalancing 1d to D6.
+        {t('marketing.demoWarn')}
       </div>
     </div>
   );
 }
 
-/* ---------- SOCIAL PROOF ---------- */
 function SocialProof() {
+  const t = useT();
   return (
     <section id="proof" className="section">
       <div className="container">
         <div className="grid gap-10 lg:grid-cols-3">
           <div className="lg:col-span-1">
-            <span className="eyebrow">Loved by builders</span>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
-              The first PM tool engineers don't dread.
-            </h2>
-            <p className="mt-4 text-ink-600">
-              Construction PMs, hardware leads, agency owners — teams who plan in days and weeks, not just sprints.
-            </p>
+            <span className="eyebrow">{t('marketing.proofEyebrow')}</span>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">{t('marketing.proofHeading')}</h2>
+            <p className="mt-4 text-ink-600">{t('marketing.proofBody')}</p>
             <div className="mt-6 grid grid-cols-3 gap-4">
-              <KpiTile value="42%" label="faster planning" />
-              <KpiTile value="−4d" label="avg slack saved" />
-              <KpiTile value="98%" label="on-time delivery" />
+              <KpiTile value="42%" label={t('marketing.kpi1')} />
+              <KpiTile value="−4d" label={t('marketing.kpi2')} />
+              <KpiTile value="98%" label={t('marketing.kpi3')} />
             </div>
           </div>
 
           <div className="grid gap-5 lg:col-span-2 md:grid-cols-2">
-            <Testimonial
-              quote="We replaced three spreadsheets and an aging MS Project install with PlanForge. Our ops lead now actually opens the plan."
-              name="Maya R."
-              role="Head of Delivery, Slope"
-            />
-            <Testimonial
-              quote="The CPM view paid for the year-one subscription in our first reno. We saw a critical path we'd missed in three rebuilds."
-              name="Jordan T."
-              role="Construction PM, Harbor"
-            />
-            <Testimonial
-              quote="Finally a Gantt that doesn't fight me. Drag, drop, and successors actually move. The dependency cycle errors are chef's kiss."
-              name="Priya S."
-              role="Engineering Lead, Relay"
-            />
-            <Testimonial
-              quote="Onboarding took an afternoon. The team picked up the WBS in one standup."
-              name="Sam K."
-              role="Founder, Catalyst"
-            />
+            <Testimonial quote={t('marketingUi.testimonial1Quote')} name={t('marketingUi.testimonial1Name')} role={t('marketingUi.testimonial1Role')} />
+            <Testimonial quote={t('marketingUi.testimonial2Quote')} name={t('marketingUi.testimonial2Name')} role={t('marketingUi.testimonial2Role')} />
+            <Testimonial quote={t('marketingUi.testimonial3Quote')} name={t('marketingUi.testimonial3Name')} role={t('marketingUi.testimonial3Role')} />
+            <Testimonial quote={t('marketingUi.testimonial4Quote')} name={t('marketingUi.testimonial4Name')} role={t('marketingUi.testimonial4Role')} />
           </div>
         </div>
       </div>
@@ -538,15 +412,7 @@ function KpiTile({ value, label }: { value: string; label: string }) {
   );
 }
 
-function Testimonial({
-  quote,
-  name,
-  role,
-}: {
-  quote: string;
-  name: string;
-  role: string;
-}) {
+function Testimonial({ quote, name, role }: { quote: string; name: string; role: string }) {
   return (
     <figure className="card card-hover relative p-6">
       <div className="flex gap-0.5 text-amber-500">
@@ -554,9 +420,7 @@ function Testimonial({
           <IconStar key={i} />
         ))}
       </div>
-      <blockquote className="mt-3 text-[15px] leading-relaxed text-ink-800">
-        “{quote}”
-      </blockquote>
+      <blockquote className="mt-3 text-[15px] leading-relaxed text-ink-800">“{quote}”</blockquote>
       <figcaption className="mt-5 flex items-center gap-3">
         <span
           className="grid h-9 w-9 place-items-center rounded-full bg-brand-gradient text-xs font-semibold text-white"
@@ -576,7 +440,6 @@ function Testimonial({
   );
 }
 
-/* ---------- FINAL CTA ---------- */
 function FinalCta() {
   const t = useT();
   return (
@@ -591,22 +454,15 @@ function FinalCta() {
             }}
             aria-hidden
           />
-          <div
-            className="pointer-events-none absolute inset-0 bg-noise opacity-40"
-            aria-hidden
-          />
+          <div className="pointer-events-none absolute inset-0 bg-noise opacity-40" aria-hidden />
           <div className="relative grid items-center gap-8 md:grid-cols-3">
             <div className="md:col-span-2">
               <span className="eyebrow border-white/15 bg-white/5 text-white/80">
                 <IconLayers className="h-3.5 w-3.5" />
-                {t('marketing.finalEyebrow')}
+                {t('marketingUi.finalBadgeWithIcon')}
               </span>
-              <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
-                {t('marketing.finalTitle')}
-              </h2>
-              <p className="mt-4 max-w-xl text-pretty text-white/70">
-                {t('marketing.finalBody')}
-              </p>
+              <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">{t('marketing.finalTitle')}</h2>
+              <p className="mt-4 max-w-xl text-pretty text-white/70">{t('marketing.finalBody')}</p>
             </div>
             <div className="flex flex-col gap-3 md:items-end">
               <Link
@@ -622,7 +478,7 @@ function FinalCta() {
               >
                 {t('marketing.comparePlans')}
               </Link>
-              <span className="text-xs text-white/50">{t('marketing.trustedWorldwide')}</span>
+              <span className="text-xs text-white/50">{t('marketing.finalTrust')}</span>
             </div>
           </div>
         </div>

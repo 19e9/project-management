@@ -3,8 +3,14 @@ import { Logo } from '../ui/Logo';
 import { usePublicSiteFooter } from '../../features/cms/hooks';
 import { MarketingLink } from './MarketingLink';
 import { cn } from '../../lib/cn';
+import { LanguageSwitcher } from '../ui/LanguageSwitcher';
+import { useI18n, useT } from '../../i18n/I18nProvider';
+import { pickLocalized } from '../../i18n/pickLocalized';
+import type { LocalizedString } from '../../i18n/pickLocalized';
 
 export function Footer({ className }: { className?: string }) {
+  const t = useT();
+  const { locale } = useI18n();
   const q = usePublicSiteFooter();
   const cols = q.data?.columns ?? [];
 
@@ -30,17 +36,20 @@ export function Footer({ className }: { className?: string }) {
             ) : (
               <>
                 <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink-400">
-                  {q.data?.footerTagline ?? ''}
+                  {pickLocalized(locale, q.data?.footerTagline as LocalizedString)}
                 </p>
-                <div className="mt-6 flex items-center gap-3">
+                <div className="mt-4">
+                  <LanguageSwitcher dark />
+                </div>
+                <div className="mt-6 flex flex-wrap items-center gap-3">
                   <Link to="/register" className="btn-brand">
-                    Start free
+                    {t('marketing.startFree')}
                   </Link>
                   <MarketingLink
                     href={q.data?.secondaryCtaHref ?? '#'}
                     className="btn px-4 py-2 text-sm text-ink-200 hover:text-white"
                   >
-                    {q.data?.secondaryCtaLabel ?? ''}
+                    {pickLocalized(locale, q.data?.secondaryCtaLabel as LocalizedString)}
                   </MarketingLink>
                 </div>
               </>
@@ -65,16 +74,13 @@ export function Footer({ className }: { className?: string }) {
               cols.map((c, ci) => (
                 <div key={`${ci}-${c.title}`}>
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-                    {c.title}
+                    {pickLocalized(locale, c.title as LocalizedString)}
                   </h4>
                   <ul className="mt-4 space-y-2.5 text-sm">
                     {c.links.map((l) => (
                       <li key={`${c.title}:${l.label}:${l.href}`}>
-                        <MarketingLink
-                          href={l.href}
-                          className="text-ink-300 transition hover:text-white"
-                        >
-                          {l.label}
+                        <MarketingLink href={l.href} className="text-ink-300 transition hover:text-white">
+                          {pickLocalized(locale, l.label as LocalizedString)}
                         </MarketingLink>
                       </li>
                     ))}
@@ -85,10 +91,12 @@ export function Footer({ className }: { className?: string }) {
         </div>
 
         <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-6 text-xs text-ink-500 md:flex-row md:items-center">
-          <span>© {new Date().getFullYear()} PlanForge Labs, Inc. All rights reserved.</span>
+          <span>
+            {t('marketing.copyright', { year: new Date().getFullYear() })} {t('marketing.footerRights')}
+          </span>
           <div className="flex items-center gap-2">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse-soft" />
-            All systems operational
+            {t('marketing.systemsOperational')}
           </div>
         </div>
       </div>

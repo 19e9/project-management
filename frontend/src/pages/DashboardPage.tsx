@@ -1,3 +1,4 @@
+import { useT } from '../i18n/I18nProvider';
 import { useAuth } from '../features/auth/AuthProvider';
 import { useMyDashboard } from '../features/dashboard/hooks';
 import { AdminDashboardView } from '../features/dashboard/views/AdminDashboardView';
@@ -96,6 +97,7 @@ function DashboardSkeleton() {
 
 /* ── Error state ───────────────────────────────────────── */
 function ErrorState() {
+  const t = useT();
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
       <div className="grid h-16 w-16 place-items-center rounded-2xl bg-rose-50 text-rose-500">
@@ -105,17 +107,15 @@ function ErrorState() {
         </svg>
       </div>
       <div>
-        <h3 className="text-lg font-semibold text-ink-900">Dashboard failed to load</h3>
-        <p className="mt-1 text-sm text-ink-500">
-          Could not reach the API. Check your connection and make sure the backend is running.
-        </p>
+        <h3 className="text-lg font-semibold text-ink-900">{t('dashErr.title')}</h3>
+        <p className="mt-1 text-sm text-ink-500">{t('dashErr.body')}</p>
       </div>
       <button
         type="button"
         onClick={() => window.location.reload()}
         className="btn-brand"
       >
-        Retry
+        {t('common.retry')}
       </button>
     </div>
   );

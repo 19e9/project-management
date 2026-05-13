@@ -2,35 +2,38 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Logo } from '../ui/Logo';
 import { IconArrowRight } from '../ui/Icons';
-import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 import { usePublicSiteFooter, usePublicSiteNav } from '../../features/cms/hooks';
 import { isExternalHref } from './MarketingLink';
-import { useT } from '../../i18n/I18nProvider';
+import { LanguageSwitcher } from '../ui/LanguageSwitcher';
+import { useI18n, useT } from '../../i18n/I18nProvider';
+import { pickLocalized } from '../../i18n/pickLocalized';
+import type { LocalizedString } from '../../i18n/pickLocalized';
 
 type NavItem = { label: string; href: string; key: string };
 
 export function Navbar() {
+  const t = useT();
+  const { locale } = useI18n();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const footerQ = usePublicSiteFooter();
   const navQ = usePublicSiteNav();
-  const t = useT();
 
   const links: NavItem[] = useMemo(() => {
     const top =
       footerQ.data?.topNavLinks?.map((l, i) => ({
-        label: translateTopNavLabel(l.label, t),
+        label: pickLocalized(locale, l.label as LocalizedString),
         href: l.href,
         key: `top:${l.href}:${i}`,
       })) ?? [];
     const cms =
       navQ.data?.nav?.map((n) => ({
-        label: n.title,
+        label: pickLocalized(locale, n.title as LocalizedString),
         href: `/${n.slug}`,
         key: `page:${n.slug}`,
       })) ?? [];
     return [...top, ...cms];
-  }, [footerQ.data, navQ.data, t]);
+  }, [footerQ.data, navQ.data, locale]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -44,23 +47,9 @@ export function Navbar() {
 
   const navClassMobile = 'block rounded-xl px-3 py-2.5 text-sm font-medium text-ink-700 hover:bg-ink-100';
 
-  function scrollToHash(href: string) {
-    const hash = href.startsWith('/#') ? href.slice(2) : href.startsWith('#') ? href.slice(1) : '';
-    if (!hash) return;
-    window.requestAnimationFrame(() => {
-      document.getElementById(decodeURIComponent(hash))?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    });
-  }
-
   function renderNavLink(item: NavItem, variant: 'desktop' | 'mobile') {
     const cls = variant === 'desktop' ? navClassDesktop : navClassMobile;
-    const close = () => {
-      setOpen(false);
-      scrollToHash(item.href);
-    };
+    const close = () => setOpen(false);
     if (isExternalHref(item.href)) {
       return (
         <a key={item.key} href={item.href} className={cls} onClick={close}>
@@ -98,7 +87,7 @@ export function Navbar() {
           </nav>
         </div>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           <LanguageSwitcher compact />
           <Link to="/login" className="btn-ghost">
             {t('marketing.signIn')}
@@ -111,7 +100,7 @@ export function Navbar() {
 
         <button
           type="button"
-          aria-label="Toggle menu"
+          aria-label={t('common.toggleMenu')}
           className="grid h-10 w-10 place-items-center rounded-xl border border-ink-200 bg-white lg:hidden"
           onClick={() => setOpen((o) => !o)}
         >
@@ -129,8 +118,10 @@ export function Navbar() {
         <div className="border-t border-ink-200/70 bg-white/95 backdrop-blur-md lg:hidden">
           <div className="container space-y-1 py-4">
             {links.map((l) => renderNavLink(l, 'mobile'))}
-            <div className="grid gap-2 pt-3">
+            <div className="flex flex-wrap items-center gap-2 pt-3">
+            <div className="flex w-full justify-center sm:w-auto">
               <LanguageSwitcher />
+            </div>
               <Link to="/login" onClick={() => setOpen(false)} className="btn-secondary w-full">
                 {t('marketing.signIn')}
               </Link>
@@ -143,13 +134,4 @@ export function Navbar() {
       )}
     </header>
   );
-}
-
-function translateTopNavLabel(label: string, t: (key: string) => string) {
-  const key = label.trim().toLowerCase();
-  if (key === 'features') return t('marketing.navFeatures');
-  if (key === 'how it works') return t('marketing.navHow');
-  if (key === 'pricing') return t('marketing.navPricing');
-  if (key === 'customers') return t('marketing.navCustomers');
-  return label;
 }

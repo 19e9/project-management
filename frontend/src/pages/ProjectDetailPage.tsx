@@ -1,12 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMyDashboard } from '../features/dashboard/hooks';
-import {
-  useDeleteProject,
-  useProject,
-  useRemoveProjectMember,
-  useUpdateProject,
-} from '../features/projects/hooks';
+import { useDeleteProject, useProject, useUpdateProject } from '../features/projects/hooks';
 import {
   useAnalyticsOverview,
   useCpm,
@@ -22,6 +17,7 @@ import {
 import {
   useInviteWorkspaceMember,
   useRemoveWorkspaceMember,
+  useUpdateWorkspaceMemberRole,
   useWorkspace,
   useWorkspaceMembers,
 } from '../features/workspaces/hooks';
@@ -41,6 +37,8 @@ import {
 } from '../features/project-detail/ProjectPulsePanels';
 import { CpmLockedPreview } from '../features/project-detail/CpmLockedPreview';
 import { countOverdue, isDescendantTasks } from '../features/project-detail/projectMetrics';
+import type { TFunction } from '../i18n/I18nProvider';
+import { useT } from '../i18n/I18nProvider';
 
 type TabId =
   | 'overview'
@@ -53,25 +51,29 @@ type TabId =
   | 'docs'
   | 'ai';
 
-const TABS: { id: TabId; label: string; description: string }[] = [
-  { id: 'overview', label: 'Overview', description: 'Health & progress' },
-  { id: 'wbs', label: 'WBS', description: 'Work breakdown' },
-  { id: 'gantt', label: 'Gantt', description: 'Timeline' },
-  { id: 'cpm', label: 'Critical path', description: 'CPM' },
-  { id: 'tasks', label: 'Tasks', description: 'Table & dependencies' },
-  { id: 'kanban', label: 'Kanban', description: 'Board & WIP' },
-  { id: 'activity', label: 'Activity', description: 'Project pulse' },
-  { id: 'docs', label: 'Docs', description: 'Files vault' },
-  { id: 'ai', label: 'AI', description: 'Copilot preview' },
-];
+function buildTabDefs(t: TFunction): { id: TabId; label: string; description: string }[] {
+  return [
+    { id: 'overview', label: t('projectDetail.tabOverview'), description: t('projectDetail.tabOverviewDesc') },
+    { id: 'wbs', label: t('projectDetail.tabWbs'), description: t('projectDetail.tabWbsDesc') },
+    { id: 'gantt', label: t('projectDetail.tabGantt'), description: t('projectDetail.tabGanttDesc') },
+    { id: 'cpm', label: t('projectDetail.tabCpm'), description: t('projectDetail.tabCpmDesc') },
+    { id: 'tasks', label: t('projectDetail.tabTasks'), description: t('projectDetail.tabTasksDesc') },
+    { id: 'kanban', label: t('projectDetail.tabKanban'), description: t('projectDetail.tabKanbanDesc') },
+    { id: 'activity', label: t('projectDetail.tabActivity'), description: t('projectDetail.tabActivityDesc') },
+    { id: 'docs', label: t('projectDetail.tabDocs'), description: t('projectDetail.tabDocsDesc') },
+    { id: 'ai', label: t('projectDetail.tabAi'), description: t('projectDetail.tabAiDesc') },
+  ];
+}
 
 export default function ProjectDetailPage() {
+  const t = useT();
   const { workspaceId, projectId } = useParams<{
     workspaceId: string;
     projectId: string;
   }>();
   const nav = useNavigate();
   const [tab, setTab] = useState<TabId>('overview');
+  const tabDefs = useMemo(() => buildTabDefs(t), [t]);
 
   const { data: workspace } = useWorkspace(workspaceId);
   const { data: dashboard } = useMyDashboard();
@@ -90,13 +92,13 @@ export default function ProjectDetailPage() {
   const patchTaskMut = usePatchTask(workspaceId!, projectId!);
   const { data: members = [] } = useWorkspaceMembers(workspaceId);
   const inviteMutation = useInviteWorkspaceMember(workspaceId!);
-  const removeProjectMember = useRemoveProjectMember(workspaceId!, projectId!);
-  const removeWorkspaceMember = useRemoveWorkspaceMember(workspaceId!);
+  const updateMemberRole = useUpdateWorkspaceMemberRole(workspaceId!);
+  const removeMember = useRemoveWorkspaceMember(workspaceId!);
 
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'owner' | 'member' | 'viewer'>('member');
+  const [inviteRole, setInviteRole] = useState<'owner' | 'admin' | 'member' | 'viewer'>('member');
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [memberActionError, setMemberActionError] = useState<string | null>(null);
   const [taskFormKey, setTaskFormKey] = useState(0);
@@ -123,10 +125,7 @@ export default function ProjectDetailPage() {
   const canUpdateTaskProgress = canCreateTask;
   const canComment = workspaceRole !== 'viewer' && workspaceRole !== 'client';
   const canGrantOwner = dashboard?.myRole === 'platform_admin' || workspaceRole === 'owner';
-  const projectMemberIds = new Set([
-    ...(project?.leadId ? [project.leadId] : []),
-    ...tasks.flatMap((task) => task.assigneeIds ?? []),
-  ]);
+  const projectMemberIds = new Set(tasks.flatMap((task) => task.assigneeIds ?? []));
   const projectMembers = members.filter((member) => projectMemberIds.has(member.userId));
   const taskDrawerMembers = canManageProject ? members : projectMembers;
 
@@ -141,7 +140,7 @@ export default function ProjectDetailPage() {
             project?.endDate,
           );
           await createTask.mutateAsync({
-            title: `Task ${tasks.length + 1}`,
+            title: t('projectDetail.taskNumbered', { n: tasks.length + 1 }),
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString(),
             durationDays,
@@ -158,7 +157,7 @@ export default function ProjectDetailPage() {
         {
           const { startDate } = defaultNewTaskWindow(project?.startDate, project?.endDate);
           await createTask.mutateAsync({
-            title: `Milestone ${tasks.length + 1}`,
+            title: t('projectDetail.milestoneNumbered', { n: tasks.length + 1 }),
             startDate: startDate.toISOString(),
             endDate: startDate.toISOString(),
             durationDays: 1,
@@ -166,7 +165,7 @@ export default function ProjectDetailPage() {
           });
         }
         setTab('tasks');
-        setNewTaskDefaultTitle('Milestone: ');
+        setNewTaskDefaultTitle(t('projectDetail.milestoneTitlePrefix'));
         setTaskFormKey((k) => k + 1);
         queueMicrotask(() => taskAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
         break;
@@ -180,13 +179,13 @@ export default function ProjectDetailPage() {
         setTab('docs');
         break;
       case 'export':
-        exportTasksJson(project?.name ?? 'project', tasks);
+        exportTasksJson(project?.name ?? t('projectDetail.fallbackProject'), tasks);
         break;
       case 'kanban':
         setTab('kanban');
         break;
       case 'report':
-        exportMarkdownReport(project?.name ?? 'Project', tasks, overview.data);
+        exportMarkdownReport(project?.name ?? t('projectDetail.fallbackProject'), tasks, overview.data, t);
         break;
       default:
         break;
@@ -201,7 +200,7 @@ export default function ProjectDetailPage() {
         err?.response?.data?.message ??
           err?.response?.data?.code ??
           err?.message ??
-          'Could not add task.',
+          t('projectDetail.errQuickAction'),
       );
     }
   }
@@ -215,14 +214,15 @@ export default function ProjectDetailPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <Breadcrumb
+          aria={t('projectsPage.breadcrumbAria')}
           items={[
-            { to: '/dashboard', label: 'Overview' },
-            { to: '/dashboard/workspaces', label: 'Workspaces' },
+            { to: '/dashboard', label: t('projectsPage.breadcrumbOverview') },
+            { to: '/dashboard/workspaces', label: t('projectsPage.breadcrumbWs') },
             {
               to: `/dashboard/workspaces/${workspaceId}/projects`,
-              label: workspace?.name ?? 'Projects',
+              label: workspace?.name ?? t('projectDetail.fallbackProjects'),
             },
-            { label: project?.name ?? 'Project' },
+            { label: project?.name ?? t('projectDetail.fallbackProject') },
           ]}
         />
         <div className="flex flex-wrap gap-2">
@@ -236,7 +236,7 @@ export default function ProjectDetailPage() {
                 setProjectEditOpen(true);
               }}
             >
-              Edit project
+              {t('projectDetail.editProject')}
             </button>
           )}
           {canManageProject && (
@@ -245,19 +245,19 @@ export default function ProjectDetailPage() {
               className="btn-secondary h-10 px-4 text-sm text-rose-700"
               disabled={deleteProject.isPending}
               onClick={async () => {
-                if (!window.confirm(`Delete project "${project?.name ?? 'Project'}"?`)) return;
+                if (!window.confirm(t('projectsPage.confirmDelete', { name: project?.name ?? t('projectDetail.fallbackProject') }))) return;
                 await deleteProject.mutateAsync(projectId!);
                 nav(`/dashboard/workspaces/${workspaceId}/projects`);
               }}
             >
-              Delete project
+              {t('projectDetail.deleteProject')}
             </button>
           )}
         <Link
           to={`/dashboard/workspaces/${workspaceId}/projects`}
           className="btn-secondary h-10 shrink-0 px-4 text-sm"
         >
-          ← Back to projects
+          {t('projectDetail.backToProjects')}
         </Link>
         </div>
       </div>
@@ -278,19 +278,19 @@ export default function ProjectDetailPage() {
             }}
           >
             <div>
-              <label className="label">Project name</label>
+              <label className="label">{t('projectsPage.labelName')}</label>
               <input className="input" value={projectNameDraft} onChange={(e) => setProjectNameDraft(e.target.value)} />
             </div>
             <div>
-              <label className="label">Description</label>
+              <label className="label">{t('projectsPage.labelDescription')}</label>
               <input className="input" value={projectDescriptionDraft} onChange={(e) => setProjectDescriptionDraft(e.target.value)} />
             </div>
             <div className="flex gap-2 md:col-span-2">
               <button type="submit" className="btn-primary px-4 text-sm" disabled={updateProject.isPending}>
-                Save project
+                {t('projectDetail.saveProject')}
               </button>
               <button type="button" className="btn-secondary px-4 text-sm" onClick={() => setProjectEditOpen(false)}>
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </form>
@@ -299,7 +299,7 @@ export default function ProjectDetailPage() {
 
       <ProjectCommandCenter
         projectId={projectId!}
-        projectName={project?.name ?? 'Project'}
+        projectName={project?.name ?? t('projectDetail.fallbackProject')}
         projectEnd={project?.endDate ?? null}
         tasks={tasks}
         members={projectMembers}
@@ -320,7 +320,7 @@ export default function ProjectDetailPage() {
 
       {project?.code && (
         <p className="text-xs text-ink-500">
-          Code{' '}
+          {t('projectDetail.codeLabel')}{' '}
           <span className="rounded-md bg-ink-100 px-2 py-0.5 font-mono font-semibold text-ink-700">
             {project.code}
           </span>
@@ -330,21 +330,21 @@ export default function ProjectDetailPage() {
       <div className="card overflow-hidden">
         <div className="border-b border-ink-200 bg-ink-50/40 px-2 py-2 sm:px-4">
           <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none sm:flex-wrap sm:pb-0">
-            {TABS.map((t) => {
-              const active = tab === t.id;
+            {tabDefs.map((tabDef) => {
+              const active = tab === tabDef.id;
               return (
                 <button
-                  key={t.id}
+                  key={tabDef.id}
                   type="button"
-                  onClick={() => setTab(t.id)}
+                  onClick={() => setTab(tabDef.id)}
                   className={`flex min-w-0 flex-col rounded-xl px-3 py-2 text-left transition sm:px-4 ${
                     active
                       ? 'bg-white text-ink-900 shadow-soft ring-1 ring-inset ring-ink-200'
                       : 'text-ink-600 hover:bg-white/70 hover:text-ink-900'
                   }`}
                 >
-                  <span className="text-sm font-semibold">{t.label}</span>
-                  <span className="hidden text-[11px] text-ink-500 sm:block">{t.description}</span>
+                  <span className="text-sm font-semibold">{tabDef.label}</span>
+                  <span className="hidden text-[11px] text-ink-500 sm:block">{tabDef.description}</span>
                 </button>
               );
             })}
@@ -365,8 +365,8 @@ export default function ProjectDetailPage() {
           {tab === 'wbs' && (
             <>
               <SectionIntro
-                title="Work breakdown structure"
-                subtitle="Drag :: handles to reorganize parents. Drop on the dashed strip to promote to root."
+                title={t('projectDetail.wbsSectionTitle')}
+                subtitle={t('projectDetail.wbsSectionSubtitle')}
               />
               <div className="mt-4 rounded-2xl border border-ink-100 bg-ink-50/30 p-4 sm:p-5">
                 <WbsTree
@@ -380,10 +380,7 @@ export default function ProjectDetailPage() {
 
           {tab === 'gantt' && (
             <>
-              <SectionIntro
-                title="Gantt"
-                subtitle="Zoom levels, today marker, dependency arrows, and drag to reschedule."
-              />
+              <SectionIntro title={t('projectDetail.tabGantt')} subtitle={t('projectDetail.ganttSectionSubtitle')} />
               <div className="mt-4 rounded-2xl border border-ink-100 bg-white p-2 sm:p-4">
                 <ProjectGantt
                   workspaceId={workspaceId!}
@@ -444,7 +441,7 @@ export default function ProjectDetailPage() {
           {tab === 'ai' && (
             <ProjectAiTab
               tasks={tasks}
-              projectName={project?.name ?? 'Project'}
+              projectName={project?.name ?? t('projectDetail.fallbackProject')}
               blocked={blocked}
               overdue={overdueCount}
             />
@@ -469,8 +466,8 @@ export default function ProjectDetailPage() {
       {inviteOpen && (
         <div className="fixed inset-0 z-[70] grid place-items-center bg-ink-900/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-ink-200">
-            <h3 className="text-lg font-semibold text-ink-900">Invite teammate</h3>
-            <p className="mt-1 text-xs text-ink-500">Invite workspace members and manage this project's access.</p>
+            <h3 className="text-lg font-semibold text-ink-900">{t('projectDetail.inviteTitle')}</h3>
+            <p className="mt-1 text-xs text-ink-500">{t('projectDetail.inviteLead')}</p>
             <form
               className="mt-4 space-y-3"
               onSubmit={async (e) => {
@@ -488,13 +485,13 @@ export default function ProjectDetailPage() {
                     err?.response?.data?.message ??
                       err?.response?.data?.code ??
                       err?.message ??
-                      'Could not invite this user.',
+                      t('projectDetail.errInvite'),
                   );
                 }
               }}
             >
               <div>
-                <label className="label">Email</label>
+                <label className="label">{t('projectDetail.labelEmail')}</label>
                 <input
                   className="input text-sm"
                   type="email"
@@ -504,15 +501,16 @@ export default function ProjectDetailPage() {
                 />
               </div>
               <div>
-                <label className="label">Role</label>
+                <label className="label">{t('projectDetail.labelRole')}</label>
                 <select
                   className="input text-sm"
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as typeof inviteRole)}
                 >
-                  <option value="member">Member</option>
-                  <option value="viewer">Viewer</option>
-                  {canGrantOwner && <option value="owner">Owner</option>}
+                  <option value="admin">{t('roles.optionAdmin')}</option>
+                  <option value="member">{t('roles.optionMember')}</option>
+                  <option value="viewer">{t('roles.optionViewer')}</option>
+                  {canGrantOwner && <option value="owner">{t('roles.optionOwner')}</option>}
                 </select>
               </div>
               {inviteError && (
@@ -526,46 +524,64 @@ export default function ProjectDetailPage() {
                   className="btn-secondary px-4 text-sm"
                   onClick={() => setInviteOpen(false)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn-primary px-4 text-sm" disabled={inviteMutation.isPending}>
-                  Send invite
+                  {t('projectDetail.sendInvite')}
                 </button>
               </div>
             </form>
 
             <div className="mt-5 border-t border-ink-100 pt-4">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <h4 className="text-sm font-semibold text-ink-900">Project members</h4>
-                <span className="text-[11px] font-medium text-ink-500">{projectMembers.length} assigned</span>
+                <h4 className="text-sm font-semibold text-ink-900">{t('projectDetail.workspaceMembers')}</h4>
+                <span className="text-[11px] font-medium text-ink-500">
+                  {t('projectDetail.membersActiveCount', { n: members.length })}
+                </span>
               </div>
               <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                {projectMembers.map((m) => (
-                  <ProjectMemberRow
+                {members.map((m) => (
+                  <MemberManagerRow
                     key={m.userId}
                     member={m}
                     isPrimaryOwner={m.userId === workspace?.ownerId}
-                    removePending={removeProjectMember.isPending}
+                    rolePending={updateMemberRole.isPending}
+                    removePending={removeMember.isPending}
+                    canGrantOwner={canGrantOwner}
+                    onRoleChange={async (role) => {
+                      setMemberActionError(null);
+                      try {
+                        await updateMemberRole.mutateAsync({ userId: m.userId, role });
+                      } catch (err: any) {
+                        setMemberActionError(
+                          err?.response?.data?.message ??
+                            err?.response?.data?.code ??
+                            err?.message ??
+                            t('projectDetail.errUpdateMember'),
+                        );
+                      }
+                    }}
                     onRemove={async () => {
-                      if (window.confirm(`Remove ${m.displayName} from this project? They will keep access to other assigned projects.`)) {
+                      if (window.confirm(t('projectDetail.removeMemberConfirm', { name: m.displayName ?? '' }))) {
                         setMemberActionError(null);
                         try {
-                          await removeProjectMember.mutateAsync(m.userId);
+                          await removeMember.mutateAsync(m.userId);
+                          setInviteOpen(false);
                         } catch (err: any) {
                           setMemberActionError(
                             err?.response?.data?.message ??
                               err?.response?.data?.code ??
                               err?.message ??
-                              'Could not remove this member from the project.',
+                              t('projectDetail.errRemoveMember'),
                           );
                         }
                       }
                     }}
                   />
                 ))}
-                {projectMembers.length === 0 && (
+                {members.length === 0 && (
                   <li className="rounded-xl border border-dashed border-ink-200 px-4 py-8 text-center text-sm text-ink-500">
-                    No project members assigned yet.
+                    {t('projectDetail.noMembersLoaded')}
                   </li>
                 )}
               </ul>
@@ -574,45 +590,9 @@ export default function ProjectDetailPage() {
                   {memberActionError}
                 </div>
               )}
-              <div className="mt-5 border-t border-ink-100 pt-4">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <h4 className="text-sm font-semibold text-ink-900">Workspace access</h4>
-                  <span className="text-[11px] font-medium text-ink-500">{members.length} active</span>
-                </div>
-                <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                  {members.map((m) => (
-                    <WorkspaceAccessRow
-                      key={m.userId}
-                      member={m}
-                      isPrimaryOwner={m.userId === workspace?.ownerId}
-                      removePending={removeWorkspaceMember.isPending}
-                      onRemove={async () => {
-                        if (window.confirm(`Remove ${m.displayName} from this workspace? They will lose access to all projects in this workspace.`)) {
-                          setMemberActionError(null);
-                          try {
-                            await removeWorkspaceMember.mutateAsync(m.userId);
-                          } catch (err: any) {
-                            setMemberActionError(
-                              err?.response?.data?.message ??
-                                err?.response?.data?.code ??
-                                err?.message ??
-                                'Could not remove this member from the workspace.',
-                            );
-                          }
-                        }
-                      }}
-                    />
-                  ))}
-                  {members.length === 0 && (
-                    <li className="rounded-xl border border-dashed border-ink-200 px-4 py-8 text-center text-sm text-ink-500">
-                      No workspace members loaded.
-                    </li>
-                  )}
-                </ul>
-              </div>
               <div className="mt-4 flex justify-end">
                 <button type="button" className="btn-secondary px-4 text-sm" onClick={() => setInviteOpen(false)}>
-                  Done
+                  {t('common.done')}
                 </button>
               </div>
             </div>
@@ -625,11 +605,13 @@ export default function ProjectDetailPage() {
 
 function Breadcrumb({
   items,
+  aria,
 }: {
   items: Array<{ to?: string; label: string }>;
+  aria: string;
 }) {
   return (
-    <nav className="flex flex-wrap items-center gap-1.5 text-xs text-ink-500" aria-label="Breadcrumb">
+    <nav className="flex flex-wrap items-center gap-1.5 text-xs text-ink-500" aria-label={aria}>
       {items.map((item, i) => (
         <span key={i} className="flex items-center gap-1.5">
           {i > 0 && <span className="text-ink-300">/</span>}
@@ -648,17 +630,24 @@ function Breadcrumb({
   );
 }
 
-function ProjectMemberRow({
+function MemberManagerRow({
   member,
   isPrimaryOwner,
+  rolePending,
   removePending,
+  canGrantOwner,
+  onRoleChange,
   onRemove,
 }: {
   member: import('../features/workspaces/hooks').WorkspaceMemberRow;
   isPrimaryOwner: boolean;
+  rolePending: boolean;
   removePending: boolean;
+  canGrantOwner: boolean;
+  onRoleChange: (role: 'owner' | 'admin' | 'member' | 'viewer') => Promise<void>;
   onRemove: () => Promise<void>;
 }) {
+  const t = useT();
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-ink-100 bg-ink-50/30 px-3 py-2 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
@@ -666,63 +655,34 @@ function ProjectMemberRow({
           <span className="truncate text-sm font-semibold text-ink-900">{member.displayName}</span>
           {isPrimaryOwner && (
             <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-100">
-              primary owner
+              {t('roles.primaryOwner')}
             </span>
           )}
         </div>
         <div className="truncate text-xs text-ink-500">{member.email}</div>
       </div>
-      <span className="badge bg-white text-ink-700 ring-1 ring-inset ring-ink-200">
-        {member.role}
-      </span>
+      <select
+        className="input h-9 min-w-[120px] py-1 text-xs"
+        value={member.role}
+        disabled={rolePending || isPrimaryOwner}
+        title={isPrimaryOwner ? t('roles.ownerRoleLockedTitle') : undefined}
+        onChange={(e) => onRoleChange(e.target.value as 'owner' | 'admin' | 'member' | 'viewer')}
+      >
+        <option value="admin">{t('roles.optionAdmin')}</option>
+        <option value="member">{t('roles.optionMember')}</option>
+        <option value="viewer">{t('roles.optionViewer')}</option>
+        {(canGrantOwner || member.role === 'owner') && <option value="owner">{t('roles.optionOwner')}</option>}
+      </select>
       <button
         type="button"
         className="btn-secondary h-9 px-3 text-xs text-rose-700"
         disabled={removePending || isPrimaryOwner}
-        title={isPrimaryOwner ? 'Only a platform admin can remove the current workspace owner' : 'Remove from project'}
+        title={
+          isPrimaryOwner ? t('roles.ownerRemoveLockedTitle') : t('projectDetail.removeFromWs')
+        }
         onClick={onRemove}
       >
-        Remove from project
-      </button>
-    </li>
-  );
-}
-
-function WorkspaceAccessRow({
-  member,
-  isPrimaryOwner,
-  removePending,
-  onRemove,
-}: {
-  member: import('../features/workspaces/hooks').WorkspaceMemberRow;
-  isPrimaryOwner: boolean;
-  removePending: boolean;
-  onRemove: () => Promise<void>;
-}) {
-  return (
-    <li className="flex flex-col gap-2 rounded-xl border border-ink-100 bg-white px-3 py-2 sm:flex-row sm:items-center">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-semibold text-ink-900">{member.displayName}</span>
-          {isPrimaryOwner && (
-            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-100">
-              primary owner
-            </span>
-          )}
-        </div>
-        <div className="truncate text-xs text-ink-500">{member.email}</div>
-      </div>
-      <span className="badge bg-ink-50 text-ink-700 ring-1 ring-inset ring-ink-200">
-        {member.role}
-      </span>
-      <button
-        type="button"
-        className="btn-secondary h-9 px-3 text-xs text-rose-700"
-        disabled={removePending || isPrimaryOwner}
-        title={isPrimaryOwner ? 'Only a platform admin can remove the current workspace owner' : 'Remove from workspace'}
-        onClick={onRemove}
-      >
-        Remove from workspace
+        {t('projectDetail.removeMemberBtn')}
       </button>
     </li>
   );
@@ -748,61 +708,64 @@ function CpmPanel({
   cpm: ReturnType<typeof useCpm>;
   tasks: { id: string; title: string }[];
 }) {
+  const tr = useT();
   return (
     <div className="space-y-4">
-      <SectionIntro
-        title="Critical path (CPM)"
-        subtitle="Early start/finish with slack; critical activities highlighted."
-      />
+      <SectionIntro title={tr('projectDetail.cpmTitle')} subtitle={tr('projectDetail.cpmSubtitle')} />
       {!cpmEnabled && (
         <>
           <CpmLockedPreview workspaceId={workspaceId} />
           <div className="rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-3 text-xs text-amber-900">
-            Upgrade this workspace to compute exact slack, drag-impact scenarios, and exports.
+            {tr('projectDetail.cpmUpgradeNote')}
           </div>
         </>
       )}
       {cpmEnabled && cpm.isLoading && (
         <div className="flex items-center gap-2 text-sm text-ink-500">
           <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-ink-200 border-t-brand-600" />
-          Computing…
+          {tr('projectDetail.cpmComputing')}
         </div>
       )}
       {cpmEnabled && cpm.data && (
         <div className="space-y-4">
           <div className="rounded-2xl border border-ink-200 bg-ink-50/40 px-4 py-3 text-sm">
-            <span className="text-ink-500">Project window </span>
+            <span className="text-ink-500">{tr('projectDetail.cpmProjectWindow')} </span>
             <strong className="text-ink-900">
               {fmt(cpm.data.projectStart)} → {fmt(cpm.data.projectEnd)}
             </strong>
             <span className="text-ink-500"> · </span>
-            <span className="font-semibold text-ink-800">{cpm.data.durationDays} days</span>
+            <span className="font-semibold text-ink-800">
+              {tr('projectDetail.cpmDurationDays', { n: cpm.data.durationDays })}
+            </span>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-ink-800">
-              Activities ({cpm.data.tasks.length})
+              {tr('projectDetail.cpmActivities', { n: cpm.data.tasks.length })}
             </h4>
             <ul className="mt-3 divide-y divide-ink-100 rounded-2xl border border-ink-200 bg-white">
-              {cpm.data.tasks.map((t: any) => {
-                const task = tasks.find((x) => x.id === t.taskId);
+              {cpm.data.tasks.map((row: any) => {
+                const task = tasks.find((x) => x.id === row.taskId);
                 return (
                   <li
-                    key={t.taskId}
+                    key={row.taskId}
                     className={`flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${
-                      t.isCritical ? 'bg-rose-50/50' : ''
+                      row.isCritical ? 'bg-rose-50/50' : ''
                     }`}
                   >
                     <div className="min-w-0 font-medium text-ink-900">
-                      {task?.title ?? t.taskId}
-                      {t.isCritical && (
+                      {task?.title ?? row.taskId}
+                      {row.isCritical && (
                         <span className="ml-2 inline-block rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-800">
-                          Critical
+                          {tr('projectDetail.cpmCriticalBadge')}
                         </span>
                       )}
                     </div>
                     <div className="shrink-0 font-mono text-[11px] text-ink-500">
-                      ES {fmt(t.es)} · EF {fmt(t.ef)} · slack ~
-                      {Math.round(t.slackMinutes / 60 / 24)}g
+                      {tr('projectDetail.cpmSlackLine', {
+                        es: fmt(row.es),
+                        ef: fmt(row.ef),
+                        days: Math.round(row.slackMinutes / 60 / 24),
+                      })}
                     </div>
                   </li>
                 );
@@ -846,6 +809,7 @@ function TasksPanel({
   onDeleteTask: (id: string) => void;
   onOpenTask: (task: TaskItem) => void;
 }) {
+  const tr = useT();
   const memberMap = new Map(members.map((m) => [m.userId, m]));
 
   return (
@@ -861,63 +825,69 @@ function TasksPanel({
 
       <div className="overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-card">
         <div className="border-b border-ink-200 bg-ink-50/40 px-5 py-4">
-          <h3 className="text-base font-semibold text-ink-900">All tasks</h3>
-          <p className="text-xs text-ink-500">{tasks.length} rows · click a row for the detail drawer</p>
+          <h3 className="text-base font-semibold text-ink-900">{tr('projectDetail.tasksAll')}</h3>
+          <p className="text-xs text-ink-500">{tr('projectDetail.tasksTableHint', { n: tasks.length })}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[960px] text-sm">
             <thead className="border-b border-ink-200 bg-ink-50/30 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-500">
               <tr>
-                <th className="whitespace-nowrap px-5 py-3">Title</th>
-                <th className="px-5 py-3">Priority</th>
-                <th className="px-5 py-3">Assignees</th>
-                <th className="px-5 py-3">WBS</th>
-                <th className="px-5 py-3">Start</th>
-                <th className="px-5 py-3">End</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">%</th>
-                <th className="px-5 py-3">Critical</th>
+                <th className="whitespace-nowrap px-5 py-3">{tr('projectDetail.colTitle')}</th>
+                <th className="px-5 py-3">{tr('projectDetail.colPriority')}</th>
+                <th className="px-5 py-3">{tr('projectDetail.colAssignees')}</th>
+                <th className="px-5 py-3">{tr('projectDetail.colWbs')}</th>
+                <th className="px-5 py-3">{tr('projectDetail.colStart')}</th>
+                <th className="px-5 py-3">{tr('projectDetail.colEnd')}</th>
+                <th className="px-5 py-3">{tr('projectDetail.colStatus')}</th>
+                <th className="px-5 py-3">{tr('projectDetail.colPct')}</th>
+                <th className="px-5 py-3">{tr('projectDetail.colCritical')}</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink-100">
-              {tasks.map((t) => (
+              {tasks.map((tsk) => (
                 <tr
-                  key={t.id}
+                  key={tsk.id}
                   role="button"
                   tabIndex={0}
                   className="cursor-pointer transition hover:bg-ink-50/50"
-                  onClick={() => onOpenTask(t)}
+                  onClick={() => onOpenTask(tsk)}
                   onKeyDown={(ev) => {
                     if (ev.key === 'Enter' || ev.key === ' ') {
                       ev.preventDefault();
-                      onOpenTask(t);
+                      onOpenTask(tsk);
                     }
                   }}
                 >
-                  <td className="px-5 py-3 font-medium text-ink-900">{t.title}</td>
-                  <td className="px-5 py-3 text-xs capitalize text-ink-700">{t.priority}</td>
+                  <td className="px-5 py-3 font-medium text-ink-900">{tsk.title}</td>
+                  <td className="px-5 py-3 text-xs capitalize text-ink-700">
+                    {(() => {
+                      const k = `taskPriority.${tsk.priority}`;
+                      const v = tr(k);
+                      return v === k || v.startsWith('taskPriority.') ? tsk.priority : v;
+                    })()}
+                  </td>
                   <td className="px-5 py-3 text-xs text-ink-600">
-                    {t.assigneeIds.length === 0
-                      ? '—'
-                      : t.assigneeIds
+                    {tsk.assigneeIds.length === 0
+                      ? tr('common.none')
+                      : tsk.assigneeIds
                           .map((id) => memberMap.get(id)?.displayName ?? id.slice(-4))
                           .join(', ')}
                   </td>
-                  <td className="px-5 py-3 font-mono text-xs text-ink-600">{t.wbsCode ?? '—'}</td>
-                  <td className="px-5 py-3 tabular-nums text-ink-700">{fmt(t.startDate)}</td>
-                  <td className="px-5 py-3 tabular-nums text-ink-700">{fmt(t.endDate)}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-ink-600">{tsk.wbsCode ?? tr('common.none')}</td>
+                  <td className="px-5 py-3 tabular-nums text-ink-700">{fmt(tsk.startDate)}</td>
+                  <td className="px-5 py-3 tabular-nums text-ink-700">{fmt(tsk.endDate)}</td>
                   <td className="px-5 py-3">
-                    <TaskStatusBadge status={t.status} />
+                    <TaskStatusBadge status={tsk.status} />
                   </td>
-                  <td className="px-5 py-3 tabular-nums text-xs text-ink-700">{t.progressPct ?? 0}</td>
+                  <td className="px-5 py-3 tabular-nums text-xs text-ink-700">{tsk.progressPct ?? 0}</td>
                   <td className="px-5 py-3">
-                    {criticalIds.includes(t.id) ? (
+                    {criticalIds.includes(tsk.id) ? (
                       <span className="badge bg-rose-50 text-rose-800 ring-1 ring-inset ring-rose-100">
-                        Yes
+                        {tr('projectDetail.yes')}
                       </span>
                     ) : (
-                      <span className="text-xs text-ink-400">—</span>
+                      <span className="text-xs text-ink-400">{tr('common.none')}</span>
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
@@ -927,10 +897,10 @@ function TasksPanel({
                         className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
                         onClick={(ev) => {
                           ev.stopPropagation();
-                          onDeleteTask(t.id);
+                          onDeleteTask(tsk.id);
                         }}
                       >
-                        Delete
+                        {tr('projectDetail.deleteTask')}
                       </button>
                     )}
                   </td>
@@ -939,7 +909,7 @@ function TasksPanel({
               {tasks.length === 0 && (
                 <tr>
                   <td colSpan={10} className="px-5 py-12 text-center text-sm text-ink-500">
-                    No assigned tasks yet.
+                    {tr('projectDetail.emptyTasks')}
                   </td>
                 </tr>
               )}
@@ -949,12 +919,12 @@ function TasksPanel({
       </div>
 
       <div className="card p-5">
-        <h3 className="text-base font-semibold text-ink-900">Dependencies</h3>
-        <p className="text-xs text-ink-500">Finish-to-start links and lag in days</p>
+        <h3 className="text-base font-semibold text-ink-900">{tr('projectDetail.dependenciesTitle')}</h3>
+        <p className="text-xs text-ink-500">{tr('projectDetail.dependenciesSubtitle')}</p>
         <ul className="mt-4 space-y-2">
           {deps.map((d) => {
-            const a = tasks.find((t) => t.id === d.predecessorId);
-            const b = tasks.find((t) => t.id === d.successorId);
+            const a = tasks.find((x) => x.id === d.predecessorId);
+            const b = tasks.find((x) => x.id === d.successorId);
             return (
               <li
                 key={d.id}
@@ -966,14 +936,14 @@ function TasksPanel({
                   <span className="font-semibold">{b?.title ?? d.successorId}</span>
                 </div>
                 <span className="shrink-0 rounded-lg bg-white px-2 py-1 font-mono text-[11px] text-ink-600 ring-1 ring-inset ring-ink-200">
-                  {d.type} · lag {d.lagDays}g
+                  {tr('projectDetail.depLineLag', { type: d.type, n: d.lagDays })}
                 </span>
               </li>
             );
           })}
           {deps.length === 0 && (
             <li className="rounded-xl border border-dashed border-ink-200 px-4 py-8 text-center text-sm text-ink-500">
-              No dependencies yet.
+              {tr('projectDetail.noDeps')}
             </li>
           )}
         </ul>
@@ -983,6 +953,7 @@ function TasksPanel({
 }
 
 function TaskStatusBadge({ status }: { status: string }) {
+  const tr = useT();
   const map: Record<string, string> = {
     not_started: 'bg-ink-100 text-ink-700 ring-ink-200',
     in_progress: 'bg-brand-50 text-brand-800 ring-brand-100',
@@ -990,17 +961,13 @@ function TaskStatusBadge({ status }: { status: string }) {
     done: 'bg-emerald-50 text-emerald-800 ring-emerald-100',
     cancelled: 'bg-ink-50 text-ink-500 ring-ink-200',
   };
-  const label: Record<string, string> = {
-    not_started: 'Not started',
-    in_progress: 'In progress',
-    blocked: 'Blocked',
-    done: 'Done',
-    cancelled: 'Cancelled',
-  };
   const cls = map[status] ?? 'bg-ink-50 text-ink-600 ring-ink-200';
-  return (
-    <span className={`badge ring-1 ring-inset ${cls}`}>{label[status] ?? status}</span>
-  );
+  const label = (() => {
+    const k = `taskStatus.${status}`;
+    const v = tr(k);
+    return v === k || v.startsWith('taskStatus.') ? status : v;
+  })();
+  return <span className={`badge ring-1 ring-inset ${cls}`}>{label}</span>;
 }
 
 function NewTaskForm({
@@ -1012,6 +979,7 @@ function NewTaskForm({
   defaultTitle: string;
   onCreate: (payload: any) => Promise<void>;
 }) {
+  const tr = useT();
   const [title, setTitle] = useState(defaultTitle);
   const [parentTaskId, setParentTaskId] = useState<string>('');
   const [start, setStart] = useState('');
@@ -1026,10 +994,8 @@ function NewTaskForm({
 
   return (
     <div className="card p-5">
-      <h3 className="text-base font-semibold text-ink-900">New task</h3>
-      <p className="text-xs text-ink-500">
-        Use dates together with duration. Optional parent nests tasks for real WBS.
-      </p>
+      <h3 className="text-base font-semibold text-ink-900">{tr('projectDetail.newTaskTitle')}</h3>
+      <p className="text-xs text-ink-500">{tr('projectDetail.newTaskHelp')}</p>
       <form
         className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:items-end"
         onSubmit={async (e) => {
@@ -1055,7 +1021,7 @@ function NewTaskForm({
               err?.response?.data?.message ??
                 err?.response?.data?.code ??
                 err?.message ??
-                'Could not add task.',
+                tr('projectDetail.errCreateTask'),
             );
           } finally {
             setIsSubmitting(false);
@@ -1064,19 +1030,19 @@ function NewTaskForm({
       >
         <div className="sm:col-span-2 lg:col-span-4">
           <label className="label" htmlFor="nt-title">
-            Title
+            {tr('projectDetail.labelTaskTitle')}
           </label>
           <input
             id="nt-title"
             className="input"
-            placeholder="e.g. Foundation pour"
+            placeholder={tr('projectDetail.placeholderTaskTitle')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
         </div>
         <div className="sm:col-span-2 lg:col-span-4">
           <label className="label" htmlFor="nt-parent">
-            Parent (optional)
+            {tr('projectDetail.labelParent')}
           </label>
           <select
             id="nt-parent"
@@ -1084,17 +1050,17 @@ function NewTaskForm({
             value={parentTaskId}
             onChange={(e) => setParentTaskId(e.target.value)}
           >
-            <option value="">Top level</option>
-            {tasks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
+            <option value="">{tr('projectDetail.parentTopLevel')}</option>
+            {tasks.map((tsk) => (
+              <option key={tsk.id} value={tsk.id}>
+                {tsk.title}
               </option>
             ))}
           </select>
         </div>
         <div className="lg:col-span-2">
           <label className="label" htmlFor="nt-start">
-            Start
+            {tr('projectDetail.labelStart')}
           </label>
           <input
             id="nt-start"
@@ -1106,7 +1072,7 @@ function NewTaskForm({
         </div>
         <div className="lg:col-span-2">
           <label className="label" htmlFor="nt-end">
-            End
+            {tr('projectDetail.labelEnd')}
           </label>
           <input
             id="nt-end"
@@ -1118,7 +1084,7 @@ function NewTaskForm({
         </div>
         <div className="lg:col-span-2">
           <label className="label" htmlFor="nt-dur">
-            Duration (days)
+            {tr('projectDetail.labelDuration')}
           </label>
           <input
             id="nt-dur"
@@ -1131,7 +1097,7 @@ function NewTaskForm({
         </div>
         <div className="lg:col-span-2">
           <button type="submit" className="btn-primary w-full lg:w-auto" disabled={isSubmitting}>
-            {isSubmitting ? 'Adding...' : 'Add task'}
+            {isSubmitting ? tr('projectDetail.addingTask') : tr('projectDetail.addTask')}
           </button>
         </div>
         {error && (
@@ -1151,13 +1117,14 @@ function NewDependencyForm({
   tasks: { id: string; title: string }[];
   onCreate: (b: { predecessorId: string; successorId: string }) => Promise<void>;
 }) {
+  const tr = useT();
   const [pred, setPred] = useState('');
   const [succ, setSucc] = useState('');
   if (tasks.length < 2) return null;
   return (
     <div className="card p-5">
-      <h3 className="text-base font-semibold text-ink-900">Add dependency (FS)</h3>
-      <p className="text-xs text-ink-500">Which task must finish before the next one starts</p>
+      <h3 className="text-base font-semibold text-ink-900">{tr('projectDetail.newDepTitle')}</h3>
+      <p className="text-xs text-ink-500">{tr('projectDetail.newDepHelp')}</p>
       <form
         className="mt-4 grid gap-4 md:grid-cols-3 md:items-end"
         onSubmit={async (e) => {
@@ -1170,32 +1137,32 @@ function NewDependencyForm({
       >
         <div>
           <label className="label" htmlFor="dep-pred">
-            Predecessor
+            {tr('projectDetail.labelPredecessor')}
           </label>
           <select id="dep-pred" className="input" value={pred} onChange={(e) => setPred(e.target.value)}>
-            <option value="">Choose…</option>
-            {tasks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
+            <option value="">{tr('projectDetail.chooseTask')}</option>
+            {tasks.map((tsk) => (
+              <option key={tsk.id} value={tsk.id}>
+                {tsk.title}
               </option>
             ))}
           </select>
         </div>
         <div>
           <label className="label" htmlFor="dep-succ">
-            Successor
+            {tr('projectDetail.labelSuccessor')}
           </label>
           <select id="dep-succ" className="input" value={succ} onChange={(e) => setSucc(e.target.value)}>
-            <option value="">Choose…</option>
-            {tasks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
+            <option value="">{tr('projectDetail.chooseTask')}</option>
+            {tasks.map((tsk) => (
+              <option key={tsk.id} value={tsk.id}>
+                {tsk.title}
               </option>
             ))}
           </select>
         </div>
         <button type="submit" className="btn-primary w-full md:w-auto">
-          Link
+          {tr('projectDetail.linkDep')}
         </button>
       </form>
     </div>
@@ -1250,20 +1217,21 @@ function exportMarkdownReport(
         inProgress?: number;
       }
     | undefined,
+  t: TFunction,
 ) {
   const lines = [
     `# ${projectName}`,
     '',
-    `- Tasks: ${overview?.total ?? tasks.length}`,
-    `- Completion: ${overview?.completionPct ?? 0}%`,
-    `- Blocked: ${overview?.blocked ?? 0}`,
-    `- In progress: ${overview?.inProgress ?? 0}`,
+    `- ${t('projectDetail.exportMdTasks')}: ${overview?.total ?? tasks.length}`,
+    `- ${t('projectDetail.exportMdCompletion')}: ${overview?.completionPct ?? 0}%`,
+    `- ${t('projectDetail.exportMdBlocked')}: ${overview?.blocked ?? 0}`,
+    `- ${t('projectDetail.exportMdInProgress')}: ${overview?.inProgress ?? 0}`,
     '',
-    '## Task register',
+    `## ${t('projectDetail.exportMdHeadingRegister')}`,
     '',
     ...tasks.map(
-      (t) =>
-        `- **${t.title}** · ${t.status} · ${fmt(t.startDate)}→${fmt(t.endDate)} · ${t.priority}`,
+      (tsk) =>
+        `- **${tsk.title}** · ${tsk.status} · ${fmt(tsk.startDate)}→${fmt(tsk.endDate)} · ${tsk.priority}`,
     ),
   ];
   const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });

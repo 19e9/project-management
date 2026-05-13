@@ -1,4 +1,5 @@
 import { Sparkline } from './charts/Sparkline';
+import { useT } from '../../i18n/I18nProvider';
 
 interface Props {
   label: string;
@@ -50,6 +51,7 @@ export function StatsCard({
   accent = 'brand',
   icon,
 }: Props) {
+  const t = useT();
   const a = ACCENT[accent];
   const positive = (changePct ?? 0) >= 0;
   return (
@@ -85,7 +87,7 @@ export function StatsCard({
                 <path d="M6 14l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               {Math.abs(changePct).toFixed(1)}%
-              <span className="text-ink-500">vs {changeWindow}</span>
+              <span className="text-ink-500">{t('adminView.vsWindow', { window: changeWindow })}</span>
             </span>
           )}
         </div>

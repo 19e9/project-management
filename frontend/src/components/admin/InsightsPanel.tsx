@@ -1,4 +1,5 @@
 import type { AdminInsights } from '../../features/admin/hooks';
+import { useT } from '../../i18n/I18nProvider';
 
 interface Props {
   data?: AdminInsights;
@@ -30,18 +31,17 @@ const LEVEL_STYLE: Record<
 };
 
 export function InsightsPanel({ data, loading }: Props) {
+  const t = useT();
   return (
     <section className="card">
       <header className="border-b border-ink-200 px-5 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-ink-900">Alerts &amp; insights</h3>
-            <p className="text-xs text-ink-500">
-              Issues that need an admin's attention right now
-            </p>
+            <h3 className="text-base font-semibold text-ink-900">{t('adminView.insightsTitle')}</h3>
+            <p className="text-xs text-ink-500">{t('adminView.insightsSub')}</p>
           </div>
           <span className="badge bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
-            Live
+            {t('adminView.insightsLive')}
           </span>
         </div>
       </header>
@@ -81,7 +81,7 @@ export function InsightsPanel({ data, loading }: Props) {
         {/* Overloaded users */}
         <div>
           <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
-            Overloaded contributors
+            {t('adminView.insightsOverloaded')}
           </h4>
           <ul className="space-y-2">
             {loading &&
@@ -90,7 +90,7 @@ export function InsightsPanel({ data, loading }: Props) {
               ))}
             {!loading && (data?.overloadedUsers?.length ?? 0) === 0 && (
               <li className="rounded-lg border border-dashed border-ink-200 px-3 py-4 text-center text-xs text-ink-500">
-                No contributors over capacity. 🎯
+                {t('adminView.insightsOverloadedEmpty')}
               </li>
             )}
             {!loading &&
@@ -110,9 +110,11 @@ export function InsightsPanel({ data, loading }: Props) {
                       </div>
                       <div className="text-right">
                         <div className="text-xs font-medium text-ink-700">
-                          {u.activeTaskCount} active
+                          {t('adminView.insightsActiveTasks', { n: u.activeTaskCount })}
                         </div>
-                        <div className="text-[11px] text-ink-500">{u.allocationPct}% capacity</div>
+                        <div className="text-[11px] text-ink-500">
+                          {t('adminView.insightsCapacity', { n: u.allocationPct })}
+                        </div>
                       </div>
                     </div>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-100">
@@ -132,7 +134,7 @@ export function InsightsPanel({ data, loading }: Props) {
         {/* Overdue tasks */}
         <div>
           <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
-            Overdue tasks
+            {t('adminView.insightsOverdue')}
           </h4>
           <ul className="space-y-1.5">
             {loading &&
@@ -141,21 +143,21 @@ export function InsightsPanel({ data, loading }: Props) {
               ))}
             {!loading && (data?.overdueTasks?.length ?? 0) === 0 && (
               <li className="rounded-lg border border-dashed border-ink-200 px-3 py-4 text-center text-xs text-ink-500">
-                Nothing overdue. Beautiful.
+                {t('adminView.insightsOverdueEmpty')}
               </li>
             )}
             {!loading &&
-              data?.overdueTasks?.slice(0, 6).map((t) => (
+              data?.overdueTasks?.slice(0, 6).map((task) => (
                 <li
-                  key={t.taskId}
+                  key={task.taskId}
                   className="flex items-center justify-between gap-3 rounded-lg border border-rose-200/70 bg-rose-50/40 px-3 py-2"
                 >
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-ink-900">{t.title}</div>
-                    <div className="truncate text-[11px] text-ink-500">{t.projectName}</div>
+                    <div className="truncate text-sm font-medium text-ink-900">{task.title}</div>
+                    <div className="truncate text-[11px] text-ink-500">{task.projectName}</div>
                   </div>
                   <span className="badge bg-rose-100 text-rose-700">
-                    +{t.daysOverdue}d late
+                    {t('adminView.insightsDaysLate', { n: task.daysOverdue })}
                   </span>
                 </li>
               ))}

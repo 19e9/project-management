@@ -1,34 +1,32 @@
 import { useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthProvider';
 import { useMyDashboard } from '../features/dashboard/hooks';
 import { Logo } from '../components/ui/Logo';
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
+import type { TFunction } from '../i18n/I18nProvider';
 import { useT } from '../i18n/I18nProvider';
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
+  const t = useT();
   const nav = useNavigate();
   const location = useLocation();
   const { workspaceId } = useParams();
   const dash = useMyDashboard();
-  const t = useT();
   const myRole = dash.data?.myRole;
-  const isAdmin = user?.platformRole === 'platform_admin';
   const [menuOpen, setMenuOpen] = useState(false);
   const currentWorkspaceId =
     workspaceId ??
     location.pathname.match(/\/dashboard\/workspaces\/([^/]+)/)?.[1] ??
     dash.data?.workspaces[0]?.id;
 
-  const links = buildNavLinks({ isAdmin, myRole, workspaceId: currentWorkspaceId, t });
+  const links = buildNavLinks({ isAdmin: user?.platformRole === 'platform_admin', myRole, workspaceId: currentWorkspaceId, t });
 
   return (
     <div className="min-h-screen bg-ink-50/40">
-      {/* Top header */}
       <header className="sticky top-0 z-20 border-b border-ink-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-4 px-4 sm:px-6">
-          {/* Logo */}
           <div className="flex items-center gap-6">
             <Logo />
             <nav className="hidden max-w-[min(64rem,calc(100vw-22rem))] items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none md:flex">
@@ -38,7 +36,7 @@ export default function AppLayout() {
                   to={l.to}
                   end={l.end}
                   className={({ isActive }) =>
-                    `flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                    `flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition ${
                       isActive
                         ? 'bg-ink-900 text-white shadow-soft'
                         : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900'
@@ -57,17 +55,16 @@ export default function AppLayout() {
             </nav>
           </div>
 
-          {/* Right cluster */}
           <div className="flex items-center gap-2">
-            <LanguageSwitcher compact />
+            <RoleChip role={myRole} />
 
-            {/* Role chip */}
-            <RoleChip role={myRole} platformAdmin={isAdmin} t={t} />
+            <div className="hidden sm:block">
+              <LanguageSwitcher compact />
+            </div>
 
-            {/* Notification bell */}
             <button
               type="button"
-              aria-label="Notifications"
+              aria-label={t('common.notifications')}
               className="relative hidden h-9 w-9 items-center justify-center rounded-xl border border-ink-200 bg-white text-ink-600 hover:bg-ink-50 sm:grid"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -79,7 +76,6 @@ export default function AppLayout() {
               )}
             </button>
 
-            {/* User */}
             <div className="hidden h-9 items-center gap-2 rounded-xl border border-ink-200 bg-white px-2 sm:flex">
               <span
                 className="grid h-6 w-6 flex-none place-items-center rounded-lg bg-brand-gradient text-[10px] font-semibold text-white"
@@ -98,32 +94,37 @@ export default function AppLayout() {
 
             <button
               type="button"
-              onClick={async () => { await signOut(); nav('/login'); }}
+              onClick={async () => {
+                await signOut();
+                nav('/login');
+              }}
               className="btn-secondary h-9 px-3 text-xs"
             >
-              {t('app.signOut')}
+              {t('common.signOut')}
             </button>
 
-            {/* Mobile menu toggle */}
             <button
               type="button"
-              aria-label="Open menu"
+              aria-label={t('common.openMenu')}
               onClick={() => setMenuOpen((o) => !o)}
               className="grid h-9 w-9 place-items-center rounded-xl border border-ink-200 bg-white md:hidden"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5">
-                {menuOpen
-                  ? <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                  : <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                }
+                {menuOpen ? (
+                  <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                ) : (
+                  <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                )}
               </svg>
             </button>
           </div>
         </div>
 
-        {/* Mobile nav */}
         {menuOpen && (
           <div className="border-t border-ink-200 bg-white px-4 pb-4 pt-2 md:hidden">
+            <div className="mb-3 flex justify-center">
+              <LanguageSwitcher />
+            </div>
             <nav className="space-y-1">
               {links.map((l) => (
                 <NavLink
@@ -145,7 +146,6 @@ export default function AppLayout() {
         )}
       </header>
 
-      {/* Content */}
       <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:py-8">
         <Outlet />
       </main>
@@ -153,46 +153,40 @@ export default function AppLayout() {
   );
 }
 
-/* ── Role chip ─────────────────────────────────────────── */
-function RoleChip({ role, platformAdmin, t }: { role?: string; platformAdmin: boolean; t: (key: string) => string }) {
-  if (platformAdmin)
-    return (
-      <span className="">
-        <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-      </span>
-    );
+function RoleChip({ role }: { role?: string }) {
+  const t = useT();
+  if (role === 'platform_admin') return null;
   if (role === 'owner')
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-100 sm:inline-flex">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-        {t('app.workspaceOwner')}
+        {t('roles.workspaceOwner')}
       </span>
     );
   if (role === 'admin')
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-100 sm:inline-flex">
         <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-        {t('app.workspaceAdmin')}
+        {t('roles.workspaceAdmin')}
       </span>
     );
   if (role === 'member')
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100 sm:inline-flex">
         <span className="h-1.5 w-1.5 rounded-full bg-cyan-500" />
-        {t('app.member')}
+        {t('roles.member')}
       </span>
     );
   if (role === 'viewer' || role === 'client')
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600 sm:inline-flex">
         <span className="h-1.5 w-1.5 rounded-full bg-ink-400" />
-        {t('app.viewer')}
+        {t('roles.viewer')}
       </span>
     );
   return null;
 }
 
-/* ── Nav link builder ──────────────────────────────────── */
 interface NavItem {
   to: string;
   label: string;
@@ -210,51 +204,49 @@ function buildNavLinks({
   isAdmin: boolean;
   myRole?: string;
   workspaceId?: string;
-  t: (key: string) => string;
+  t: TFunction;
 }): NavItem[] {
   if (isAdmin) {
     return [
-      { to: '/dashboard', label: t('app.dashboard'), end: true, icon: IconGrid },
-      { to: '/dashboard/workspaces', label: t('app.workspaces'), end: true, icon: IconBox },
-      { to: '/dashboard/activity', label: t('app.activity'), icon: IconActivity },
+      { to: '/dashboard', label: t('app.nav.dashboard'), end: true, icon: IconGrid },
+      { to: '/dashboard/workspaces', label: t('app.nav.workspacesMine'), end: true, icon: IconBox },
+      { to: '/dashboard/activity', label: t('app.nav.activity'), icon: IconActivity },
       {
         to: '/dashboard/all-workspaces',
-        label: t('app.allWorkspaces'),
+        label: t('app.nav.allWorkspacesDirectory'),
         icon: IconLayers,
       },
-      { to: '/dashboard/users', label: t('app.users'), icon: IconPeople },
-      { to: '/dashboard/billing', label: t('app.billing'), icon: IconCreditCard },
-      { to: '/dashboard/settings', label: t('app.settings'), icon: IconCog },
+      { to: '/dashboard/users', label: t('app.nav.users'), icon: IconPeople },
+      { to: '/dashboard/billing', label: t('app.nav.billing'), icon: IconCreditCard },
+      { to: '/dashboard/settings', label: t('app.nav.settings'), icon: IconCog },
     ];
   }
   if (myRole === 'owner' || myRole === 'admin') {
     return [
-      { to: '/dashboard', label: t('app.dashboard'), end: true, icon: IconGrid },
-      { to: '/dashboard/workspaces', label: t('app.workspaces'), end: true, icon: IconBox },
+      { to: '/dashboard', label: t('app.nav.dashboard'), end: true, icon: IconGrid },
+      { to: '/dashboard/workspaces', label: t('app.nav.workspaces'), end: true, icon: IconBox },
       ...(workspaceId
-        ? [{ to: `/dashboard/workspaces/${workspaceId}/projects`, label: t('app.projects'), icon: IconLayers }]
+        ? [{ to: `/dashboard/workspaces/${workspaceId}/projects`, label: t('app.nav.projects'), icon: IconLayers }]
         : []),
     ];
   }
   if (myRole === 'member') {
     return [
-      { to: '/dashboard', label: t('app.myTasks'), end: true, icon: IconCheck },
-      { to: '/dashboard/workspaces', label: t('app.workspaces'), end: true, icon: IconBox },
+      { to: '/dashboard', label: t('app.nav.myTasks'), end: true, icon: IconCheck },
+      { to: '/dashboard/workspaces', label: t('app.nav.workspaces'), end: true, icon: IconBox },
       ...(workspaceId
-        ? [{ to: `/dashboard/workspaces/${workspaceId}/projects`, label: t('app.projects'), icon: IconLayers }]
+        ? [{ to: `/dashboard/workspaces/${workspaceId}/projects`, label: t('app.nav.projects'), icon: IconLayers }]
         : []),
     ];
   }
-  // viewer / legacy client
   return [
-    { to: '/dashboard', label: t('app.overview'), end: true, icon: IconGrid },
+    { to: '/dashboard', label: t('app.nav.overview'), end: true, icon: IconGrid },
     workspaceId
-      ? { to: `/dashboard/workspaces/${workspaceId}/projects`, label: t('app.projects'), icon: IconLayers }
-      : { to: '/dashboard/workspaces', label: t('app.projects'), end: true, icon: IconLayers },
+      ? { to: `/dashboard/workspaces/${workspaceId}/projects`, label: t('app.nav.projects'), icon: IconLayers }
+      : { to: '/dashboard/workspaces', label: t('app.nav.projects'), end: true, icon: IconLayers },
   ];
 }
 
-/* ── Micro icons ────────────────────────────────────────── */
 type IP = React.SVGProps<SVGSVGElement>;
 const mkIcon =
   (path: React.ReactNode) =>

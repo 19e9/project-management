@@ -9,6 +9,7 @@ import {
   saveTaskComments,
   type TaskComment,
 } from '../../lib/projectDetailLocal';
+import { useT } from '../../i18n/I18nProvider';
 
 const LABELS_KEY = (id: string) => `planforge.taskLabels.${id}`;
 const EST_KEY = (id: string) => `planforge.taskEstHours.${id}`;
@@ -80,6 +81,7 @@ export function TaskDrawer({
   patchTask: (patch: Partial<TaskItem> & { id: string }) => Promise<unknown>;
   createTask: (body: Partial<TaskItem>) => Promise<unknown>;
 }) {
+  const t = useT();
   const [tab, setTab] = useState<'details' | 'comments' | 'files'>('details');
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [commentDraft, setCommentDraft] = useState('');
@@ -88,7 +90,7 @@ export function TaskDrawer({
   const [estHours, setEstHours] = useState(0);
   const [watchers, setWatchers] = useState<string[]>([]);
   const [subTitle, setSubTitle] = useState('');
-  const [authorName, setAuthorName] = useState('You');
+  const [authorName, setAuthorName] = useState('');
 
   useEffect(() => {
     if (!task) return;
@@ -102,13 +104,15 @@ export function TaskDrawer({
   }, [task?.id]);
 
   const subtasks = useMemo(
-    () => tasks.filter((t) => t.parentTaskId === task?.id),
+    () => tasks.filter((tsk) => tsk.parentTaskId === task?.id),
     [tasks, task?.id],
   );
 
   const depsPreview = useMemo(() => {
     if (!task) return [];
-    return tasks.filter((t) => t.id !== task.id && (t.title.includes(task.title.slice(0, 8)) || false));
+    return tasks.filter(
+      (tsk) => tsk.id !== task.id && (tsk.title.includes(task.title.slice(0, 8)) || false),
+    );
   }, [task, tasks]);
 
   if (!open || !task) return null;
@@ -131,7 +135,7 @@ export function TaskDrawer({
       <button
         type="button"
         className="fixed inset-0 z-40 bg-ink-900/40 backdrop-blur-[2px]"
-        aria-label="Close task panel"
+        aria-label={t('taskDrawer.closePanel')}
         onClick={onClose}
       />
       <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-ink-200 bg-white shadow-2xl">
@@ -146,23 +150,27 @@ export function TaskDrawer({
             <p className="mt-1 truncate font-mono text-[11px] text-ink-500">{task.id}</p>
           </div>
           <button type="button" className="btn-secondary h-9 shrink-0 px-3 text-xs" onClick={onClose}>
-            Close
+            {t('taskDrawer.close')}
           </button>
         </header>
 
         <div className="flex border-b border-ink-100 px-5">
-          {(['details', 'comments', 'files'] as const).map((t) => (
+          {([
+            ['details', 'taskDrawer.tabDetails'],
+            ['comments', 'taskDrawer.tabComments'],
+            ['files', 'taskDrawer.tabFiles'],
+          ] as const).map(([tabId, labelKey]) => (
             <button
-              key={t}
+              key={tabId}
               type="button"
-              onClick={() => setTab(t)}
-              className={`relative -mb-px border-b-2 px-3 py-3 text-xs font-semibold capitalize ${
-                tab === t
+              onClick={() => setTab(tabId)}
+              className={`relative -mb-px border-b-2 px-3 py-3 text-xs font-semibold ${
+                tab === tabId
                   ? 'border-brand-600 text-brand-800'
                   : 'border-transparent text-ink-500 hover:text-ink-800'
               }`}
             >
-              {t}
+              {t(labelKey)}
             </button>
           ))}
         </div>
@@ -171,10 +179,10 @@ export function TaskDrawer({
           {tab === 'details' && (
             <div className="space-y-5">
               <div>
-                <label className="label">Description</label>
+                <label className="label">{t('taskDrawer.description')}</label>
                 <textarea
                   className="input min-h-[88px] resize-y text-sm"
-                  placeholder="Context, acceptance criteria, links…"
+                  placeholder={t('taskDrawer.descPlaceholder')}
                   value={task.description ?? ''}
                   readOnly={!canManage}
                   onChange={(e) => patchTask({ id: task.id, description: e.target.value || null })}
@@ -183,7 +191,7 @@ export function TaskDrawer({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="label">Status</label>
+                  <label className="label">{t('taskDrawer.status')}</label>
                   <select
                     className="input text-sm"
                     value={task.status}
@@ -192,15 +200,15 @@ export function TaskDrawer({
                       patchTask({ id: task.id, status: e.target.value as TaskItem['status'] })
                     }
                   >
-                    <option value="not_started">Not started</option>
-                    <option value="in_progress">In progress</option>
-                    <option value="blocked">Blocked</option>
-                    <option value="done">Done</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="not_started">{t('taskStatus.not_started')}</option>
+                    <option value="in_progress">{t('taskStatus.in_progress')}</option>
+                    <option value="blocked">{t('taskStatus.blocked')}</option>
+                    <option value="done">{t('taskStatus.done')}</option>
+                    <option value="cancelled">{t('taskStatus.cancelled')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="label">Priority</label>
+                  <label className="label">{t('taskDrawer.priority')}</label>
                   <select
                     className="input text-sm"
                     value={task.priority}
@@ -209,17 +217,17 @@ export function TaskDrawer({
                       patchTask({ id: task.id, priority: e.target.value as TaskItem['priority'] })
                     }
                   >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
+                    <option value="low">{t('taskPriority.low')}</option>
+                    <option value="medium">{t('taskPriority.medium')}</option>
+                    <option value="high">{t('taskPriority.high')}</option>
+                    <option value="critical">{t('taskPriority.critical')}</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="label">Start</label>
+                  <label className="label">{t('taskDrawer.start')}</label>
                   <input
                     type="date"
                     className="input text-sm"
@@ -231,7 +239,7 @@ export function TaskDrawer({
                   />
                 </div>
                 <div>
-                  <label className="label">End</label>
+                  <label className="label">{t('taskDrawer.end')}</label>
                   <input
                     type="date"
                     className="input text-sm"
@@ -246,7 +254,7 @@ export function TaskDrawer({
 
               <div>
                 <div className="flex justify-between gap-2">
-                  <label className="label">Progress</label>
+                  <label className="label">{t('taskDrawer.progress')}</label>
                   <span className="text-xs font-semibold tabular-nums text-ink-700">
                     {task.progressPct ?? 0}%
                   </span>
@@ -265,7 +273,7 @@ export function TaskDrawer({
               </div>
 
               <div>
-                <label className="label">Estimated hours (local)</label>
+                <label className="label">{t('taskDrawer.estimatedHours')}</label>
                 <input
                   type="number"
                   min={0}
@@ -281,7 +289,7 @@ export function TaskDrawer({
               </div>
 
               {canManage && <div>
-                <label className="label">Assignees</label>
+                <label className="label">{t('taskDrawer.assignees')}</label>
                 <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-ink-200 bg-ink-50/30 p-2">
                   {members.map((m) => (
                     <li key={m.userId}>
@@ -300,7 +308,7 @@ export function TaskDrawer({
               </div>}
 
               <div>
-                <label className="label">Labels (local)</label>
+                <label className="label">{t('taskDrawer.labelsLocal')}</label>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {labels.map((l) => (
                     <button
@@ -331,18 +339,18 @@ export function TaskDrawer({
                 >
                   <input
                     className="input flex-1 text-sm"
-                    placeholder="Add label"
+                    placeholder={t('taskDrawer.addLabel')}
                     value={labelDraft}
                     onChange={(e) => setLabelDraft(e.target.value)}
                   />
                   <button type="submit" className="btn-secondary shrink-0 px-3 text-xs">
-                    Add
+                    {t('taskDrawer.add')}
                   </button>
                 </form>
               </div>
 
               {canManage && <div>
-                <label className="label">Watchers (local)</label>
+                <label className="label">{t('taskDrawer.watchersLocal')}</label>
                 <ul className="mt-2 space-y-1 rounded-xl border border-ink-200 bg-ink-50/30 p-2">
                   {members.map((m) => (
                     <label key={m.userId} className="flex items-center gap-2 px-2 py-1 text-sm">
@@ -364,7 +372,7 @@ export function TaskDrawer({
               </div>}
 
               <div>
-                <label className="label">Subtasks ({subtasks.length})</label>
+                <label className="label">{t('taskDrawer.subtasksCount', { n: subtasks.length })}</label>
                 <ul className="mt-2 space-y-2">
                   {subtasks.map((st) => (
                     <li
@@ -396,29 +404,29 @@ export function TaskDrawer({
                 >
                   <input
                     className="input flex-1 text-sm"
-                    placeholder="New subtask title"
+                    placeholder={t('taskDrawer.newSubtaskTitle')}
                     value={subTitle}
                     onChange={(e) => setSubTitle(e.target.value)}
                   />
                   <button type="submit" className="btn-primary shrink-0 px-3 text-xs">
-                    Add
+                    {t('taskDrawer.add')}
                   </button>
                 </form>}
               </div>
 
               <div className="rounded-xl border border-dashed border-ink-200 bg-ink-50/20 p-3 text-xs text-ink-600">
-                <p className="font-semibold text-ink-800">Dependencies</p>
+                <p className="font-semibold text-ink-800">{t('taskDrawer.dependencies')}</p>
                 <p className="mt-1 text-ink-500">
-                  Link predecessors from the Tasks tab. Nearby matches for quick context:
+                  {t('taskDrawer.dependenciesHelp')}
                 </p>
                 <ul className="mt-2 space-y-1">
-                  {depsPreview.slice(0, 4).map((t) => (
-                    <li key={t.id} className="truncate font-mono text-[11px]">
-                      {t.title}
+                  {depsPreview.slice(0, 4).map((row) => (
+                    <li key={row.id} className="truncate font-mono text-[11px]">
+                      {row.title}
                     </li>
                   ))}
                   {depsPreview.length === 0 && (
-                    <li className="text-ink-400">No heuristic matches.</li>
+                    <li className="text-ink-400">{t('taskDrawer.noHeuristicMatches')}</li>
                   )}
                 </ul>
               </div>
@@ -430,7 +438,7 @@ export function TaskDrawer({
               <div className="flex gap-2">
                 <input
                   className="input flex-1 text-sm"
-                  placeholder="Your name"
+                  placeholder={t('taskDrawer.yourName')}
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
                 />
@@ -441,24 +449,24 @@ export function TaskDrawer({
                   e.preventDefault();
                   const body = commentDraft.trim();
                   if (!body) return;
-                  appendTaskComment(task.id, body, authorName.trim() || 'Member');
+                  appendTaskComment(task.id, body, authorName.trim() || t('taskDrawer.fallbackAuthor'));
                   setComments(loadTaskComments(task.id));
                   setCommentDraft('');
                 }}
               >
                 <textarea
                   className="input min-h-[72px] resize-y text-sm"
-                  placeholder="Write an update…"
+                  placeholder={t('taskDrawer.writeUpdate')}
                   value={commentDraft}
                   onChange={(e) => setCommentDraft(e.target.value)}
                 />
                 <button type="submit" className="btn-primary text-sm">
-                  Post comment
+                  {t('taskDrawer.postComment')}
                 </button>
               </form>}
               {!canComment && (
                 <div className="rounded-xl border border-ink-200 bg-ink-50 px-3 py-2 text-sm text-ink-600">
-                  Viewers can read comments but cannot post updates.
+                  {t('taskDrawer.viewerReadOnly')}
                 </div>
               )}
               <ul className="space-y-3">
@@ -475,13 +483,13 @@ export function TaskDrawer({
                         className="mt-2 text-[11px] font-semibold text-rose-600"
                         onClick={() => deleteComment(c.id)}
                       >
-                        Remove
+                        {t('taskDrawer.remove')}
                       </button>
                     )}
                   </li>
                 ))}
                 {comments.length === 0 && (
-                  <li className="text-center text-sm text-ink-500">No comments yet.</li>
+                  <li className="text-center text-sm text-ink-500">{t('taskDrawer.noCommentsYet')}</li>
                 )}
               </ul>
             </div>
@@ -497,6 +505,7 @@ export function TaskDrawer({
 }
 
 function ProjectFilesTab({ taskId, projectId }: { taskId: string; projectId: string }) {
+  const t = useT();
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
   const [docs, setDocs] = useState(() =>
@@ -510,7 +519,7 @@ function ProjectFilesTab({ taskId, projectId }: { taskId: string; projectId: str
   return (
     <div className="space-y-4">
       <p className="text-xs text-ink-500">
-        Attachments are stored in this browser for demo workflows (no server upload yet).
+        {t('taskDrawer.filesTabLead')}
       </p>
       <form
         className="space-y-2 rounded-xl border border-ink-200 bg-ink-50/30 p-3"
@@ -524,10 +533,10 @@ function ProjectFilesTab({ taskId, projectId }: { taskId: string; projectId: str
           setDocs(loadProjectDocs(projectId).filter((d) => !d.taskId || d.taskId === taskId));
         }}
       >
-        <input className="input text-sm" placeholder="File name (e.g. SOW-v2.pdf)" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className="input text-sm" placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+        <input className="input text-sm" placeholder={t('taskDrawer.fileNamePh')} value={name} onChange={(e) => setName(e.target.value)} />
+        <input className="input text-sm" placeholder={t('taskDrawer.noteOptional')} value={note} onChange={(e) => setNote(e.target.value)} />
         <button type="submit" className="btn-primary text-sm">
-          Register attachment
+          {t('taskDrawer.registerAttachment')}
         </button>
       </form>
       <ul className="space-y-2">
@@ -540,13 +549,17 @@ function ProjectFilesTab({ taskId, projectId }: { taskId: string; projectId: str
             </div>
           </li>
         ))}
-        {docs.length === 0 && <li className="text-sm text-ink-500">No files linked to this task.</li>}
+        {docs.length === 0 && <li className="text-sm text-ink-500">{t('taskDrawer.noFilesLinked')}</li>}
       </ul>
     </div>
   );
 }
 
 function TaskStatusMini({ status }: { status: string }) {
+  const t = useT();
+  const key = `taskStatus.${status}`;
+  const translated = t(key);
+  const label = translated === key ? status : translated;
   const cls =
     status === 'done'
       ? 'bg-emerald-50 text-emerald-800'
@@ -555,7 +568,7 @@ function TaskStatusMini({ status }: { status: string }) {
         : status === 'in_progress'
           ? 'bg-brand-50 text-brand-800'
           : 'bg-ink-100 text-ink-700';
-  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${cls}`}>{status}</span>;
+  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${cls}`}>{label}</span>;
 }
 
 function isoDate(iso: string) {

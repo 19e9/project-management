@@ -6,6 +6,7 @@ import { formatUsd } from '../../features/billing/billingFormat';
 import { LineChart } from '../../components/admin/charts/LineChart';
 import { BarChart } from '../../components/admin/charts/BarChart';
 import { DonutChart } from '../../components/admin/charts/DonutChart';
+import { useT } from '../../i18n/I18nProvider';
 
 function Kpi({
   label,
@@ -40,8 +41,10 @@ function Kpi({
 }
 
 export default function BillingOverviewPage() {
+  const t = useT();
   const billing = useBillingDashboard();
   const b = billing.data;
+  const dash = t('common.none');
 
   const lineLabels = (b?.mrrTrend ?? []).map((p) => p.date.slice(5));
   const trialsOpen = useMemo(
@@ -71,10 +74,11 @@ export default function BillingOverviewPage() {
     if (pts.length < 2) return null;
     const first = pts[0]?.paymentCashUsd ?? 0;
     const last = pts[pts.length - 1]?.paymentCashUsd ?? 0;
-    if (!first) return last ? 'Cash accelerating' : null;
+    if (!first) return last ? t('billingOv.cashAccelerating') : null;
     const pct = ((last - first) / first) * 100;
-    return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% vs window start`;
-  }, [b?.mrrTrend]);
+    const pctStr = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+    return `${pctStr} ${t('billingOv.cashVelVsWindow')}`;
+  }, [b?.mrrTrend, t]);
 
   const barItems = (b?.revenueByWorkspace ?? []).slice(0, 8).map((x, i) => ({
     label: x.name.length > 14 ? `${x.name.slice(0, 13)}…` : x.name,
@@ -94,14 +98,14 @@ export default function BillingOverviewPage() {
         <div className="rounded-3xl bg-gradient-to-br from-white via-white to-ink-50/90 p-8 shadow-[0_24px_80px_-32px_rgba(15,23,42,0.35)] ring-1 ring-ink-900/[0.06] dark:from-ink-900 dark:via-ink-950 dark:to-ink-950 dark:ring-white/[0.08]">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-medium text-ink-500 dark:text-ink-400">Net recurring revenue</p>
+              <p className="text-xs font-medium text-ink-500 dark:text-ink-400">{t('billingOv.netMrrEyebrow')}</p>
               <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-ink-950 dark:text-white md:text-5xl">
-                {b ? formatUsd(b.mrrTotalUsd) : '—'}
+                {b ? formatUsd(b.mrrTotalUsd) : dash}
               </p>
               <p className="mt-2 max-w-xl text-sm text-ink-600 dark:text-ink-300">
-                Run-rate view across Pro seats and contracted enterprise minimums.{' '}
+                {t('billingOv.intro')}{' '}
                 <span className="font-medium text-ink-900 dark:text-ink-100">
-                  ARR {b ? formatUsd(b.arrTotalUsd) : '—'}
+                  {t('billingOv.arrLine', { amount: b ? formatUsd(b.arrTotalUsd) : dash })}
                 </span>
               </p>
             </div>
@@ -111,65 +115,65 @@ export default function BillingOverviewPage() {
                 className="rounded-full border border-ink-200 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-ink-800 backdrop-blur hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-ink-100"
                 onClick={() => void downloadAdminBillingCsv('invoices')}
               >
-                Export invoices
+                {t('billingOv.exportInvoices')}
               </button>
               <button
                 type="button"
                 className="rounded-full border border-ink-200 bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-ink-800 backdrop-blur hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-ink-100"
                 onClick={() => void downloadAdminBillingCsv('payments')}
               >
-                Export payments
+                {t('billingOv.exportPayments')}
               </button>
               <Link
                 to="/dashboard/billing/analytics"
                 className="rounded-full bg-brand-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-soft hover:bg-brand-700"
               >
-                Open analytics →
+                {t('billingOv.openAnalytics')}
               </Link>
             </div>
           </div>
 
           <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi
-              label="Active subscriptions"
-              value={b ? String(b.breakdown.payingAccountCount) : '—'}
-              hint={`${b?.payingSeatCount ?? '—'} billable seats`}
+              label={t('billingOv.kpiActiveSubs')}
+              value={b ? String(b.breakdown.payingAccountCount) : dash}
+              hint={t('billingOv.kpiBillableSeats', { n: b?.payingSeatCount ?? dash })}
             />
-            <Kpi label="Trials live" value={String(trialsOpen)} hint="Workspaces in trial window" />
+            <Kpi label={t('billingOv.kpiTrialsLive')} value={String(trialsOpen)} hint={t('billingOv.kpiTrialsHint')} />
             <Kpi
-              label="Churn (mo)"
-              value={b ? `${b.breakdown.churnRateMonthlyPct}%` : '—'}
-              hint="Rolling estimate"
+              label={t('billingOv.kpiChurn')}
+              value={b ? `${b.breakdown.churnRateMonthlyPct}%` : dash}
+              hint={t('billingOv.kpiChurnHint')}
               trend="neutral"
             />
             <Kpi
-              label="Failed payments"
-              value={String(b?.failedPayments.length ?? '—')}
-              hint="Needs collections follow-up"
+              label={t('billingOv.kpiFailedPay')}
+              value={String(b?.failedPayments.length ?? dash)}
+              hint={t('billingOv.kpiFailedHint')}
               trend={(b?.failedPayments.length ?? 0) > 0 ? 'down' : 'neutral'}
             />
           </div>
 
           <div className="mt-10 grid gap-8 border-t border-ink-100 pt-10 dark:border-white/[0.06] sm:grid-cols-2 lg:grid-cols-4">
             <Kpi
-              label="Conversion"
-              value={conversionPct != null ? `${conversionPct.toFixed(1)}%` : '—'}
-              hint="Paid ÷ total workspaces"
+              label={t('billingOv.kpiConversion')}
+              value={conversionPct != null ? `${conversionPct.toFixed(1)}%` : dash}
+              hint={t('billingOv.kpiConversionHint')}
             />
             <Kpi
-              label="Cash velocity"
-              value={revenueGrowthHint ?? '—'}
-              hint="vs trailing window start"
+              label={t('billingOv.kpiCashVel')}
+              value={revenueGrowthHint ?? dash}
+              hint={t('billingOv.kpiCashVelTrailing')}
             />
             <Kpi
-              label="ARPU"
-              value={b ? formatUsd(b.breakdown.arpuUsd) : '—'}
-              hint="Per paying account"
+              label={t('billingOv.kpiArpu')}
+              value={b ? formatUsd(b.breakdown.arpuUsd) : dash}
+              hint={t('billingOv.kpiArpuHint')}
             />
             <Kpi
-              label="LTV (est.)"
-              value={b ? formatUsd(b.breakdown.ltvEstimateUsd, 0) : '—'}
-              hint="Modeled from churn"
+              label={t('billingOv.kpiLtv')}
+              value={b ? formatUsd(b.breakdown.ltvEstimateUsd, 0) : dash}
+              hint={t('billingOv.kpiLtvHint')}
             />
           </div>
         </div>
@@ -177,10 +181,10 @@ export default function BillingOverviewPage() {
         <aside className="flex min-w-0 flex-col justify-between overflow-hidden rounded-3xl bg-ink-900 p-6 text-white shadow-xl dark:bg-black dark:ring-1 dark:ring-white/10">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
-              Subscription health
+              {t('billingOv.subHealth')}
             </p>
-            <p className="mt-3 text-3xl font-bold tabular-nums">{totalWs || '—'}</p>
-            <p className="text-sm text-white/70">Workspaces on platform</p>
+            <p className="mt-3 text-3xl font-bold tabular-nums">{totalWs || dash}</p>
+            <p className="text-sm text-white/70">{t('billingOv.wsOnPlatform')}</p>
           </div>
           <div className="mt-6 w-full min-w-0">
             {billing.isLoading ? (
@@ -191,7 +195,7 @@ export default function BillingOverviewPage() {
                 tone="dark"
                 thickness={20}
                 centerLabel={totalWs ? String(totalWs) : '0'}
-                centerSubLabel="mix"
+                centerSubLabel={t('billingOv.mixLabel')}
                 slices={[
                   { label: 'Free', value: b?.planDistribution.free ?? 0, color: '#94a3b8' },
                   { label: 'Pro', value: b?.planDistribution.pro ?? 0, color: '#818cf8' },
@@ -202,11 +206,11 @@ export default function BillingOverviewPage() {
           </div>
           <div className="mt-4 space-y-2 border-t border-white/10 pt-4 text-[11px] text-white/65">
             <div className="flex justify-between">
-              <span>Refunds (ledger)</span>
+              <span>{t('billingOv.refundsLedger')}</span>
               <span className="font-semibold tabular-nums text-white">{formatUsd(refundTotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Enterprise contracts</span>
+              <span>{t('billingOv.entContracts')}</span>
               <span className="font-semibold tabular-nums text-white">
                 {(b?.enterpriseContracts ?? []).length}
               </span>
@@ -217,7 +221,7 @@ export default function BillingOverviewPage() {
 
       {b && b.alerts.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-ink-900 dark:text-white">Operational signals</h2>
+          <h2 className="text-sm font-semibold text-ink-900 dark:text-white">{t('billingOv.operationalSignals')}</h2>
           <div className="grid gap-2 md:grid-cols-2">
             {b.alerts.slice(0, 6).map((a) => (
               <div
@@ -237,7 +241,7 @@ export default function BillingOverviewPage() {
                     to={`/dashboard/billing/subscriptions?drawer=${a.workspaceId}`}
                     className="mt-2 inline-block text-xs font-semibold text-brand-700 underline dark:text-brand-300"
                   >
-                    Open subscription →
+                    {t('billingOv.openSubscription')}
                   </Link>
                 )}
               </div>
@@ -250,10 +254,8 @@ export default function BillingOverviewPage() {
         <div className="rounded-3xl bg-white/90 p-6 shadow-soft ring-1 ring-ink-900/[0.05] dark:bg-ink-900/40 dark:ring-white/[0.06]">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold text-ink-900 dark:text-white">Cash vs invoiced</h3>
-              <p className="text-xs text-ink-500 dark:text-ink-400">
-                Succeeded payments vs invoice issuance — trailing window
-              </p>
+              <h3 className="text-sm font-semibold text-ink-900 dark:text-white">{t('billingOv.cashVsInvoicedTitle')}</h3>
+              <p className="text-xs text-ink-500 dark:text-ink-400">{t('billingOv.cashVsInvoicedSub')}</p>
             </div>
           </div>
           <div className="mt-6 min-h-[240px]">
@@ -266,13 +268,13 @@ export default function BillingOverviewPage() {
                 series={[
                   {
                     key: 'pay',
-                    label: 'Payments',
+                    label: t('billingOv.seriesPayments'),
                     color: '#22c55e',
                     values: (b?.mrrTrend ?? []).map((p) => p.paymentCashUsd),
                   },
                   {
                     key: 'inv',
-                    label: 'Invoices',
+                    label: t('billingOv.seriesInvoices'),
                     color: '#6366f1',
                     values: (b?.mrrTrend ?? []).map((p) => p.invoiceIssuedUsd),
                   },
@@ -283,8 +285,8 @@ export default function BillingOverviewPage() {
         </div>
 
         <div className="rounded-3xl bg-white/90 p-6 shadow-soft ring-1 ring-ink-900/[0.05] dark:bg-ink-900/40 dark:ring-white/[0.06]">
-          <h3 className="text-sm font-semibold text-ink-900 dark:text-white">Top workspaces by cash</h3>
-          <p className="text-xs text-ink-500 dark:text-ink-400">30-day realized revenue</p>
+          <h3 className="text-sm font-semibold text-ink-900 dark:text-white">{t('billingOv.topWsCashTitle')}</h3>
+          <p className="text-xs text-ink-500 dark:text-ink-400">{t('billingOv.topWsCashSub')}</p>
           <div className="mt-6">
             {billing.isLoading ? (
               <div className="skeleton h-[220px] w-full rounded-2xl dark:bg-ink-800" />
@@ -293,7 +295,7 @@ export default function BillingOverviewPage() {
                 items={
                   barItems.length
                     ? barItems
-                    : [{ label: '—', value: 1, color: '#334155' }]
+                    : [{ label: dash, value: 1, color: '#334155' }]
                 }
               />
             )}

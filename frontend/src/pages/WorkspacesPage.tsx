@@ -7,8 +7,11 @@ import {
   useUpdateWorkspace,
   useWorkspaces,
 } from '../features/workspaces/hooks';
+import type { TFunction } from '../i18n/I18nProvider';
+import { useT } from '../i18n/I18nProvider';
 
 export default function WorkspacesPage() {
+  const t = useT();
   const { data: workspaces, isLoading } = useWorkspaces();
   const { data: dashboard } = useMyDashboard();
   const create = useCreateWorkspace();
@@ -22,27 +25,30 @@ export default function WorkspacesPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <span className="eyebrow">Tenant</span>
+          <span className="eyebrow">{t('workspaces.eyebrow')}</span>
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink-900 md:text-3xl">
-            Workspaces
+            {t('workspaces.title')}
           </h1>
-          <p className="mt-1 max-w-xl text-sm text-ink-500">
-            Each workspace keeps its own members, projects, and permissions. New users get access
-            after an owner or admin invites them.
-          </p>
+          <p className="mt-1 max-w-xl text-sm text-ink-500">{t('workspaces.intro')}</p>
         </div>
         <Link to="/dashboard" className="btn-secondary h-10 px-4 text-sm">
-          ← Back to overview
+          {t('workspaces.backOverview')}
         </Link>
       </header>
 
       {!isLoading && (
         <div className="grid gap-4 sm:grid-cols-3">
-          <StatChip label="Workspaces" value={list.length} accent="brand" />
-          <StatChip label="Active" value={activeCount} accent="emerald" />
+          <StatChip label={t('workspaces.statWorkspaces')} value={list.length} accent="brand" />
+          <StatChip label={t('workspaces.statActive')} value={activeCount} accent="emerald" />
           <StatChip
-            label="Your access"
-            value={list.length ? `Across ${list.length} workspace${list.length === 1 ? '' : 's'}` : '—'}
+            label={t('workspaces.statAccess')}
+            value={
+              list.length
+                ? list.length === 1
+                  ? t('workspacesUi.statAcrossOne')
+                  : t('workspaces.statAcross', { n: list.length })
+                : t('common.none')
+            }
             accent="cyan"
             isText
           />
@@ -53,10 +59,8 @@ export default function WorkspacesPage() {
         {isPlatformAdmin ? (
           <section className="card p-5 lg:col-span-5">
             <div className="border-b border-ink-100 pb-4">
-              <h2 className="text-base font-semibold text-ink-900">Create workspace</h2>
-              <p className="mt-1 text-xs text-ink-500">
-                Platform admins can provision a workspace for a new client or delivery team.
-              </p>
+              <h2 className="text-base font-semibold text-ink-900">{t('workspaces.createTitle')}</h2>
+              <p className="mt-1 text-xs text-ink-500">{t('workspaces.createHelp')}</p>
             </div>
             <form
               className="mt-5 space-y-4"
@@ -69,12 +73,12 @@ export default function WorkspacesPage() {
             >
               <div>
                 <label htmlFor="ws-name" className="label">
-                  Workspace name
+                  {t('workspaces.workspaceName')}
                 </label>
                 <input
                   id="ws-name"
                   className="input"
-                  placeholder="e.g. Acme Construction"
+                  placeholder={t('workspaces.placeholderName')}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="organization"
@@ -85,26 +89,23 @@ export default function WorkspacesPage() {
                 className="btn-brand w-full sm:w-auto"
                 disabled={create.isPending || !name.trim()}
               >
-                {create.isPending ? 'Creating...' : 'Create workspace'}
+                {create.isPending ? t('workspaces.creating') : t('workspaces.createSubmit')}
               </button>
             </form>
           </section>
         ) : (
           <section className="card p-5 lg:col-span-5">
             <div className="rounded-2xl border border-dashed border-ink-200 bg-ink-50/40 p-5">
-              <h2 className="text-base font-semibold text-ink-900">Waiting for access</h2>
-              <p className="mt-2 text-sm text-ink-500">
-                You cannot create a workspace from this account. Ask a workspace owner or admin to
-                invite you, then your projects and tasks will appear here.
-              </p>
+              <h2 className="text-base font-semibold text-ink-900">{t('workspaces.waitingTitle')}</h2>
+              <p className="mt-2 text-sm text-ink-500">{t('workspaces.waitingBody')}</p>
             </div>
           </section>
         )}
         <section className="card overflow-hidden lg:col-span-7">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 bg-ink-50/30 px-5 py-4">
             <div>
-              <h2 className="text-base font-semibold text-ink-900">Your workspaces</h2>
-              <p className="text-xs text-ink-500">Projects and teams live inside each workspace</p>
+              <h2 className="text-base font-semibold text-ink-900">{t('workspacesUi.listHeading')}</h2>
+              <p className="text-xs text-ink-500">{t('workspacesUi.listSub')}</p>
             </div>
           </div>
 
@@ -127,11 +128,8 @@ export default function WorkspacesPage() {
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-2xl ring-1 ring-inset ring-brand-100">
                 🏢
               </div>
-              <h3 className="mt-4 font-semibold text-ink-900">Henüz çalışma alanı yok</h3>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">
-                Ask a workspace owner or admin to invite you. Once assigned, your projects and tasks
-                will appear here.
-              </p>
+              <h3 className="mt-4 font-semibold text-ink-900">{t('workspacesUi.emptyTitle')}</h3>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">{t('workspacesUi.emptyBody')}</p>
             </div>
           )}
 
@@ -150,6 +148,22 @@ export default function WorkspacesPage() {
       </div>
     </div>
   );
+}
+
+function membershipRoleLabel(t: TFunction, role: string): string {
+  switch (role) {
+    case 'owner':
+      return t('roles.workspaceOwner');
+    case 'admin':
+      return t('roles.workspaceAdmin');
+    case 'member':
+      return t('roles.member');
+    case 'viewer':
+    case 'client':
+      return t('roles.viewer');
+    default:
+      return role;
+  }
 }
 
 function StatChip({
@@ -184,6 +198,7 @@ function StatChip({
 }
 
 function WorkspaceRow({ workspace: w, canManage }: { workspace: any; canManage: boolean }) {
+  const t = useT();
   const update = useUpdateWorkspace(w.id);
   const remove = useDeleteWorkspace(w.id);
   const [editing, setEditing] = useState(false);
@@ -218,12 +233,10 @@ function WorkspaceRow({ workspace: w, canManage }: { workspace: any; canManage: 
                 {plan}
               </span>
               <span className={`badge ring-1 ring-inset ${roleStyles[role] ?? roleStyles.member}`}>
-                {role}
+                {membershipRoleLabel(t, role)}
               </span>
             </div>
-            <p className="mt-1 text-xs text-ink-500">
-              Open a workspace to manage its projects and tasks.
-            </p>
+            <p className="mt-1 text-xs text-ink-500">{t('workspacesUi.rowHint')}</p>
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2 sm:self-center">
@@ -244,10 +257,10 @@ function WorkspaceRow({ workspace: w, canManage }: { workspace: any; canManage: 
                 onChange={(e) => setDraftName(e.target.value)}
               />
               <button type="submit" className="btn-secondary px-3 text-xs" disabled={update.isPending}>
-                Save
+                {t('common.save')}
               </button>
               <button type="button" className="btn-secondary px-3 text-xs" onClick={() => setEditing(false)}>
-                Cancel
+                {t('common.cancel')}
               </button>
             </form>
           ) : (
@@ -261,7 +274,7 @@ function WorkspaceRow({ workspace: w, canManage }: { workspace: any; canManage: 
                     setEditing(true);
                   }}
                 >
-                  Edit
+                  {t('common.edit')}
                 </button>
               )}
               {canManage && (
@@ -270,17 +283,17 @@ function WorkspaceRow({ workspace: w, canManage }: { workspace: any; canManage: 
                   className="btn-secondary px-3 py-2 text-xs text-rose-700"
                   disabled={remove.isPending}
                   onClick={() => {
-                    if (window.confirm(`Delete workspace "${w.name}"?`)) remove.mutate();
+                    if (window.confirm(t('workspacesUi.confirmDelete', { name: w.name ?? '' }))) remove.mutate();
                   }}
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               )}
               <Link
                 to={`/dashboard/workspaces/${w.id}/projects`}
                 className="btn-brand px-5 py-2.5 text-sm"
               >
-                Projects →
+                {t('workspacesUi.projectsArrow')}
               </Link>
             </>
           )}
@@ -289,4 +302,3 @@ function WorkspaceRow({ workspace: w, canManage }: { workspace: any; canManage: 
     </li>
   );
 }
-

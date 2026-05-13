@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { AdminWorkspaceRow } from '../../features/admin/hooks';
+import type { TFunction } from '../../i18n/I18nProvider';
+import { useI18n, useT } from '../../i18n/I18nProvider';
 
 interface Props {
   rows: AdminWorkspaceRow[];
@@ -11,6 +13,9 @@ interface Props {
 type SortKey = 'name' | 'memberCount' | 'projectCount' | 'taskCount' | 'lastActivityAt';
 
 export function WorkspacesTable({ rows, loading, onSearchChange }: Props) {
+  const t = useT();
+  const { locale } = useI18n();
+  const dateLocale = locale === 'tr' ? 'tr-TR' : 'en-US';
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({
     key: 'lastActivityAt',
     dir: 'desc',
@@ -65,38 +70,38 @@ export function WorkspacesTable({ rows, loading, onSearchChange }: Props) {
     <section className="card overflow-hidden">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 px-5 py-4">
         <div>
-          <h3 className="text-base font-semibold text-ink-900">Workspaces</h3>
+          <h3 className="text-base font-semibold text-ink-900">{t('adminView.wsTableTitle')}</h3>
           <p className="text-xs text-ink-500">
-            Latest activity across the platform · {filtered.length} of {rows.length}
+            {t('adminView.wsTableSub', { shown: filtered.length, total: rows.length })}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <FilterPill active={filter === 'all'} onClick={() => setFilter('all')} count={rows.length}>
-            All
+            {t('adminView.wsFilterAll')}
           </FilterPill>
           <FilterPill
             active={filter === 'free'}
             onClick={() => setFilter('free')}
             count={rows.filter((r) => r.plan === 'free').length}
           >
-            Free
+            {t('adminView.sliceFree')}
           </FilterPill>
           <FilterPill
             active={filter === 'pro'}
             onClick={() => setFilter('pro')}
             count={rows.filter((r) => r.plan === 'pro').length}
           >
-            Pro
+            {t('adminView.slicePro')}
           </FilterPill>
           <FilterPill
             active={filter === 'enterprise'}
             onClick={() => setFilter('enterprise')}
             count={rows.filter((r) => r.plan === 'enterprise').length}
           >
-            Enterprise
+            {t('adminView.sliceEnterprise')}
           </FilterPill>
           <input
-            placeholder="Search…"
+            placeholder={t('adminView.wsSearchPlaceholder')}
             className="input ml-2 hidden h-9 w-44 sm:block"
             onChange={(e) => onSearchChange?.(e.target.value)}
           />
@@ -107,13 +112,13 @@ export function WorkspacesTable({ rows, loading, onSearchChange }: Props) {
         <table className="w-full text-sm">
           <thead className="bg-ink-50/40">
             <tr className="text-left">
-              {header('Workspace', 'name')}
-              {header('Owner')}
-              {header('Plan')}
-              {header('Members', 'memberCount')}
-              {header('Projects', 'projectCount')}
-              {header('Tasks', 'taskCount')}
-              {header('Last activity', 'lastActivityAt')}
+              {header(t('adminView.wsColWorkspace'), 'name')}
+              {header(t('adminView.wsColOwner'))}
+              {header(t('adminView.wsColPlan'))}
+              {header(t('adminView.wsColMembers'), 'memberCount')}
+              {header(t('adminView.wsColProjects'), 'projectCount')}
+              {header(t('adminView.wsColTasks'), 'taskCount')}
+              {header(t('adminView.wsColLastActivity'), 'lastActivityAt')}
               {header('')}
             </tr>
           </thead>
@@ -129,7 +134,7 @@ export function WorkspacesTable({ rows, loading, onSearchChange }: Props) {
             {!loading && sorted.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-5 py-12 text-center text-sm text-ink-500">
-                  No workspaces match the current filters.
+                  {t('adminView.wsNoMatch')}
                 </td>
               </tr>
             )}
@@ -152,7 +157,9 @@ export function WorkspacesTable({ rows, loading, onSearchChange }: Props) {
                       <div className="min-w-0">
                         <div className="truncate font-medium text-ink-900">{w.name}</div>
                         <div className="text-[11px] text-ink-500">
-                          Created {new Date(w.createdAt).toLocaleDateString()}
+                          {t('adminView.wsCreated', {
+                            date: new Date(w.createdAt).toLocaleDateString(dateLocale),
+                          })}
                         </div>
                       </div>
                     </div>
@@ -168,25 +175,25 @@ export function WorkspacesTable({ rows, loading, onSearchChange }: Props) {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <PlanChip plan={w.plan} />
+                    <PlanChip plan={w.plan} t={t} />
                   </td>
                   <td className="px-4 py-3 tabular-nums text-ink-700">{w.memberCount}</td>
                   <td className="px-4 py-3 tabular-nums text-ink-700">{w.projectCount}</td>
                   <td className="px-4 py-3 tabular-nums text-ink-700">{w.taskCount}</td>
                   <td className="px-4 py-3">
-                    <ActivityChip iso={w.lastActivityAt} />
+                    <ActivityChip iso={w.lastActivityAt} t={t} />
                   </td>
                   <td className="px-4 py-3 text-right">
                     {w.status === 'suspended' ? (
                       <span className="badge bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-100">
-                        Suspended
+                        {t('adminView.wsSuspended')}
                       </span>
                     ) : (
                       <Link
                         to={`/dashboard/workspaces/${w.id}/projects`}
                         className="text-xs font-medium text-brand-700 hover:underline"
                       >
-                        Open →
+                        {t('adminView.wsOpen')}
                       </Link>
                     )}
                   </td>
@@ -199,12 +206,20 @@ export function WorkspacesTable({ rows, loading, onSearchChange }: Props) {
   );
 }
 
-function PlanChip({ plan }: { plan: 'free' | 'pro' | 'enterprise' }) {
+function PlanChip({
+  plan,
+  t,
+}: {
+  plan: 'free' | 'pro' | 'enterprise';
+  t: TFunction;
+}) {
   const map = {
     free: 'bg-ink-100 text-ink-700 ring-ink-200',
     pro: 'bg-brand-50 text-brand-700 ring-brand-100',
     enterprise: 'bg-amber-50 text-amber-700 ring-amber-100',
   } as const;
+  const label =
+    plan === 'free' ? t('adminView.sliceFree') : plan === 'pro' ? t('adminView.slicePro') : t('adminView.sliceEnterprise');
   return (
     <span className={`badge ring-1 ring-inset ${map[plan]}`}>
       {plan === 'pro' && (
@@ -212,13 +227,19 @@ function PlanChip({ plan }: { plan: 'free' | 'pro' | 'enterprise' }) {
           <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />
         </svg>
       )}
-      {plan[0].toUpperCase() + plan.slice(1)}
+      {label}
     </span>
   );
 }
 
-function ActivityChip({ iso }: { iso: string | null }) {
-  if (!iso) return <span className="text-ink-400">No activity</span>;
+function ActivityChip({
+  iso,
+  t,
+}: {
+  iso: string | null;
+  t: TFunction;
+}) {
+  if (!iso) return <span className="text-ink-400">{t('adminView.activityChipNoActivity')}</span>;
   const diff = Date.now() - new Date(iso).getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const recent = days <= 1;
@@ -229,7 +250,11 @@ function ActivityChip({ iso }: { iso: string | null }) {
       ? 'bg-rose-50 text-rose-700 ring-rose-100'
       : 'bg-ink-100 text-ink-700 ring-ink-200';
   const label =
-    days <= 0 ? 'Today' : days === 1 ? 'Yesterday' : `${days}d ago`;
+    days <= 0
+      ? t('adminView.timeToday')
+      : days === 1
+        ? t('adminView.timeYesterday')
+        : t('adminView.timeDaysAgo', { n: days });
   return <span className={`badge ring-1 ring-inset ${cls}`}>{label}</span>;
 }
 

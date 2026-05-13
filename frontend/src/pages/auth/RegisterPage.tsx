@@ -6,6 +6,8 @@ import { googleLoginUrl } from '../../lib/api-client';
 import { AuthBrandPanel } from '../../components/auth/AuthBrandPanel';
 import { Logo } from '../../components/ui/Logo';
 import { IconCheck, IconEye, IconEyeOff, IconGoogle } from '../../components/ui/Icons';
+import type { TFunction } from '../../i18n/I18nProvider';
+import { useT } from '../../i18n/I18nProvider';
 
 interface FormValues {
   displayName: string;
@@ -14,7 +16,10 @@ interface FormValues {
   agree: boolean;
 }
 
+const STRENGTH_KEYS = ['auth.pwTooShort', 'auth.pwWeak', 'auth.pwFair', 'auth.pwGood', 'auth.pwStrong'] as const;
+
 export default function RegisterPage() {
+  const t = useT();
   const { signUp } = useAuth();
   const nav = useNavigate();
   const {
@@ -30,7 +35,7 @@ export default function RegisterPage() {
   const [showPw, setShowPw] = useState(false);
   const password = watch('password');
 
-  const strength = useMemo(() => scorePassword(password ?? ''), [password]);
+  const strengthScore = useMemo(() => scorePassword(password ?? ''), [password]);
 
   async function onSubmit(values: FormValues) {
     setServerError(null);
@@ -38,22 +43,21 @@ export default function RegisterPage() {
       await signUp(values.email, values.password, values.displayName);
       nav('/dashboard');
     } catch (e: any) {
-      setServerError(e?.response?.data?.message ?? 'Sign up failed. Please try again.');
+      setServerError(e?.response?.data?.message ?? t('auth.signUpFailed'));
     }
   }
 
+  const bulletKeys = ['auth.bulletNoCard', 'auth.bulletInvite', 'auth.bulletRole'] as const;
+
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <AuthBrandPanel
-        title="Create your account."
-        subtitle="Join a workspace after an owner or admin invites you."
-      />
+      <AuthBrandPanel title={t('auth.registerBrandTitle')} subtitle={t('auth.registerBrandSubtitle')} />
 
       <main className="relative flex min-h-screen flex-col">
         <div className="flex items-center justify-between border-b border-ink-200/60 px-6 py-5 lg:hidden">
           <Logo />
           <Link to="/login" className="text-sm font-medium text-brand-700 hover:underline">
-            Sign in
+            {t('auth.signInShort')}
           </Link>
         </div>
 
@@ -61,47 +65,42 @@ export default function RegisterPage() {
           <div className="w-full max-w-md">
             <div className="hidden items-center justify-end lg:flex">
               <span className="text-sm text-ink-500">
-                Already have an account?{' '}
+                {t('auth.hasAccount')}{' '}
                 <Link to="/login" className="font-medium text-brand-700 hover:underline">
-                  Sign in
+                  {t('auth.signInShort')}
                 </Link>
               </span>
             </div>
 
             <div className="mt-8 lg:mt-16">
-              <h1 className="text-3xl font-bold tracking-tight">Create your account</h1>
-              <p className="mt-2 text-sm text-ink-500">
-                Your workspace access starts after an owner or admin assigns you.
-              </p>
+              <h1 className="text-3xl font-bold tracking-tight">{t('auth.registerHeading')}</h1>
+              <p className="mt-2 text-sm text-ink-500">{t('auth.registerSubtitle')}</p>
             </div>
 
-            <a
-              href={googleLoginUrl()}
-              className="btn-secondary btn-lg mt-8 w-full justify-center"
-            >
+            <a href={googleLoginUrl()} className="btn-secondary btn-lg mt-8 w-full justify-center">
               <IconGoogle />
-              Continue with Google
+              {t('auth.googleContinue')}
             </a>
 
             <div className="my-6 flex items-center gap-3 text-xs text-ink-400">
               <span className="h-px flex-1 bg-ink-200" />
-              OR REGISTER WITH EMAIL
+              {t('auth.dividerRegister')}
               <span className="h-px flex-1 bg-ink-200" />
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
               <div>
                 <label htmlFor="displayName" className="label">
-                  Full name
+                  {t('auth.fullName')}
                 </label>
                 <input
                   id="displayName"
                   autoComplete="name"
-                  placeholder="Jane Cooper"
+                  placeholder={t('auth.placeholderDisplayName')}
                   className={`input input-lg ${errors.displayName ? 'input-error' : ''}`}
                   {...register('displayName', {
-                    required: 'Name is required',
-                    minLength: { value: 2, message: 'Use at least 2 characters' },
+                    required: t('auth.errNameReq'),
+                    minLength: { value: 2, message: t('auth.errNameMin') },
                   })}
                 />
                 {errors.displayName && <p className="error">{errors.displayName.message}</p>}
@@ -109,19 +108,19 @@ export default function RegisterPage() {
 
               <div>
                 <label htmlFor="email" className="label">
-                  Work email
+                  {t('auth.workEmail')}
                 </label>
                 <input
                   id="email"
                   type="email"
                   autoComplete="email"
-                  placeholder="you@company.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   className={`input input-lg ${errors.email ? 'input-error' : ''}`}
                   {...register('email', {
-                    required: 'Email is required',
+                    required: t('auth.errEmailReq'),
                     pattern: {
                       value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: 'Enter a valid email',
+                      message: t('auth.errEmailInvalid'),
                     },
                   })}
                 />
@@ -130,30 +129,30 @@ export default function RegisterPage() {
 
               <div>
                 <label htmlFor="password" className="label">
-                  Password
+                  {t('auth.password')}
                 </label>
                 <div className="relative">
                   <input
                     id="password"
                     type={showPw ? 'text' : 'password'}
                     autoComplete="new-password"
-                    placeholder="At least 8 characters"
+                    placeholder={t('auth.passMinLen')}
                     className={`input input-lg pr-11 ${errors.password ? 'input-error' : ''}`}
                     {...register('password', {
-                      required: 'Password is required',
-                      minLength: { value: 8, message: 'At least 8 characters' },
+                      required: t('auth.errPassReq'),
+                      minLength: { value: 8, message: t('auth.errPassMinChars') },
                     })}
                   />
                   <button
                     type="button"
-                    aria-label={showPw ? 'Hide password' : 'Show password'}
+                    aria-label={showPw ? t('auth.hidePassword') : t('auth.showPassword')}
                     onClick={() => setShowPw((s) => !s)}
                     className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-ink-500 hover:bg-ink-100"
                   >
                     {showPw ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
                   </button>
                 </div>
-                <PasswordStrength score={strength.score} label={strength.label} />
+                <PasswordStrength score={strengthScore} t={t} />
                 {errors.password && <p className="error">{errors.password.message}</p>}
               </div>
 
@@ -161,16 +160,16 @@ export default function RegisterPage() {
                 <input
                   type="checkbox"
                   className="mt-0.5 h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
-                  {...register('agree', { required: 'Please accept the terms' })}
+                  {...register('agree', { required: t('auth.errTerms') })}
                 />
                 <span>
-                  I agree to the{' '}
+                  {t('auth.agreePrefix')}{' '}
                   <Link to="#" className="text-brand-700 hover:underline">
-                    Terms
+                    {t('auth.terms')}
                   </Link>{' '}
-                  and{' '}
+                  {t('auth.agreeAnd')}{' '}
                   <Link to="#" className="text-brand-700 hover:underline">
-                    Privacy Policy
+                    {t('auth.privacyPolicy')}
                   </Link>
                   .
                 </span>
@@ -190,25 +189,21 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={isSubmitting || !isValid}
-                className="btn-brand btn-lg w-full justify-center"
-              >
+              <button type="submit" disabled={isSubmitting || !isValid} className="btn-brand btn-lg w-full justify-center">
                 {isSubmitting ? (
                   <>
-                    <Spinner /> Creating account…
+                    <Spinner /> {t('auth.creatingAccount')}
                   </>
                 ) : (
-                  <>Create account</>
+                  t('auth.submitRegister')
                 )}
               </button>
 
               <ul className="mt-1 grid grid-cols-2 gap-2 text-xs text-ink-500 sm:grid-cols-3">
-                {['No card required', 'Invite based access', 'Role controlled'].map((b) => (
-                  <li key={b} className="flex items-center gap-1.5">
+                {bulletKeys.map((k) => (
+                  <li key={k} className="flex items-center gap-1.5">
                     <IconCheck className="h-3.5 w-3.5 text-emerald-600" />
-                    {b}
+                    {t(k)}
                   </li>
                 ))}
               </ul>
@@ -220,8 +215,6 @@ export default function RegisterPage() {
   );
 }
 
-/* ---- helpers ---- */
-
 function scorePassword(p: string) {
   let s = 0;
   if (p.length >= 8) s++;
@@ -229,11 +222,10 @@ function scorePassword(p: string) {
   if (/[0-9]/.test(p)) s++;
   if (/[^A-Za-z0-9]/.test(p)) s++;
   if (p.length >= 12) s++;
-  const labels = ['Too short', 'Weak', 'Fair', 'Good', 'Strong', 'Strong'];
-  return { score: Math.min(s, 5), label: labels[Math.min(s, 5)] };
+  return Math.min(s, 5);
 }
 
-function PasswordStrength({ score, label }: { score: number; label: string }) {
+function PasswordStrength({ score, t }: { score: number; t: TFunction }) {
   const colors = [
     'bg-ink-200',
     'bg-rose-500',
@@ -242,20 +234,16 @@ function PasswordStrength({ score, label }: { score: number; label: string }) {
     'bg-emerald-500',
     'bg-emerald-600',
   ];
+  const label = t(STRENGTH_KEYS[Math.min(Math.max(score, 0), STRENGTH_KEYS.length - 1)]);
   return (
     <div className="mt-2 space-y-1">
       <div className="flex gap-1">
         {[0, 1, 2, 3].map((i) => (
-          <span
-            key={i}
-            className={`h-1.5 flex-1 rounded-full transition ${
-              i < score ? colors[score] : 'bg-ink-200'
-            }`}
-          />
+          <span key={i} className={`h-1.5 flex-1 rounded-full transition ${i < score ? colors[score] : 'bg-ink-200'}`} />
         ))}
       </div>
       <p className="text-[11px] text-ink-500">
-        Strength: <span className="font-medium text-ink-700">{label}</span>
+        {t('auth.strengthPrefix')} <span className="font-medium text-ink-700">{label}</span>
       </p>
     </div>
   );
@@ -263,12 +251,7 @@ function PasswordStrength({ score, label }: { score: number; label: string }) {
 
 function Spinner() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 animate-spin"
-      fill="none"
-      aria-hidden
-    >
+    <svg viewBox="0 0 24 24" className="h-4 w-4 animate-spin" fill="none" aria-hidden>
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity=".3" strokeWidth="2.5" />
       <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
     </svg>

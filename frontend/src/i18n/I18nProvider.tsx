@@ -7,22 +7,30 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import tr from './locales/tr';
-import en from './locales/en';
+import en from './locales/en.json';
+import tr from './locales/tr.json';
 import es from './locales/es';
 import it from './locales/it';
 import { hasUiPhrase, translateUiPhrase } from './uiPhrases';
 
-/** Nested message tree (locale files share shape but not literal string types). */
+/** Nested message tree */
 type Msg = string | { [k: string]: Msg };
+
 export type Locale = 'en' | 'tr' | 'es' | 'it';
+
 export const localeOptions: Array<{ code: Locale; label: string; shortLabel: string }> = [
   { code: 'en', label: 'English', shortLabel: 'EN' },
   { code: 'tr', label: 'Turkish', shortLabel: 'TR' },
   { code: 'es', label: 'Spanish', shortLabel: 'SP' },
   { code: 'it', label: 'Italian', shortLabel: 'IT' },
 ];
-const dicts: Record<Locale, Msg> = { en, tr, es, it };
+
+const dicts: Record<Locale, Msg> = {
+  en: en as Msg,
+  tr: tr as Msg,
+  es: es as Msg,
+  it: it as Msg,
+};
 
 function lookup(dict: Msg, key: string): string | undefined {
   const parts = key.split('.');
@@ -37,10 +45,23 @@ function lookup(dict: Msg, key: string): string | undefined {
   return typeof cur === 'string' ? cur : undefined;
 }
 
+function interpolate(
+  template: string,
+  vars?: Record<string, string | number | boolean>,
+): string {
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (_, name: string) => {
+    const v = vars[name];
+    return v !== undefined && v !== null ? String(v) : `{${name}}`;
+  });
+}
+
+export type TFunction = (key: string, vars?: Record<string, string | number | boolean>) => string;
+
 type I18nCtx = {
   locale: Locale;
   setLocale: (l: Locale) => void;
-  t: (key: string) => string;
+  t: TFunction;
 };
 
 const Ctx = createContext<I18nCtx | null>(null);
@@ -55,7 +76,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
-    return 'en';
+    return 'tr';
   });
 
   useEffect(() => {
@@ -85,14 +106,15 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLocale = useCallback((l: Locale) => setLocaleState(l), []);
 
-  const t = useCallback(
-    (key: string) => {
+  const t = useCallback<TFunction>(
+    (key, vars) => {
       let out = lookup(dicts[locale], key);
       if (out === undefined) out = lookup(dicts.en, key);
       if (out === undefined && import.meta.env.DEV) {
         console.warn(`[i18n] missing key: ${key}`);
       }
-      return out ?? key;
+      const base = out ?? key;
+      return interpolate(base, vars);
     },
     [locale],
   );
@@ -102,7 +124,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
-export function useT(): I18nCtx['t'] {
+export function useT(): TFunction {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error('useT must be used within I18nProvider');
   return ctx.t;
@@ -112,6 +134,10 @@ export function useI18n(): I18nCtx {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error('useI18n must be used within I18nProvider');
   return ctx;
+}
+
+export function useTranslation(): I18nCtx {
+  return useI18n();
 }
 
 function isLocale(value: string | null): value is Locale {

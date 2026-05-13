@@ -8,8 +8,10 @@ import {
   useUpdateProject,
 } from '../features/projects/hooks';
 import { useWorkspace } from '../features/workspaces/hooks';
+import { useT } from '../i18n/I18nProvider';
 
 export default function ProjectsPage() {
+  const t = useT();
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { data: workspace, isLoading: wsLoading } = useWorkspace(workspaceId);
   const { data: projects, isLoading: projLoading } = useProjects(workspaceId);
@@ -28,49 +30,56 @@ export default function ProjectsPage() {
     workspaceRole === 'admin';
   const maxProjects = workspace?.entitlements?.maxProjects ?? null;
   const atProjectLimit = canManageProjects && maxProjects !== null && list.length >= maxProjects;
-  const emptyTitle = canManageProjects ? 'No projects yet' : 'No visible projects yet';
+  const emptyTitle = canManageProjects
+    ? t('projectsPage.emptyOwnerTitle')
+    : t('projectsPage.emptyViewerTitle');
   const emptyDescription = canManageProjects
-    ? 'Add your first project with the form on the left, then shape the WBS and schedule.'
+    ? t('projectsPage.emptyOwnerBody')
     : workspaceRole === 'viewer' || workspaceRole === 'client'
-      ? 'Your workspace owner has not shared any active projects in this workspace yet.'
-      : 'Open a project to view and update your assigned work.';
+      ? t('projectsPage.emptyViewerBody')
+      : t('projectsPage.emptyMemberBody');
+  const infinityLabel = t('projectsPage.infinity');
 
   return (
     <div className="space-y-8">
       <Breadcrumb
+        ariaLabel={t('projectsPage.breadcrumbAria')}
         items={[
-          { to: '/dashboard', label: 'Overview' },
-          { to: '/dashboard/workspaces', label: 'Workspaces' },
-          { label: workspace?.name ?? 'Projects' },
+          { to: '/dashboard', label: t('projectsPage.breadcrumbOverview') },
+          { to: '/dashboard/workspaces', label: t('projectsPage.breadcrumbWs') },
+          { label: workspace?.name ?? t('projectsPage.fallbackTitle') },
         ]}
       />
 
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <span className="eyebrow">Project portfolio</span>
+          <span className="eyebrow">{t('projectsPage.eyebrow')}</span>
           <h1 className="mt-2 truncate text-2xl font-bold tracking-tight text-ink-900 md:text-3xl">
-            {workspace?.name ?? 'Projects'}
+            {workspace?.name ?? t('projectsPage.fallbackTitle')}
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-ink-500">
-            All projects in this workspace. Each one has its own WBS, Gantt, and (when your plan
-            allows) critical-path analysis.
-          </p>
+          <p className="mt-1 max-w-2xl text-sm text-ink-500">{t('projectsPage.intro')}</p>
           {!wsLoading && workspace && (
             <div className="mt-4 flex flex-wrap gap-2">
-              <MetaPill label="Plan" value={String(workspace.plan ?? '—').toUpperCase()} tone="brand" />
+              <MetaPill label={t('projectsPage.metaPlan')} value={String(workspace.plan ?? '—').toUpperCase()} tone="brand" />
               <MetaPill
-                label="CPM"
-                value={workspace.entitlements?.cpmEnabled ? 'On' : 'Locked'}
+                label={t('projectsPage.metaCpm')}
+                value={
+                  workspace.entitlements?.cpmEnabled ? t('projectsPage.on') : t('projectsPage.locked')
+                }
                 tone={workspace.entitlements?.cpmEnabled ? 'ok' : 'muted'}
               />
               <MetaPill
-                label="Gantt"
-                value={workspace.entitlements?.ganttEnabled !== false ? 'On' : 'Off'}
+                label={t('projectsPage.metaGantt')}
+                value={workspace.entitlements?.ganttEnabled !== false ? t('projectsPage.on') : t('projectsPage.off')}
                 tone="muted"
               />
               <MetaPill
-                label="Projects"
-                value={`${list.length}/${workspace.entitlements?.maxProjects ?? '∞'}`}
+                label={t('projectsPage.metaProjects')}
+                value={`${list.length}/${
+                  workspace.entitlements?.maxProjects != null
+                    ? workspace.entitlements.maxProjects
+                    : infinityLabel
+                }`}
                 tone={atProjectLimit ? 'warn' : 'muted'}
               />
             </div>
@@ -79,88 +88,87 @@ export default function ProjectsPage() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
-        {canManageProjects && <section className="card p-5 lg:col-span-5">
-          <div className="border-b border-ink-100 pb-4">
-            <h2 className="text-base font-semibold text-ink-900">New project</h2>
-            <p className="mt-1 text-xs text-ink-500">
-              {atProjectLimit
-                ? 'This workspace has reached its active project limit for the current plan.'
-                : 'Title is required; a short description helps your team.'}
-            </p>
-          </div>
-          <form
-            className="mt-5 space-y-4"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setCreateError(null);
-              if (!name.trim()) return;
-              try {
-                await create.mutateAsync({
-                  name: name.trim(),
-                  ...(description.trim() ? { description: description.trim() } : {}),
-                });
-                setName('');
-                setDescription('');
-              } catch (err: any) {
-                setCreateError(
-                  err?.response?.data?.message ??
-                    err?.response?.data?.code ??
-                    err?.message ??
-                    'Could not create project.',
-                );
-              }
-            }}
-          >
-            <div>
-              <label htmlFor="proj-name" className="label">
-                Project name
-              </label>
-              <input
-                id="proj-name"
-                className="input"
-                placeholder="e.g. Plot 14 build-out"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+        {canManageProjects && (
+          <section className="card p-5 lg:col-span-5">
+            <div className="border-b border-ink-100 pb-4">
+              <h2 className="text-base font-semibold text-ink-900">{t('projectsPage.newProject')}</h2>
+              <p className="mt-1 text-xs text-ink-500">
+                {atProjectLimit ? t('projectsPage.helpAtLimit') : t('projectsPage.helpDefault')}
+              </p>
             </div>
-            <div>
-              <label htmlFor="proj-desc" className="label">
-                Description <span className="font-normal text-ink-400">(optional)</span>
-              </label>
-              <textarea
-                id="proj-desc"
-                className="input min-h-[88px] resize-y py-3"
-                placeholder="Scope, target dates, or client context…"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-            <button
-              type="submit"
-              className="btn-brand w-full sm:w-auto"
-              disabled={create.isPending || !name.trim() || atProjectLimit}
+            <form
+              className="mt-5 space-y-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setCreateError(null);
+                if (!name.trim()) return;
+                try {
+                  await create.mutateAsync({
+                    name: name.trim(),
+                    ...(description.trim() ? { description: description.trim() } : {}),
+                  });
+                  setName('');
+                  setDescription('');
+                } catch (err: any) {
+                  setCreateError(
+                    err?.response?.data?.message ??
+                      err?.response?.data?.code ??
+                      err?.message ??
+                      t('projectsPage.createFailed'),
+                  );
+                }
+              }}
             >
-              {create.isPending ? 'Creating…' : 'Create project'}
-            </button>
-            {createError && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
-                {createError}
+              <div>
+                <label htmlFor="proj-name" className="label">
+                  {t('projectsPage.labelName')}
+                </label>
+                <input
+                  id="proj-name"
+                  className="input"
+                  placeholder={t('projectsPage.placeholderName')}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               </div>
-            )}
-            {atProjectLimit && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                Active projects: {list.length}/{maxProjects}. Archive an active project or move this workspace to a higher plan to add more.
+              <div>
+                <label htmlFor="proj-desc" className="label">
+                  {t('projectsPage.labelDescription')}{' '}
+                  <span className="font-normal text-ink-400">{t('projectsPage.optionalParen')}</span>
+                </label>
+                <textarea
+                  id="proj-desc"
+                  className="input min-h-[88px] resize-y py-3"
+                  placeholder={t('projectsPage.placeholderDesc')}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
               </div>
-            )}
-          </form>
-        </section>}
+              <button
+                type="submit"
+                className="btn-brand w-full sm:w-auto"
+                disabled={create.isPending || !name.trim() || atProjectLimit}
+              >
+                {create.isPending ? t('projectsPage.creating') : t('projectsPage.submitCreate')}
+              </button>
+              {createError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+                  {createError}
+                </div>
+              )}
+              {atProjectLimit && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                  {t('projectsPage.limitNote', { cur: list.length, max: maxProjects ?? 0 })}
+                </div>
+              )}
+            </form>
+          </section>
+        )}
 
         <section className={`overflow-hidden ${canManageProjects ? 'lg:col-span-7' : 'lg:col-span-12'}`}>
           <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="text-base font-semibold text-ink-900">All projects</h2>
-            {!loading && (
-              <span className="text-xs font-medium text-ink-500">{list.length} total</span>
-            )}
+            <h2 className="text-base font-semibold text-ink-900">{t('projectsPage.sectionAll')}</h2>
+            {!loading && <span className="text-xs font-medium text-ink-500">{t('projectsPage.nTotal', { n: list.length })}</span>}
           </div>
 
           {loading && (
@@ -181,9 +189,7 @@ export default function ProjectsPage() {
                 📁
               </div>
               <h3 className="mt-4 font-semibold text-ink-900">{emptyTitle}</h3>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">
-                {emptyDescription}
-              </p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">{emptyDescription}</p>
             </div>
           )}
 
@@ -204,11 +210,13 @@ export default function ProjectsPage() {
 
 function Breadcrumb({
   items,
+  ariaLabel,
 }: {
   items: Array<{ to?: string; label: string }>;
+  ariaLabel: string;
 }) {
   return (
-    <nav className="flex flex-wrap items-center gap-1.5 text-xs text-ink-500" aria-label="Breadcrumb">
+    <nav className="flex flex-wrap items-center gap-1.5 text-xs text-ink-500" aria-label={ariaLabel}>
       {items.map((item, i) => (
         <span key={i} className="flex items-center gap-1.5">
           {i > 0 && <span className="text-ink-300">/</span>}
@@ -241,7 +249,7 @@ function MetaPill({
         ? 'bg-emerald-50 text-emerald-900 ring-emerald-100'
         : tone === 'warn'
           ? 'bg-amber-50 text-amber-900 ring-amber-200'
-        : 'bg-ink-50 text-ink-700 ring-ink-200';
+          : 'bg-ink-50 text-ink-700 ring-ink-200';
   return (
     <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ring-inset ${ring}`}>
       <span className="text-ink-500">{label}</span>
@@ -259,6 +267,7 @@ function ProjectCard({
   workspaceId: string;
   canManage: boolean;
 }) {
+  const t = useT();
   const update = useUpdateProject(workspaceId, p.id);
   const remove = useDeleteProject(workspaceId);
   const [editing, setEditing] = useState(false);
@@ -267,9 +276,7 @@ function ProjectCard({
   const status = String(p.status ?? 'active');
   const isArchived = status === 'archived';
   return (
-    <div
-      className={`card card-hover flex h-full flex-col p-5 ${isArchived ? 'opacity-80' : ''}`}
-    >
+    <div className={`card card-hover flex h-full flex-col p-5 ${isArchived ? 'opacity-80' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {editing ? (
@@ -289,18 +296,16 @@ function ProjectCard({
         </div>
         <span
           className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset ${
-            isArchived
-              ? 'bg-ink-100 text-ink-600 ring-ink-200'
-              : 'bg-emerald-50 text-emerald-800 ring-emerald-100'
+            isArchived ? 'bg-ink-100 text-ink-600 ring-ink-200' : 'bg-emerald-50 text-emerald-800 ring-emerald-100'
           }`}
         >
-          {isArchived ? 'Archived' : 'Active'}
+          {isArchived ? t('projectsPage.statusArchived') : t('projectsPage.statusActive')}
         </span>
       </div>
       {editing && (
         <textarea
           className="input mt-3 min-h-[84px] resize-y text-sm"
-          placeholder="Project description"
+          placeholder={t('projectsPage.editDescPlaceholder')}
           value={draftDescription}
           onChange={(e) => setDraftDescription(e.target.value)}
         />
@@ -308,7 +313,9 @@ function ProjectCard({
       {!editing && p.description && (
         <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-ink-600">{p.description}</p>
       )}
-      {!editing && !p.description && <div className="mt-3 flex-1 text-xs italic text-ink-400">No description</div>}
+      {!editing && !p.description && (
+        <div className="mt-3 flex-1 text-xs italic text-ink-400">{t('projectsPage.noDescription')}</div>
+      )}
       <div className="mt-5 flex flex-wrap gap-2">
         {editing ? (
           <>
@@ -323,10 +330,10 @@ function ProjectCard({
                 setEditing(false);
               }}
             >
-              Save
+              {t('common.save')}
             </button>
             <button type="button" className="btn-secondary flex-1 justify-center text-sm" onClick={() => setEditing(false)}>
-              Cancel
+              {t('common.cancel')}
             </button>
           </>
         ) : (
@@ -341,7 +348,7 @@ function ProjectCard({
                   setEditing(true);
                 }}
               >
-                Edit
+                {t('common.edit')}
               </button>
             )}
             {canManage && (
@@ -350,17 +357,14 @@ function ProjectCard({
                 className="btn-secondary px-3 text-sm text-rose-700"
                 disabled={remove.isPending}
                 onClick={() => {
-                  if (window.confirm(`Delete project "${p.name}"?`)) remove.mutate(p.id);
+                  if (window.confirm(t('projectsPage.confirmDelete', { name: p.name ?? '' }))) remove.mutate(p.id);
                 }}
               >
-                Delete
+                {t('common.delete')}
               </button>
             )}
-            <Link
-              to={`/dashboard/workspaces/${workspaceId}/projects/${p.id}`}
-              className="btn-secondary flex-1 justify-center text-sm"
-            >
-              Open project →
+            <Link to={`/dashboard/workspaces/${workspaceId}/projects/${p.id}`} className="btn-secondary flex-1 justify-center text-sm">
+              {t('projectsPage.openProject')}
             </Link>
           </>
         )}

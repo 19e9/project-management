@@ -2,6 +2,7 @@ import type { Task, TaskStatus, TaskPriority } from '../../features/projects/typ
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/cn';
+import { useT } from '../../i18n/I18nProvider';
 
 interface TaskDrawerProps {
   open: boolean;
@@ -16,6 +17,7 @@ const STATUS_OPTIONS: TaskStatus[] = ['not_started', 'in_progress', 'blocked', '
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high', 'critical'];
 
 export function TaskDrawer({ open, task, readOnly, onClose, onSave, onDelete }: TaskDrawerProps) {
+  const t = useT();
   const [draft, setDraft] = useState<Task | null>(task);
 
   useEffect(() => {
@@ -32,10 +34,22 @@ export function TaskDrawer({ open, task, readOnly, onClose, onSave, onDelete }: 
   }
 
   function handleDelete() {
-    if (draft && window.confirm('Bu görevi silmek istediğinize emin misiniz?')) {
+    if (draft && window.confirm(t('taskDrawer.confirmDelete'))) {
       onDelete(draft.id);
       onClose();
     }
+  }
+
+  function statusLabel(s: TaskStatus) {
+    const key = `taskStatus.${s}`;
+    const out = t(key);
+    return out === key ? s.replace('_', ' ') : out;
+  }
+
+  function priorityLabel(p: TaskPriority) {
+    const key = `taskPriority.${p}`;
+    const out = t(key);
+    return out === key ? p : out;
   }
 
   return (
@@ -51,7 +65,7 @@ export function TaskDrawer({ open, task, readOnly, onClose, onSave, onDelete }: 
         )}
       >
         <header className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold text-fg">Görev Detayı</h2>
+          <h2 className="text-sm font-semibold text-fg">{t('taskDrawer.panelTitle')}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -63,7 +77,7 @@ export function TaskDrawer({ open, task, readOnly, onClose, onSave, onDelete }: 
 
         <div className="flex-1 overflow-y-auto space-y-4 px-5 py-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Başlık</label>
+            <label className="mb-1 block text-xs font-medium text-muted">{t('taskDrawer.labelTitle')}</label>
             {readOnly ? (
               <p className="text-sm text-fg">{draft.title}</p>
             ) : (
@@ -76,9 +90,9 @@ export function TaskDrawer({ open, task, readOnly, onClose, onSave, onDelete }: 
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Açıklama</label>
+            <label className="mb-1 block text-xs font-medium text-muted">{t('taskDrawer.description')}</label>
             {readOnly ? (
-              <p className="text-sm text-muted">{draft.description ?? '—'}</p>
+              <p className="text-sm text-muted">{draft.description ?? t('common.none')}</p>
             ) : (
               <textarea
                 rows={3}
@@ -91,9 +105,9 @@ export function TaskDrawer({ open, task, readOnly, onClose, onSave, onDelete }: 
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Durum</label>
+              <label className="mb-1 block text-xs font-medium text-muted">{t('taskDrawer.status')}</label>
               {readOnly ? (
-                <p className="text-sm text-fg">{draft.status}</p>
+                <p className="text-sm text-fg">{statusLabel(draft.status)}</p>
               ) : (
                 <select
                   className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg outline-none focus:border-brand"
@@ -101,15 +115,17 @@ export function TaskDrawer({ open, task, readOnly, onClose, onSave, onDelete }: 
                   onChange={(e) => setDraft({ ...draft, status: e.target.value as TaskStatus })}
                 >
                   {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s.replace('_', ' ')}</option>
+                    <option key={s} value={s}>
+                      {statusLabel(s)}
+                    </option>
                   ))}
                 </select>
               )}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Öncelik</label>
+              <label className="mb-1 block text-xs font-medium text-muted">{t('taskDrawer.priority')}</label>
               {readOnly ? (
-                <p className="text-sm text-fg">{draft.priority}</p>
+                <p className="text-sm text-fg">{priorityLabel(draft.priority)}</p>
               ) : (
                 <select
                   className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg outline-none focus:border-brand"
@@ -117,7 +133,9 @@ export function TaskDrawer({ open, task, readOnly, onClose, onSave, onDelete }: 
                   onChange={(e) => setDraft({ ...draft, priority: e.target.value as TaskPriority })}
                 >
                   {PRIORITY_OPTIONS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
+                    <option key={p} value={p}>
+                      {priorityLabel(p)}
+                    </option>
                   ))}
                 </select>
               )}
@@ -126,7 +144,7 @@ export function TaskDrawer({ open, task, readOnly, onClose, onSave, onDelete }: 
 
           {draft.due && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Son Tarih</label>
+              <label className="mb-1 block text-xs font-medium text-muted">{t('taskDrawer.labelDue')}</label>
               <p className="text-sm text-fg">{draft.due}</p>
             </div>
           )}
@@ -134,10 +152,10 @@ export function TaskDrawer({ open, task, readOnly, onClose, onSave, onDelete }: 
 
         {!readOnly && (
           <footer className="flex items-center justify-between border-t border-border px-5 py-4">
-            <Button variant="danger" onClick={handleDelete}>Sil</Button>
+            <Button variant="danger" onClick={handleDelete}>{t('common.delete')}</Button>
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={onClose}>İptal</Button>
-              <Button onClick={handleSave}>Kaydet</Button>
+              <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
+              <Button onClick={handleSave}>{t('common.save')}</Button>
             </div>
           </footer>
         )}

@@ -1,17 +1,22 @@
 import { Link } from 'react-router-dom';
 import { Logo } from '../ui/Logo';
 import { IconStar } from '../ui/Icons';
+import { useI18n } from '../../i18n/I18nProvider';
 
 export function AuthBrandPanel({
-  title = 'Plan, schedule and ship.',
-  subtitle = 'Built-in Critical Path, Gantt and WBS — without the spreadsheets.',
+  title,
+  subtitle,
 }: {
   title?: string;
   subtitle?: string;
-}) {
+} = {}) {
+  const { t } = useI18n();
+  const bullets = [t('auth.brandB1'), t('auth.brandB2'), t('auth.brandB3'), t('auth.brandB4')];
+  const displayTitle = title ?? t('auth.brandTitle');
+  const displaySubtitle = subtitle ?? t('auth.brandSubtitle');
+
   return (
     <aside className="relative hidden h-full overflow-hidden bg-ink-950 lg:flex lg:flex-col lg:justify-between">
-      {/* gradient mesh */}
       <div
         className="pointer-events-none absolute inset-0 opacity-90"
         style={{
@@ -42,16 +47,11 @@ export function AuthBrandPanel({
 
       <div className="relative z-10 px-10 pb-10">
         <div className="max-w-md">
-          <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">{title}</h2>
-          <p className="mt-3 text-pretty text-white/70">{subtitle}</p>
+          <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">{displayTitle}</h2>
+          <p className="mt-3 text-pretty text-white/70">{displaySubtitle}</p>
 
           <ul className="mt-8 space-y-3 text-sm text-white/80">
-            {[
-              'Drag-and-drop Gantt with live dependencies',
-              'Built-in CPM with critical-path highlighting',
-              'Resource histograms that prevent overload',
-              'Multi-tenant workspaces with RBAC',
-            ].map((b) => (
+            {bullets.map((b) => (
               <li key={b} className="flex items-start gap-3">
                 <span className="mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full bg-white/10 text-white">
                   <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -70,22 +70,19 @@ export function AuthBrandPanel({
               ))}
             </div>
             <blockquote className="mt-2 text-sm leading-relaxed text-white/85">
-              “We replaced three spreadsheets and an aging MS Project install with PlanForge. Our
-              ops lead now actually opens the plan.”
+              “{t('auth.brandQuote')}”
             </blockquote>
-            <figcaption className="mt-3 text-xs text-white/60">
-              Maya R. · Head of Delivery, NorthBuild
-            </figcaption>
+            <figcaption className="mt-3 text-xs text-white/60">{t('auth.brandFig')}</figcaption>
           </figure>
 
           <p className="mt-8 text-xs text-white/40">
-            By continuing you agree to our{' '}
+            {t('auth.termsLead')}{' '}
             <Link to="#" className="text-white/70 underline-offset-2 hover:underline">
-              Terms
+              {t('auth.terms')}
             </Link>{' '}
-            and{' '}
+            {t('auth.and')}{' '}
             <Link to="#" className="text-white/70 underline-offset-2 hover:underline">
-              Privacy Policy
+              {t('auth.privacy')}
             </Link>
             .
           </p>

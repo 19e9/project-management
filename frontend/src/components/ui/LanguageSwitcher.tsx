@@ -1,13 +1,15 @@
 import { localeOptions, useI18n, type Locale } from '../../i18n/I18nProvider';
 
-export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
+export function LanguageSwitcher({ compact = false, dark = false }: { compact?: boolean; dark?: boolean }) {
   const { locale, setLocale } = useI18n();
 
   return (
     <label
-      className={`inline-flex items-center rounded-xl border border-ink-200 bg-white text-ink-700 shadow-soft ${
-        compact ? 'h-9 px-2 text-xs' : 'h-10 px-3 text-sm'
-      }`}
+      className={`inline-flex items-center rounded-xl border shadow-soft ${
+        dark
+          ? 'border-white/20 bg-white/5 text-ink-100'
+          : 'border-ink-200 bg-white text-ink-700'
+      } ${compact ? 'h-9 px-2 text-xs' : 'h-10 px-3 text-sm'}`}
       title="Language"
     >
       <select
