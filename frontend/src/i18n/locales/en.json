@@ -120,6 +120,23 @@
       "pricing": "Pricing",
       "customers": "Customers"
     },
+    "footer": {
+      "tagline": "Plan, schedule and ship faster. PlanForge brings Gantt, WBS and the Critical Path Method into one calm, modern workspace.",
+      "secondaryCta": "See pricing →",
+      "colProduct": "Product",
+      "colCompany": "Company",
+      "colResources": "Resources",
+      "colLegal": "Legal",
+      "about": "About",
+      "careers": "Careers",
+      "contact": "Contact",
+      "documentation": "Documentation",
+      "apiReference": "API reference",
+      "status": "Status",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "security": "Security"
+    },
     "footerRights": "All rights reserved.",
     "systemsOperational": "All systems operational",
     "copyright": "© {year} PlanForge Labs, Inc."

@@ -4,8 +4,12 @@ import { usePublicSiteFooter } from '../../features/cms/hooks';
 import { MarketingLink } from './MarketingLink';
 import { cn } from '../../lib/cn';
 import { useI18n, useT } from '../../i18n/I18nProvider';
-import { pickLocalized } from '../../i18n/pickLocalized';
-import type { LocalizedString } from '../../i18n/pickLocalized';
+import {
+  resolveFooterColumnTitle,
+  resolveFooterLinkLabel,
+  resolveFooterSecondaryCta,
+  resolveFooterTagline,
+} from '../../i18n/footerCmsLocale';
 
 export function Footer({ className }: { className?: string }) {
   const t = useT();
@@ -35,7 +39,7 @@ export function Footer({ className }: { className?: string }) {
             ) : (
               <>
                 <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink-400">
-                  {pickLocalized(locale, q.data?.footerTagline as LocalizedString)}
+                  {resolveFooterTagline(locale, t, q.data?.footerTagline)}
                 </p>
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <Link to="/register" className="btn-brand">
@@ -45,7 +49,7 @@ export function Footer({ className }: { className?: string }) {
                     href={q.data?.secondaryCtaHref ?? '#'}
                     className="btn px-4 py-2 text-sm text-ink-200 hover:text-white"
                   >
-                    {pickLocalized(locale, q.data?.secondaryCtaLabel as LocalizedString)}
+                    {resolveFooterSecondaryCta(locale, t, q.data?.secondaryCtaLabel)}
                   </MarketingLink>
                 </div>
               </>
@@ -70,13 +74,13 @@ export function Footer({ className }: { className?: string }) {
               cols.map((c, ci) => (
                 <div key={`${ci}-${c.title}`}>
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-                    {pickLocalized(locale, c.title as LocalizedString)}
+                    {resolveFooterColumnTitle(locale, t, c.title)}
                   </h4>
                   <ul className="mt-4 space-y-2.5 text-sm">
                     {c.links.map((l) => (
                       <li key={`${c.title}:${l.label}:${l.href}`}>
                         <MarketingLink href={l.href} className="text-ink-300 transition hover:text-white">
-                          {pickLocalized(locale, l.label as LocalizedString)}
+                          {resolveFooterLinkLabel(locale, t, l.href, l.label)}
                         </MarketingLink>
                       </li>
                     ))}

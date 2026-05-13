@@ -120,6 +120,23 @@
       "pricing": "Fiyatlandırma",
       "customers": "Müşteriler"
     },
+    "footer": {
+      "tagline": "Daha hızlı planlayın, zamanlayın ve teslim edin. PlanForge; Gantt, WBS ve Kritik Yol Yöntemini sakin ve modern tek bir çalışma alanında bir araya getirir.",
+      "secondaryCta": "Fiyatlandırmayı gör →",
+      "colProduct": "Ürün",
+      "colCompany": "Şirket",
+      "colResources": "Kaynaklar",
+      "colLegal": "Yasal",
+      "about": "Hakkında",
+      "careers": "Kariyer",
+      "contact": "İletişim",
+      "documentation": "Dokümantasyon",
+      "apiReference": "API referansı",
+      "status": "Durum",
+      "privacy": "Gizlilik",
+      "terms": "Koşullar",
+      "security": "Güvenlik"
+    },
     "footerRights": "Tüm hakları saklıdır.",
     "systemsOperational": "Tüm sistemler çalışıyor",
     "copyright": "© {year} PlanForge Labs, Inc."
