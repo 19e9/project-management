@@ -26,6 +26,9 @@ import { EnterpriseContract } from '../billing/schemas/enterprise-contract.schem
 
 const DAY_MS = 86_400_000;
 
+/** Demo workspaces recreated on each `npm run seed` (matched by exact name). */
+const DEMO_WORKSPACE_NAMES = ['Demo Construction Co.', 'Demo Software Studio'] as const;
+
 dotenv.config();
 
 async function run() {
@@ -49,7 +52,7 @@ async function run() {
 
   log.log('Wiping existing demo data...');
   await Users.deleteMany({ email: { $in: ['owner@demo.local', 'member@demo.local'] } });
-  const oldDemo = await Workspaces.find({ name: 'Demo Construction Co.' }).lean();
+  const oldDemo = await Workspaces.find({ name: { $in: DEMO_WORKSPACE_NAMES } }).lean();
   for (const w of oldDemo) {
     const wid = w._id;
     await Promise.all([
@@ -113,6 +116,36 @@ async function run() {
     action: 'added',
     billableAfter: true,
     at: new Date(Date.now() - 45 * DAY_MS),
+  });
+
+  log.log('Creating software / web workspace + memberships...');
+  const wsDev = await Workspaces.create({
+    name: 'Demo Software Studio',
+    ownerId: owner._id,
+    plan: 'pro',
+    subscriptionPlanId: proSnap ? new Types.ObjectId(proSnap.id) : undefined,
+    entitlements: proSnap?.entitlements ?? PLAN_DEFAULTS.pro,
+    trialEndsAt: new Date(Date.now() + 5 * DAY_MS),
+  });
+  await Members.insertMany([
+    { workspaceId: wsDev._id, userId: owner._id, role: 'owner', status: 'active' },
+    { workspaceId: wsDev._id, userId: member._id, role: 'member', status: 'active' },
+  ]);
+  await billing.recordSeatEvent({
+    workspaceId: String(wsDev._id),
+    userId: String(owner._id),
+    role: 'owner',
+    action: 'added',
+    billableAfter: true,
+    at: new Date(Date.now() - 30 * DAY_MS),
+  });
+  await billing.recordSeatEvent({
+    workspaceId: String(wsDev._id),
+    userId: String(member._id),
+    role: 'member',
+    action: 'added',
+    billableAfter: true,
+    at: new Date(Date.now() - 28 * DAY_MS),
   });
 
   log.log('Seeding billing ledger (demo)...');
@@ -302,13 +335,165 @@ async function run() {
   await link(framing._id, roofing._id);
   await link(roofing._id, interior._id);
 
-  log.log('Computing CPM snapshot...');
+  log.log('Computing CPM snapshot (construction)...');
   const result = await cpm.compute(String(project._id));
   log.log(
     `CPM done — duration: ${result.durationDays}d, critical tasks: ${result.criticalTaskIds.length}`,
   );
 
+  log.log('Creating website development project (software workspace)...');
+  await Projects.deleteMany({ workspaceId: wsDev._id });
+  const webProject = await Projects.create({
+    workspaceId: wsDev._id,
+    name: 'Corporate website — MVP launch',
+    description:
+      'Kurumsal web sitesi: keşif, tasarım, frontend, headless CMS, kalite ve canlıya alma.',
+    code: 'WEB-MVP',
+    status: 'active',
+    leadId: owner._id,
+    startDate: new Date('2026-06-02T00:00:00.000Z'),
+    endDate: new Date('2026-08-22T00:00:00.000Z'),
+  });
+
+  await Tasks.deleteMany({ projectId: webProject._id });
+  await Deps.deleteMany({ projectId: webProject._id });
+
+  const mkDevTask = async (
+    over: Partial<{
+      title: string;
+      parent: Types.ObjectId | null;
+      wbs: string;
+      start: string;
+      end: string;
+      duration: number;
+      assignees: Types.ObjectId[];
+      sortOrder: number;
+    }>,
+  ) =>
+    Tasks.create({
+      workspaceId: wsDev._id,
+      projectId: webProject._id,
+      title: over.title!,
+      parentTaskId: over.parent ?? null,
+      wbsCode: over.wbs,
+      startDate: D(over.start!),
+      endDate: D(over.end!),
+      durationDays: over.duration!,
+      status: 'not_started',
+      priority: 'medium',
+      assigneeIds: over.assignees ?? [],
+      sortOrder: over.sortOrder ?? 0,
+    });
+
+  const disc = await mkDevTask({
+    title: '1. Discovery',
+    wbs: '1',
+    start: '2026-06-02',
+    end: '2026-06-12',
+    duration: 11,
+    sortOrder: 1,
+  });
+  const req = await mkDevTask({
+    title: '1.1 Requirements & information architecture',
+    parent: disc._id,
+    wbs: '1.1',
+    start: '2026-06-02',
+    end: '2026-06-06',
+    duration: 5,
+    assignees: [member._id],
+    sortOrder: 1,
+  });
+  const wire = await mkDevTask({
+    title: '1.2 UX wireframes & content outline',
+    parent: disc._id,
+    wbs: '1.2',
+    start: '2026-06-07',
+    end: '2026-06-12',
+    duration: 6,
+    assignees: [member._id],
+    sortOrder: 2,
+  });
+  const design = await mkDevTask({
+    title: '2. UI design',
+    wbs: '2',
+    start: '2026-06-13',
+    end: '2026-06-24',
+    duration: 12,
+    assignees: [member._id],
+    sortOrder: 2,
+  });
+  const feShell = await mkDevTask({
+    title: '3.1 Frontend scaffold & routing',
+    wbs: '3.1',
+    start: '2026-06-22',
+    end: '2026-06-28',
+    duration: 7,
+    assignees: [member._id],
+    sortOrder: 3,
+  });
+  const fePages = await mkDevTask({
+    title: '3.2 Responsive pages & components',
+    wbs: '3.2',
+    start: '2026-06-29',
+    end: '2026-07-18',
+    duration: 20,
+    assignees: [member._id],
+    sortOrder: 4,
+  });
+  const cms = await mkDevTask({
+    title: '4. Headless CMS & API integration',
+    wbs: '4',
+    start: '2026-07-14',
+    end: '2026-07-31',
+    duration: 18,
+    assignees: [member._id],
+    sortOrder: 5,
+  });
+  const qa = await mkDevTask({
+    title: '5. QA, accessibility & SEO',
+    wbs: '5',
+    start: '2026-07-28',
+    end: '2026-08-12',
+    duration: 16,
+    assignees: [member._id],
+    sortOrder: 6,
+  });
+  const goLive = await mkDevTask({
+    title: '6. Production deploy & handoff',
+    wbs: '6',
+    start: '2026-08-11',
+    end: '2026-08-22',
+    duration: 12,
+    assignees: [member._id],
+    sortOrder: 7,
+  });
+
+  log.log('Creating dependencies — website project (FS)...');
+  const linkDev = (predId: Types.ObjectId, succId: Types.ObjectId, lag = 0) =>
+    Deps.create({
+      workspaceId: wsDev._id,
+      projectId: webProject._id,
+      predecessorId: predId,
+      successorId: succId,
+      type: 'FS',
+      lagDays: lag,
+    });
+  await linkDev(req._id, wire._id);
+  await linkDev(wire._id, design._id);
+  await linkDev(design._id, feShell._id);
+  await linkDev(feShell._id, fePages._id);
+  await linkDev(fePages._id, cms._id);
+  await linkDev(cms._id, qa._id);
+  await linkDev(qa._id, goLive._id);
+
+  log.log('Computing CPM snapshot (website project)...');
+  const webCpm = await cpm.compute(String(webProject._id));
+  log.log(
+    `CPM done (web) — duration: ${webCpm.durationDays}d, critical tasks: ${webCpm.criticalTaskIds.length}`,
+  );
+
   log.log('Seed complete.');
+  log.log(`  Workspaces: ${DEMO_WORKSPACE_NAMES.join(', ')}`);
   log.log('  Login: owner@demo.local / Passw0rd!');
   log.log('  Login: member@demo.local / Passw0rd!');
   await app.close();
