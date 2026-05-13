@@ -114,6 +114,12 @@
     "finalBody": "Free forever for small teams. 14-day Pro trial when you're ready. No card up front, no migration drama.",
     "finalTrust": "Trusted by ambitious teams worldwide",
     "comparePlans": "Compare plans",
+    "nav": {
+      "features": "Features",
+      "howItWorks": "How it works",
+      "pricing": "Pricing",
+      "customers": "Customers"
+    },
     "footerRights": "All rights reserved.",
     "systemsOperational": "All systems operational",
     "copyright": "© {year} PlanForge Labs, Inc."

@@ -114,6 +114,12 @@
     "finalBody": "Küçük ekipler için süresiz ücretsiz. Hazır olduğunuzda 14 günlük Pro denemesi. Ön kart yok, taşıma melodramı yok.",
     "finalTrust": "Hırslı takımların dünya çapında tercihi",
     "comparePlans": "Paketleri karşılaştır",
+    "nav": {
+      "features": "Özellikler",
+      "howItWorks": "Nasıl çalışır",
+      "pricing": "Fiyatlandırma",
+      "customers": "Müşteriler"
+    },
     "footerRights": "Tüm hakları saklıdır.",
     "systemsOperational": "Tüm sistemler çalışıyor",
     "copyright": "© {year} PlanForge Labs, Inc."

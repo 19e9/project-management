@@ -9,6 +9,31 @@ import { useI18n, useT } from '../../i18n/I18nProvider';
 import { pickLocalized } from '../../i18n/pickLocalized';
 import type { LocalizedString } from '../../i18n/pickLocalized';
 
+/** Default CMS anchors → i18n; keeps TR/EN in sync regardless of plain English CMS labels */
+const LANDING_NAV_I18N: Record<string, string> = {
+  features: 'marketing.nav.features',
+  how: 'marketing.nav.howItWorks',
+  pricing: 'marketing.nav.pricing',
+  proof: 'marketing.nav.customers',
+};
+
+function landingTopNavTKey(href: string): string | null {
+  const trimmed = href.trim();
+  let fragment = '';
+  try {
+    if (/^https?:\/\//i.test(trimmed)) {
+      fragment = new URL(trimmed).hash.slice(1);
+    } else {
+      const idx = trimmed.indexOf('#');
+      fragment = idx >= 0 ? trimmed.slice(idx + 1) : '';
+    }
+  } catch {
+    return null;
+  }
+  const id = fragment.split(/[?&]/)[0].toLowerCase();
+  return id ? LANDING_NAV_I18N[id] ?? null : null;
+}
+
 type NavItem = { label: string; href: string; key: string };
 
 export function Navbar() {
@@ -21,11 +46,14 @@ export function Navbar() {
 
   const links: NavItem[] = useMemo(() => {
     const top =
-      footerQ.data?.topNavLinks?.map((l, i) => ({
-        label: pickLocalized(locale, l.label as LocalizedString),
-        href: l.href,
-        key: `top:${l.href}:${i}`,
-      })) ?? [];
+      footerQ.data?.topNavLinks?.map((l, i) => {
+        const tk = landingTopNavTKey(l.href);
+        return {
+          label: tk ? t(tk) : pickLocalized(locale, l.label as LocalizedString),
+          href: l.href,
+          key: `top:${l.href}:${i}`,
+        };
+      }) ?? [];
     const cms =
       navQ.data?.nav?.map((n) => ({
         label: pickLocalized(locale, n.title as LocalizedString),
@@ -33,7 +61,7 @@ export function Navbar() {
         key: `page:${n.slug}`,
       })) ?? [];
     return [...top, ...cms];
-  }, [footerQ.data, navQ.data, locale]);
+  }, [footerQ.data, navQ.data, locale, t]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
