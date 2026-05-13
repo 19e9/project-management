@@ -1,4 +1,5 @@
 import { type ReactNode, useMemo, useState } from 'react';
+import { useT } from '../../i18n/I18nProvider';
 import type { TaskItem } from '../tasks/hooks';
 import type { WorkspaceMemberRow } from '../workspaces/hooks';
 import {
@@ -47,6 +48,7 @@ export function ProjectCommandCenter({
   canCreateTask: boolean;
   onQuickAction: (action: QuickAction) => void;
 }) {
+  const t = useT();
   const overdue = useMemo(() => countOverdue(tasks), [tasks]);
   const health = deriveHealth({ blocked, overdue, completionPct, criticalCount });
   const risk = deriveRiskLevel({ overdue, blocked, completionPct });
@@ -97,6 +99,13 @@ export function ProjectCommandCenter({
           <div className="flex flex-wrap gap-2">
             {canCreateTask && <QuickBtn icon="+" label="Task" onClick={() => onQuickAction({ type: 'task' })} />}
             {canCreateTask && <QuickBtn icon="◇" label="Milestone" onClick={() => onQuickAction({ type: 'milestone' })} />}
+            {canManage && (
+              <QuickBtn
+                icon="◉"
+                label={t('projectDetail.quickMembers')}
+                onClick={() => onQuickAction({ type: 'members' })}
+              />
+            )}
             {canManage && <QuickBtn icon="✉" label="Invite" onClick={() => onQuickAction({ type: 'invite' })} />}
             {canManage && <QuickBtn icon="↧" label="Upload" onClick={() => onQuickAction({ type: 'docs' })} />}
             <QuickBtn icon="↗" label="Export" onClick={() => onQuickAction({ type: 'export' })} />
@@ -256,6 +265,7 @@ export function ProjectCommandCenter({
 export type QuickAction =
   | { type: 'task' }
   | { type: 'milestone' }
+  | { type: 'members' }
   | { type: 'invite' }
   | { type: 'docs' }
   | { type: 'export' }

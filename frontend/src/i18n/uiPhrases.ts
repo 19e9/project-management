@@ -107,7 +107,7 @@ const phrases: PhraseMap = {
   Subscriptions: { tr: 'Abonelikler' },
   Plans: { tr: 'Planlar' },
   Invoices: { tr: 'Faturalar' },
-  Payments: { tr: 'Odemeler' },
+  Payments: { tr: 'Ödemeler' },
   Refunds: { tr: 'Iadeler' },
   Enterprise: { tr: 'Kurumsal' },
   Analytics: { tr: 'Analitik' },

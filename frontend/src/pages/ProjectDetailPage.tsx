@@ -97,6 +97,7 @@ export default function ProjectDetailPage() {
 
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'member' | 'viewer'>('member');
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -124,7 +125,6 @@ export default function ProjectDetailPage() {
   const canCreateTask = canManageProject || workspaceRole === 'member';
   const canUpdateTaskProgress = canCreateTask;
   const canComment = workspaceRole !== 'viewer' && workspaceRole !== 'client';
-  const canGrantOwner = dashboard?.myRole === 'platform_admin' || workspaceRole === 'owner';
   const projectMemberIds = new Set(tasks.flatMap((task) => task.assigneeIds ?? []));
   const projectMembers = members.filter((member) => projectMemberIds.has(member.userId));
   const taskDrawerMembers = canManageProject ? members : projectMembers;
@@ -173,7 +173,14 @@ export default function ProjectDetailPage() {
         if (!canManageProject) return;
         setInviteError(null);
         setMemberActionError(null);
+        setMembersOpen(false);
         setInviteOpen(true);
+        break;
+      case 'members':
+        if (!canManageProject) return;
+        setMemberActionError(null);
+        setInviteOpen(false);
+        setMembersOpen(true);
         break;
       case 'docs':
         setTab('docs');
@@ -467,7 +474,7 @@ export default function ProjectDetailPage() {
         <div className="fixed inset-0 z-[70] grid place-items-center bg-ink-900/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-ink-200">
             <h3 className="text-lg font-semibold text-ink-900">{t('projectDetail.inviteTitle')}</h3>
-            <p className="mt-1 text-xs text-ink-500">{t('projectDetail.inviteLead')}</p>
+            <p className="mt-1 text-xs text-ink-500">{t('projectDetail.inviteLeadOnly')}</p>
             <form
               className="mt-4 space-y-3"
               onSubmit={async (e) => {
@@ -529,70 +536,72 @@ export default function ProjectDetailPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
 
-            <div className="mt-5 border-t border-ink-100 pt-4">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <h4 className="text-sm font-semibold text-ink-900">{t('projectDetail.workspaceMembers')}</h4>
-                <span className="text-[11px] font-medium text-ink-500">
-                  {t('projectDetail.membersActiveCount', { n: members.length })}
-                </span>
-              </div>
-              <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                {members.map((m) => (
-                  <MemberManagerRow
-                    key={m.userId}
-                    member={m}
-                    isPrimaryOwner={m.userId === workspace?.ownerId}
-                    rolePending={updateMemberRole.isPending}
-                    removePending={removeMember.isPending}
-                    canGrantOwner={canGrantOwner}
-                    onRoleChange={async (role) => {
+      {membersOpen && (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-ink-900/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-ink-200">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h3 className="text-lg font-semibold text-ink-900">{t('projectDetail.workspaceMembers')}</h3>
+              <span className="text-[11px] font-medium text-ink-500">
+                {t('projectDetail.membersActiveCount', { n: members.length })}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-ink-500">{t('projectDetail.membersModalLead')}</p>
+            <ul className="mt-4 max-h-[min(24rem,calc(100vh-12rem))] space-y-2 overflow-y-auto pr-1">
+              {members.map((m) => (
+                <MemberManagerRow
+                  key={m.userId}
+                  member={m}
+                  rolePending={updateMemberRole.isPending}
+                  removePending={removeMember.isPending}
+                  onRoleChange={async (role) => {
+                    setMemberActionError(null);
+                    try {
+                      await updateMemberRole.mutateAsync({ userId: m.userId, role });
+                    } catch (err: any) {
+                      setMemberActionError(
+                        err?.response?.data?.message ??
+                          err?.response?.data?.code ??
+                          err?.message ??
+                          t('projectDetail.errUpdateMember'),
+                      );
+                    }
+                  }}
+                  onRemove={async () => {
+                    if (window.confirm(t('projectDetail.removeMemberConfirm', { name: m.displayName ?? '' }))) {
                       setMemberActionError(null);
                       try {
-                        await updateMemberRole.mutateAsync({ userId: m.userId, role });
+                        await removeMember.mutateAsync(m.userId);
                       } catch (err: any) {
                         setMemberActionError(
                           err?.response?.data?.message ??
                             err?.response?.data?.code ??
                             err?.message ??
-                            t('projectDetail.errUpdateMember'),
+                            t('projectDetail.errRemoveMember'),
                         );
                       }
-                    }}
-                    onRemove={async () => {
-                      if (window.confirm(t('projectDetail.removeMemberConfirm', { name: m.displayName ?? '' }))) {
-                        setMemberActionError(null);
-                        try {
-                          await removeMember.mutateAsync(m.userId);
-                          setInviteOpen(false);
-                        } catch (err: any) {
-                          setMemberActionError(
-                            err?.response?.data?.message ??
-                              err?.response?.data?.code ??
-                              err?.message ??
-                              t('projectDetail.errRemoveMember'),
-                          );
-                        }
-                      }
-                    }}
-                  />
-                ))}
-                {members.length === 0 && (
-                  <li className="rounded-xl border border-dashed border-ink-200 px-4 py-8 text-center text-sm text-ink-500">
-                    {t('projectDetail.noMembersLoaded')}
-                  </li>
-                )}
-              </ul>
-              {memberActionError && (
-                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
-                  {memberActionError}
-                </div>
+                    }
+                  }}
+                />
+              ))}
+              {members.length === 0 && (
+                <li className="rounded-xl border border-dashed border-ink-200 px-4 py-8 text-center text-sm text-ink-500">
+                  {t('projectDetail.noMembersLoaded')}
+                </li>
               )}
-              <div className="mt-4 flex justify-end">
-                <button type="button" className="btn-secondary px-4 text-sm" onClick={() => setInviteOpen(false)}>
-                  {t('common.done')}
-                </button>
+            </ul>
+            {memberActionError && (
+              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+                {memberActionError}
               </div>
+            )}
+            <div className="mt-4 flex justify-end">
+              <button type="button" className="btn-secondary px-4 text-sm" onClick={() => setMembersOpen(false)}>
+                {t('common.done')}
+              </button>
             </div>
           </div>
         </div>
@@ -628,60 +637,76 @@ function Breadcrumb({
   );
 }
 
+function memberRowDisplayName(member: import('../features/workspaces/hooks').WorkspaceMemberRow, t: TFunction): string {
+  const name = member.displayName?.trim();
+  if (name) return name;
+  const email = member.email?.trim();
+  if (!email) return t('projectDetail.memberUnknown');
+  const local = email.split('@')[0] ?? '';
+  if (!local) return t('projectDetail.memberUnknown');
+  return local.replace(/[._-]+/g, ' ');
+}
+
 function MemberManagerRow({
   member,
-  isPrimaryOwner,
   rolePending,
   removePending,
-  canGrantOwner,
   onRoleChange,
   onRemove,
 }: {
   member: import('../features/workspaces/hooks').WorkspaceMemberRow;
-  isPrimaryOwner: boolean;
   rolePending: boolean;
   removePending: boolean;
-  canGrantOwner: boolean;
-  onRoleChange: (role: 'owner' | 'admin' | 'member' | 'viewer') => Promise<void>;
+  onRoleChange: (role: 'member' | 'viewer') => Promise<void>;
   onRemove: () => Promise<void>;
 }) {
   const t = useT();
+  const ownerLocked = member.role === 'owner';
+  const displayName = memberRowDisplayName(member, t);
+  const memberViewerValue = member.role === 'member' || member.role === 'viewer' ? member.role : '';
   return (
-    <li className="flex flex-col gap-2 rounded-xl border border-ink-100 bg-ink-50/30 px-3 py-2 sm:flex-row sm:items-center">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-semibold text-ink-900">{member.displayName}</span>
-          {isPrimaryOwner && (
-            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-100">
-              {t('roles.primaryOwner')}
-            </span>
-          )}
-        </div>
-        <div className="truncate text-xs text-ink-500">{member.email}</div>
+    <li className="flex flex-row flex-wrap items-center gap-3 rounded-xl border border-ink-100 bg-white px-3 py-2.5">
+      <span className="min-w-0 flex-1 text-sm font-semibold text-ink-900" title={displayName}>
+        {displayName}
+      </span>
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        {ownerLocked ? (
+          <span
+            className="input flex h-9 min-w-[7.5rem] items-center justify-center py-1 text-xs font-medium text-ink-600"
+            title={t('roles.ownerRoleLockedTitle')}
+          >
+            {t('roles.optionOwner')}
+          </span>
+        ) : (
+          <select
+            className="input h-9 min-w-[7.5rem] py-1 text-xs"
+            value={memberViewerValue}
+            disabled={rolePending}
+            title={t('projectDetail.labelRole')}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === 'member' || v === 'viewer') void onRoleChange(v);
+            }}
+          >
+            {memberViewerValue === '' && (
+              <option value="" disabled>
+                {t('projectDetail.pickMemberRole')}
+              </option>
+            )}
+            <option value="member">{t('roles.optionMember')}</option>
+            <option value="viewer">{t('roles.optionViewer')}</option>
+          </select>
+        )}
+        <button
+          type="button"
+          className="btn-secondary h-9 px-3 text-xs text-rose-700"
+          disabled={removePending || ownerLocked}
+          title={ownerLocked ? t('roles.ownerRemoveLockedTitle') : t('projectDetail.removeFromWs')}
+          onClick={onRemove}
+        >
+          {t('projectDetail.removeMemberBtn')}
+        </button>
       </div>
-      <select
-        className="input h-9 min-w-[120px] py-1 text-xs"
-        value={member.role}
-        disabled={rolePending || isPrimaryOwner}
-        title={isPrimaryOwner ? t('roles.ownerRoleLockedTitle') : undefined}
-        onChange={(e) => onRoleChange(e.target.value as 'owner' | 'admin' | 'member' | 'viewer')}
-      >
-        <option value="admin">{t('roles.optionAdmin')}</option>
-        <option value="member">{t('roles.optionMember')}</option>
-        <option value="viewer">{t('roles.optionViewer')}</option>
-        {(canGrantOwner || member.role === 'owner') && <option value="owner">{t('roles.optionOwner')}</option>}
-      </select>
-      <button
-        type="button"
-        className="btn-secondary h-9 px-3 text-xs text-rose-700"
-        disabled={removePending || isPrimaryOwner}
-        title={
-          isPrimaryOwner ? t('roles.ownerRemoveLockedTitle') : t('projectDetail.removeFromWs')
-        }
-        onClick={onRemove}
-      >
-        {t('projectDetail.removeMemberBtn')}
-      </button>
     </li>
   );
 }
