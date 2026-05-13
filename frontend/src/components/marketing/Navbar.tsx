@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Logo } from '../ui/Logo';
 import { IconArrowRight } from '../ui/Icons';
+import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 import { usePublicSiteFooter, usePublicSiteNav } from '../../features/cms/hooks';
 import { isExternalHref } from './MarketingLink';
+import { useT } from '../../i18n/I18nProvider';
 
 type NavItem = { label: string; href: string; key: string };
 
@@ -12,11 +14,12 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
   const footerQ = usePublicSiteFooter();
   const navQ = usePublicSiteNav();
+  const t = useT();
 
   const links: NavItem[] = useMemo(() => {
     const top =
       footerQ.data?.topNavLinks?.map((l, i) => ({
-        label: l.label,
+        label: translateTopNavLabel(l.label, t),
         href: l.href,
         key: `top:${l.href}:${i}`,
       })) ?? [];
@@ -27,7 +30,7 @@ export function Navbar() {
         key: `page:${n.slug}`,
       })) ?? [];
     return [...top, ...cms];
-  }, [footerQ.data, navQ.data]);
+  }, [footerQ.data, navQ.data, t]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -41,9 +44,23 @@ export function Navbar() {
 
   const navClassMobile = 'block rounded-xl px-3 py-2.5 text-sm font-medium text-ink-700 hover:bg-ink-100';
 
+  function scrollToHash(href: string) {
+    const hash = href.startsWith('/#') ? href.slice(2) : href.startsWith('#') ? href.slice(1) : '';
+    if (!hash) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(decodeURIComponent(hash))?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  }
+
   function renderNavLink(item: NavItem, variant: 'desktop' | 'mobile') {
     const cls = variant === 'desktop' ? navClassDesktop : navClassMobile;
-    const close = () => setOpen(false);
+    const close = () => {
+      setOpen(false);
+      scrollToHash(item.href);
+    };
     if (isExternalHref(item.href)) {
       return (
         <a key={item.key} href={item.href} className={cls} onClick={close}>
@@ -82,11 +99,12 @@ export function Navbar() {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
+          <LanguageSwitcher compact />
           <Link to="/login" className="btn-ghost">
-            Sign in
+            {t('marketing.signIn')}
           </Link>
           <Link to="/register" className="btn-brand">
-            Start free
+            {t('marketing.startFree')}
             <IconArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -112,11 +130,12 @@ export function Navbar() {
           <div className="container space-y-1 py-4">
             {links.map((l) => renderNavLink(l, 'mobile'))}
             <div className="grid gap-2 pt-3">
+              <LanguageSwitcher />
               <Link to="/login" onClick={() => setOpen(false)} className="btn-secondary w-full">
-                Sign in
+                {t('marketing.signIn')}
               </Link>
               <Link to="/register" onClick={() => setOpen(false)} className="btn-brand w-full">
-                Start free
+                {t('marketing.startFree')}
               </Link>
             </div>
           </div>
@@ -124,4 +143,13 @@ export function Navbar() {
       )}
     </header>
   );
+}
+
+function translateTopNavLabel(label: string, t: (key: string) => string) {
+  const key = label.trim().toLowerCase();
+  if (key === 'features') return t('marketing.navFeatures');
+  if (key === 'how it works') return t('marketing.navHow');
+  if (key === 'pricing') return t('marketing.navPricing');
+  if (key === 'customers') return t('marketing.navCustomers');
+  return label;
 }

@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMyDashboard } from '../features/dashboard/hooks';
-import { useDeleteProject, useProject, useUpdateProject } from '../features/projects/hooks';
+import {
+  useDeleteProject,
+  useProject,
+  useRemoveProjectMember,
+  useUpdateProject,
+} from '../features/projects/hooks';
 import {
   useAnalyticsOverview,
   useCpm,
@@ -17,7 +22,6 @@ import {
 import {
   useInviteWorkspaceMember,
   useRemoveWorkspaceMember,
-  useUpdateWorkspaceMemberRole,
   useWorkspace,
   useWorkspaceMembers,
 } from '../features/workspaces/hooks';
@@ -86,13 +90,13 @@ export default function ProjectDetailPage() {
   const patchTaskMut = usePatchTask(workspaceId!, projectId!);
   const { data: members = [] } = useWorkspaceMembers(workspaceId);
   const inviteMutation = useInviteWorkspaceMember(workspaceId!);
-  const updateMemberRole = useUpdateWorkspaceMemberRole(workspaceId!);
-  const removeMember = useRemoveWorkspaceMember(workspaceId!);
+  const removeProjectMember = useRemoveProjectMember(workspaceId!, projectId!);
+  const removeWorkspaceMember = useRemoveWorkspaceMember(workspaceId!);
 
   const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'owner' | 'admin' | 'member' | 'viewer'>('member');
+  const [inviteRole, setInviteRole] = useState<'owner' | 'member' | 'viewer'>('member');
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [memberActionError, setMemberActionError] = useState<string | null>(null);
   const [taskFormKey, setTaskFormKey] = useState(0);
@@ -119,7 +123,10 @@ export default function ProjectDetailPage() {
   const canUpdateTaskProgress = canCreateTask;
   const canComment = workspaceRole !== 'viewer' && workspaceRole !== 'client';
   const canGrantOwner = dashboard?.myRole === 'platform_admin' || workspaceRole === 'owner';
-  const projectMemberIds = new Set(tasks.flatMap((task) => task.assigneeIds ?? []));
+  const projectMemberIds = new Set([
+    ...(project?.leadId ? [project.leadId] : []),
+    ...tasks.flatMap((task) => task.assigneeIds ?? []),
+  ]);
   const projectMembers = members.filter((member) => projectMemberIds.has(member.userId));
   const taskDrawerMembers = canManageProject ? members : projectMembers;
 
@@ -463,7 +470,7 @@ export default function ProjectDetailPage() {
         <div className="fixed inset-0 z-[70] grid place-items-center bg-ink-900/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-ink-200">
             <h3 className="text-lg font-semibold text-ink-900">Invite teammate</h3>
-            <p className="mt-1 text-xs text-ink-500">Invite or manage workspace access.</p>
+            <p className="mt-1 text-xs text-ink-500">Invite workspace members and manage this project's access.</p>
             <form
               className="mt-4 space-y-3"
               onSubmit={async (e) => {
@@ -503,7 +510,6 @@ export default function ProjectDetailPage() {
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as typeof inviteRole)}
                 >
-                  <option value="admin">Admin</option>
                   <option value="member">Member</option>
                   <option value="viewer">Viewer</option>
                   {canGrantOwner && <option value="owner">Owner</option>}
@@ -530,52 +536,36 @@ export default function ProjectDetailPage() {
 
             <div className="mt-5 border-t border-ink-100 pt-4">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <h4 className="text-sm font-semibold text-ink-900">Workspace members</h4>
-                <span className="text-[11px] font-medium text-ink-500">{members.length} active</span>
+                <h4 className="text-sm font-semibold text-ink-900">Project members</h4>
+                <span className="text-[11px] font-medium text-ink-500">{projectMembers.length} assigned</span>
               </div>
               <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                {members.map((m) => (
-                  <MemberManagerRow
+                {projectMembers.map((m) => (
+                  <ProjectMemberRow
                     key={m.userId}
                     member={m}
                     isPrimaryOwner={m.userId === workspace?.ownerId}
-                    rolePending={updateMemberRole.isPending}
-                    removePending={removeMember.isPending}
-                    canGrantOwner={canGrantOwner}
-                    onRoleChange={async (role) => {
-                      setMemberActionError(null);
-                      try {
-                        await updateMemberRole.mutateAsync({ userId: m.userId, role });
-                      } catch (err: any) {
-                        setMemberActionError(
-                          err?.response?.data?.message ??
-                            err?.response?.data?.code ??
-                            err?.message ??
-                            'Could not update this member.',
-                        );
-                      }
-                    }}
+                    removePending={removeProjectMember.isPending}
                     onRemove={async () => {
-                      if (window.confirm(`Remove ${m.displayName} from this workspace?`)) {
+                      if (window.confirm(`Remove ${m.displayName} from this project? They will keep access to other assigned projects.`)) {
                         setMemberActionError(null);
                         try {
-                          await removeMember.mutateAsync(m.userId);
-                          setInviteOpen(false);
+                          await removeProjectMember.mutateAsync(m.userId);
                         } catch (err: any) {
                           setMemberActionError(
                             err?.response?.data?.message ??
                               err?.response?.data?.code ??
                               err?.message ??
-                              'Could not remove this member.',
+                              'Could not remove this member from the project.',
                           );
                         }
                       }
                     }}
                   />
                 ))}
-                {members.length === 0 && (
+                {projectMembers.length === 0 && (
                   <li className="rounded-xl border border-dashed border-ink-200 px-4 py-8 text-center text-sm text-ink-500">
-                    No members loaded.
+                    No project members assigned yet.
                   </li>
                 )}
               </ul>
@@ -584,6 +574,42 @@ export default function ProjectDetailPage() {
                   {memberActionError}
                 </div>
               )}
+              <div className="mt-5 border-t border-ink-100 pt-4">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <h4 className="text-sm font-semibold text-ink-900">Workspace access</h4>
+                  <span className="text-[11px] font-medium text-ink-500">{members.length} active</span>
+                </div>
+                <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                  {members.map((m) => (
+                    <WorkspaceAccessRow
+                      key={m.userId}
+                      member={m}
+                      isPrimaryOwner={m.userId === workspace?.ownerId}
+                      removePending={removeWorkspaceMember.isPending}
+                      onRemove={async () => {
+                        if (window.confirm(`Remove ${m.displayName} from this workspace? They will lose access to all projects in this workspace.`)) {
+                          setMemberActionError(null);
+                          try {
+                            await removeWorkspaceMember.mutateAsync(m.userId);
+                          } catch (err: any) {
+                            setMemberActionError(
+                              err?.response?.data?.message ??
+                                err?.response?.data?.code ??
+                                err?.message ??
+                                'Could not remove this member from the workspace.',
+                            );
+                          }
+                        }
+                      }}
+                    />
+                  ))}
+                  {members.length === 0 && (
+                    <li className="rounded-xl border border-dashed border-ink-200 px-4 py-8 text-center text-sm text-ink-500">
+                      No workspace members loaded.
+                    </li>
+                  )}
+                </ul>
+              </div>
               <div className="mt-4 flex justify-end">
                 <button type="button" className="btn-secondary px-4 text-sm" onClick={() => setInviteOpen(false)}>
                   Done
@@ -622,21 +648,15 @@ function Breadcrumb({
   );
 }
 
-function MemberManagerRow({
+function ProjectMemberRow({
   member,
   isPrimaryOwner,
-  rolePending,
   removePending,
-  canGrantOwner,
-  onRoleChange,
   onRemove,
 }: {
   member: import('../features/workspaces/hooks').WorkspaceMemberRow;
   isPrimaryOwner: boolean;
-  rolePending: boolean;
   removePending: boolean;
-  canGrantOwner: boolean;
-  onRoleChange: (role: 'owner' | 'admin' | 'member' | 'viewer') => Promise<void>;
   onRemove: () => Promise<void>;
 }) {
   return (
@@ -652,18 +672,49 @@ function MemberManagerRow({
         </div>
         <div className="truncate text-xs text-ink-500">{member.email}</div>
       </div>
-      <select
-        className="input h-9 min-w-[120px] py-1 text-xs"
-        value={member.role}
-        disabled={rolePending || isPrimaryOwner}
-        title={isPrimaryOwner ? 'Only a platform admin can change the current workspace owner role' : undefined}
-        onChange={(e) => onRoleChange(e.target.value as 'owner' | 'admin' | 'member' | 'viewer')}
+      <span className="badge bg-white text-ink-700 ring-1 ring-inset ring-ink-200">
+        {member.role}
+      </span>
+      <button
+        type="button"
+        className="btn-secondary h-9 px-3 text-xs text-rose-700"
+        disabled={removePending || isPrimaryOwner}
+        title={isPrimaryOwner ? 'Only a platform admin can remove the current workspace owner' : 'Remove from project'}
+        onClick={onRemove}
       >
-        <option value="admin">Admin</option>
-        <option value="member">Member</option>
-        <option value="viewer">Viewer</option>
-        {(canGrantOwner || member.role === 'owner') && <option value="owner">Owner</option>}
-      </select>
+        Remove from project
+      </button>
+    </li>
+  );
+}
+
+function WorkspaceAccessRow({
+  member,
+  isPrimaryOwner,
+  removePending,
+  onRemove,
+}: {
+  member: import('../features/workspaces/hooks').WorkspaceMemberRow;
+  isPrimaryOwner: boolean;
+  removePending: boolean;
+  onRemove: () => Promise<void>;
+}) {
+  return (
+    <li className="flex flex-col gap-2 rounded-xl border border-ink-100 bg-white px-3 py-2 sm:flex-row sm:items-center">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="truncate text-sm font-semibold text-ink-900">{member.displayName}</span>
+          {isPrimaryOwner && (
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-100">
+              primary owner
+            </span>
+          )}
+        </div>
+        <div className="truncate text-xs text-ink-500">{member.email}</div>
+      </div>
+      <span className="badge bg-ink-50 text-ink-700 ring-1 ring-inset ring-ink-200">
+        {member.role}
+      </span>
       <button
         type="button"
         className="btn-secondary h-9 px-3 text-xs text-rose-700"
@@ -671,7 +722,7 @@ function MemberManagerRow({
         title={isPrimaryOwner ? 'Only a platform admin can remove the current workspace owner' : 'Remove from workspace'}
         onClick={onRemove}
       >
-        Remove
+        Remove from workspace
       </button>
     </li>
   );

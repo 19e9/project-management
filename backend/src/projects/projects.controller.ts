@@ -66,6 +66,18 @@ export class ProjectsController {
   }
 
   @WorkspaceRoles('owner', 'admin')
+  @Delete(':projectId/members/:userId')
+  removeProjectMember(
+    @Param('workspaceId') wid: string,
+    @Param('projectId') pid: string,
+    @Param('userId') targetUserId: string,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: any,
+  ) {
+    return this.svc.removeProjectMember(wid, pid, targetUserId, actorFromRequest(user, req));
+  }
+
+  @WorkspaceRoles('owner', 'admin')
   @Delete(':projectId')
   archive(
     @Param('workspaceId') wid: string,

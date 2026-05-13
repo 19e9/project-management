@@ -45,6 +45,21 @@ export function useDeleteProject(workspaceId: string) {
   });
 }
 
+export function useRemoveProjectMember(workspaceId: string, projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) =>
+      (await api.delete(`/workspaces/${workspaceId}/projects/${projectId}/members/${userId}`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['project', workspaceId, projectId] });
+      qc.invalidateQueries({ queryKey: ['projects', workspaceId] });
+      qc.invalidateQueries({ queryKey: ['tasks', workspaceId, projectId] });
+      qc.invalidateQueries({ queryKey: ['tasks', 'tree', workspaceId, projectId] });
+      qc.invalidateQueries({ queryKey: ['me', 'dashboard'] });
+    },
+  });
+}
+
 export function useProject(workspaceId?: string, projectId?: string) {
   return useQuery({
     enabled: !!workspaceId && !!projectId,

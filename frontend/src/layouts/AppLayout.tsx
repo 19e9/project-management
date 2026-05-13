@@ -3,6 +3,8 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'reac
 import { useAuth } from '../features/auth/AuthProvider';
 import { useMyDashboard } from '../features/dashboard/hooks';
 import { Logo } from '../components/ui/Logo';
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
+import { useT } from '../i18n/I18nProvider';
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
@@ -10,6 +12,7 @@ export default function AppLayout() {
   const location = useLocation();
   const { workspaceId } = useParams();
   const dash = useMyDashboard();
+  const t = useT();
   const myRole = dash.data?.myRole;
   const isAdmin = user?.platformRole === 'platform_admin';
   const [menuOpen, setMenuOpen] = useState(false);
@@ -18,7 +21,7 @@ export default function AppLayout() {
     location.pathname.match(/\/dashboard\/workspaces\/([^/]+)/)?.[1] ??
     dash.data?.workspaces[0]?.id;
 
-  const links = buildNavLinks({ isAdmin, myRole, workspaceId: currentWorkspaceId });
+  const links = buildNavLinks({ isAdmin, myRole, workspaceId: currentWorkspaceId, t });
 
   return (
     <div className="min-h-screen bg-ink-50/40">
@@ -56,8 +59,10 @@ export default function AppLayout() {
 
           {/* Right cluster */}
           <div className="flex items-center gap-2">
+            <LanguageSwitcher compact />
+
             {/* Role chip */}
-            <RoleChip role={myRole} platformAdmin={isAdmin} />
+            <RoleChip role={myRole} platformAdmin={isAdmin} t={t} />
 
             {/* Notification bell */}
             <button
@@ -96,7 +101,7 @@ export default function AppLayout() {
               onClick={async () => { await signOut(); nav('/login'); }}
               className="btn-secondary h-9 px-3 text-xs"
             >
-              Sign out
+              {t('app.signOut')}
             </button>
 
             {/* Mobile menu toggle */}
@@ -149,7 +154,7 @@ export default function AppLayout() {
 }
 
 /* ── Role chip ─────────────────────────────────────────── */
-function RoleChip({ role, platformAdmin }: { role?: string; platformAdmin: boolean }) {
+function RoleChip({ role, platformAdmin, t }: { role?: string; platformAdmin: boolean; t: (key: string) => string }) {
   if (platformAdmin)
     return (
       <span className="">
@@ -160,28 +165,28 @@ function RoleChip({ role, platformAdmin }: { role?: string; platformAdmin: boole
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-100 sm:inline-flex">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-        Workspace owner
+        {t('app.workspaceOwner')}
       </span>
     );
   if (role === 'admin')
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-100 sm:inline-flex">
         <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-        Workspace admin
+        {t('app.workspaceAdmin')}
       </span>
     );
   if (role === 'member')
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-100 sm:inline-flex">
         <span className="h-1.5 w-1.5 rounded-full bg-cyan-500" />
-        Member
+        {t('app.member')}
       </span>
     );
   if (role === 'viewer' || role === 'client')
     return (
       <span className="hidden items-center gap-1.5 rounded-full bg-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-600 sm:inline-flex">
         <span className="h-1.5 w-1.5 rounded-full bg-ink-400" />
-        Viewer
+        {t('app.viewer')}
       </span>
     );
   return null;
@@ -200,50 +205,52 @@ function buildNavLinks({
   isAdmin,
   myRole,
   workspaceId,
+  t,
 }: {
   isAdmin: boolean;
   myRole?: string;
   workspaceId?: string;
+  t: (key: string) => string;
 }): NavItem[] {
   if (isAdmin) {
     return [
-      { to: '/dashboard', label: 'Dashboard', end: true, icon: IconGrid },
-      { to: '/dashboard/workspaces', label: 'Workspaces', end: true, icon: IconBox },
-      { to: '/dashboard/activity', label: 'Activity', icon: IconActivity },
+      { to: '/dashboard', label: t('app.dashboard'), end: true, icon: IconGrid },
+      { to: '/dashboard/workspaces', label: t('app.workspaces'), end: true, icon: IconBox },
+      { to: '/dashboard/activity', label: t('app.activity'), icon: IconActivity },
       {
         to: '/dashboard/all-workspaces',
-        label: 'All workspaces',
+        label: t('app.allWorkspaces'),
         icon: IconLayers,
       },
-      { to: '/dashboard/users', label: 'Users', icon: IconPeople },
-      { to: '/dashboard/billing', label: 'Billing', icon: IconCreditCard },
-      { to: '/dashboard/settings', label: 'Settings', icon: IconCog },
+      { to: '/dashboard/users', label: t('app.users'), icon: IconPeople },
+      { to: '/dashboard/billing', label: t('app.billing'), icon: IconCreditCard },
+      { to: '/dashboard/settings', label: t('app.settings'), icon: IconCog },
     ];
   }
   if (myRole === 'owner' || myRole === 'admin') {
     return [
-      { to: '/dashboard', label: 'Dashboard', end: true, icon: IconGrid },
-      { to: '/dashboard/workspaces', label: 'Workspaces', end: true, icon: IconBox },
+      { to: '/dashboard', label: t('app.dashboard'), end: true, icon: IconGrid },
+      { to: '/dashboard/workspaces', label: t('app.workspaces'), end: true, icon: IconBox },
       ...(workspaceId
-        ? [{ to: `/dashboard/workspaces/${workspaceId}/projects`, label: 'Projects', icon: IconLayers }]
+        ? [{ to: `/dashboard/workspaces/${workspaceId}/projects`, label: t('app.projects'), icon: IconLayers }]
         : []),
     ];
   }
   if (myRole === 'member') {
     return [
-      { to: '/dashboard', label: 'My tasks', end: true, icon: IconCheck },
-      { to: '/dashboard/workspaces', label: 'Workspaces', end: true, icon: IconBox },
+      { to: '/dashboard', label: t('app.myTasks'), end: true, icon: IconCheck },
+      { to: '/dashboard/workspaces', label: t('app.workspaces'), end: true, icon: IconBox },
       ...(workspaceId
-        ? [{ to: `/dashboard/workspaces/${workspaceId}/projects`, label: 'Projects', icon: IconLayers }]
+        ? [{ to: `/dashboard/workspaces/${workspaceId}/projects`, label: t('app.projects'), icon: IconLayers }]
         : []),
     ];
   }
   // viewer / legacy client
   return [
-    { to: '/dashboard', label: 'Overview', end: true, icon: IconGrid },
+    { to: '/dashboard', label: t('app.overview'), end: true, icon: IconGrid },
     workspaceId
-      ? { to: `/dashboard/workspaces/${workspaceId}/projects`, label: 'Projects', icon: IconLayers }
-      : { to: '/dashboard/workspaces', label: 'Projects', end: true, icon: IconLayers },
+      ? { to: `/dashboard/workspaces/${workspaceId}/projects`, label: t('app.projects'), icon: IconLayers }
+      : { to: '/dashboard/workspaces', label: t('app.projects'), end: true, icon: IconLayers },
   ];
 }
 

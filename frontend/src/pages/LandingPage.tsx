@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { MarketingPageShell } from '../components/marketing/MarketingPageShell';
 import { DynamicPricingSection } from '../components/marketing/DynamicPricingSection';
 import { HeroMockup } from '../components/marketing/HeroMockup';
@@ -14,8 +15,24 @@ import {
   IconTree,
   IconUsers,
 } from '../components/ui/Icons';
+import { useT } from '../i18n/I18nProvider';
 
 export default function LandingPage() {
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) return;
+    const id = decodeURIComponent(hash.slice(1));
+    const scrollToSection = () => {
+      document.getElementById(id)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    };
+    const frame = window.requestAnimationFrame(scrollToSection);
+    return () => window.cancelAnimationFrame(frame);
+  }, [hash]);
+
   return (
     <MarketingPageShell>
       <Hero />
@@ -32,6 +49,7 @@ export default function LandingPage() {
 
 /* ---------- HERO ---------- */
 function Hero() {
+  const t = useT();
   return (
     <section className="relative overflow-hidden">
       {/* background */}
@@ -54,29 +72,36 @@ function Hero() {
       <div className="container relative pb-12 pt-14 md:pb-20 md:pt-20">
         <div className="mx-auto max-w-3xl text-center">
 
+          <span className="eyebrow animate-fade-in-up">
+            <span className="grid h-1.5 w-1.5 place-items-center rounded-full bg-emerald-500" />
+            {t('marketing.eyebrow')}
+            <Link to="/#pricing" className="text-brand-700 hover:underline">
+              {t('marketing.viewPricing')} →
+            </Link>
+          </span>
+
           <h1 className="h-display mt-6 text-balance animate-fade-in-up [animation-delay:80ms]">
-            Plan, schedule and ship.
+            {t('marketing.heroTitle')}
             <br />
-            <span className="gradient-text">With real planning power.</span>
+            <span className="gradient-text">{t('marketing.heroAccent')}</span>
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-ink-600 animate-fade-in-up [animation-delay:160ms]">
-            PlanForge is the modern alternative to Jira and Microsoft Project. Gantt, WBS,
-            dependency-aware scheduling and a built-in <strong className="text-ink-900">Critical Path</strong> engine — all in one calm, fast workspace.
+            {t('marketing.heroBody')}
           </p>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3 animate-fade-in-up [animation-delay:240ms]">
             <Link to="/register" className="btn-brand btn-lg">
-              Start free
+              {t('marketing.startFree')}
               <IconArrowRight className="h-4 w-4" />
             </Link>
             <Link to="/#pricing" className="btn-secondary btn-lg">
-              See pricing
+              {t('marketing.seePricing')}
             </Link>
           </div>
 
           <p className="mt-3 text-xs text-ink-500 animate-fade-in-up [animation-delay:320ms]">
-            No credit card required to start · Compare live plans below.
+            {t('marketing.heroNote')}
           </p>
         </div>
 
@@ -91,6 +116,7 @@ function Hero() {
 
 /* ---------- LOGO CLOUD ---------- */
 function LogoCloud() {
+  const t = useT();
   const brands: { name: string; href: string }[] = [
     { name: 'Slope', href: 'https://slope.so' },
     { name: 'Relay', href: 'https://relay.app' },
@@ -103,7 +129,7 @@ function LogoCloud() {
     <section className="border-y border-ink-200/70 bg-ink-50/40 py-10">
       <div className="container">
         <p className="text-center text-xs font-semibold uppercase tracking-widest text-ink-500">
-          Trusted by modern teams shipping ambitious work
+          {t('marketing.trusted')}
         </p>
         <div className="mt-6 grid grid-cols-2 items-center gap-x-10 gap-y-6 sm:grid-cols-3 md:grid-cols-6">
           {brands.map(({ name, href }) => (
@@ -128,63 +154,63 @@ function LogoCloud() {
 const FEATURES = [
   {
     icon: IconGantt,
-    title: 'Gantt that respects dependencies',
-    body: 'Drag bars to reschedule. Successors update instantly. Lag, lead and FS dependencies — without spreadsheets.',
+    titleKey: 'marketing.feature1Title',
+    bodyKey: 'marketing.feature1Body',
     color: 'from-brand-500/15 to-brand-500/0 text-brand-700',
   },
   {
     icon: IconRoute,
-    title: 'Built-in Critical Path Method',
-    body: 'A real CPM engine highlights tasks with zero slack. Forward and backward pass, ES/EF/LS/LF — all live.',
+    titleKey: 'marketing.feature2Title',
+    bodyKey: 'marketing.feature2Body',
     color: 'from-rose-500/15 to-rose-500/0 text-rose-700',
   },
   {
     icon: IconTree,
-    title: 'Work Breakdown the way PMs think',
-    body: 'Hierarchical WBS with codes, rollups and clean tree views. From program down to deliverable.',
+    titleKey: 'marketing.feature3Title',
+    bodyKey: 'marketing.feature3Body',
     color: 'from-accent-500/15 to-accent-500/0 text-accent-700',
   },
   {
     icon: IconUsers,
-    title: 'Resource histogram',
-    body: 'See over-allocation per teammate, per day. Smooth conflicts before they become slips.',
+    titleKey: 'marketing.feature4Title',
+    bodyKey: 'marketing.feature4Body',
     color: 'from-violet-500/15 to-violet-500/0 text-violet-700',
   },
   {
     icon: IconChart,
-    title: 'Analytics built-in',
-    body: 'Burndown, completion, status breakdown. No plugins. No CSV exports. Just answers.',
+    titleKey: 'marketing.feature5Title',
+    bodyKey: 'marketing.feature5Body',
     color: 'from-emerald-500/15 to-emerald-500/0 text-emerald-700',
   },
   {
     icon: IconShield,
-    title: 'Multi-tenant from day one',
-    body: 'Workspaces, RBAC and plan-based feature gates. Scales from startup to enterprise.',
+    titleKey: 'marketing.feature6Title',
+    bodyKey: 'marketing.feature6Body',
     color: 'from-amber-500/15 to-amber-500/0 text-amber-700',
   },
 ];
 
 function Features() {
+  const t = useT();
   return (
     <section id="features" className="section">
       <div className="container">
         <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow">Features</span>
+          <span className="eyebrow">{t('marketing.featuresEyebrow')}</span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
-            Everything serious project teams need.
+            {t('marketing.featuresTitle')}
             <br />
-            <span className="text-ink-500">Nothing they don't.</span>
+            <span className="text-ink-500">{t('marketing.featuresSubtitle')}</span>
           </h2>
           <p className="mt-4 text-pretty text-ink-600">
-            Built for teams who actually ship: construction, R&amp;D, agencies, ops, hardware. The
-            kind of planning that survives reality.
+            {t('marketing.featuresBody')}
           </p>
         </div>
 
         <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ icon: Icon, title, body, color }) => (
+          {FEATURES.map(({ icon: Icon, titleKey, bodyKey, color }) => (
             <article
-              key={title}
+              key={titleKey}
               className="card card-hover group relative overflow-hidden p-6"
             >
               <div
@@ -199,10 +225,10 @@ function Features() {
                 >
                   <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="mt-5 text-lg font-semibold tracking-tight">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-600">{body}</p>
+                <h3 className="mt-5 text-lg font-semibold tracking-tight">{t(titleKey)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-ink-600">{t(bodyKey)}</p>
                 <div className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-ink-700 opacity-0 transition group-hover:opacity-100">
-                  Learn more
+                  {t('marketing.learnMore')}
                   <IconArrowRight className="h-3.5 w-3.5" />
                 </div>
               </div>
@@ -216,26 +242,27 @@ function Features() {
 
 /* ---------- HOW IT WORKS ---------- */
 function HowItWorks() {
+  const t = useT();
   const steps = [
     {
       n: '01',
-      title: 'Map the work',
-      body: 'Build your WBS in minutes. Codes, parents, durations. Import from CSV or start fresh.',
+      titleKey: 'marketing.step1Title',
+      bodyKey: 'marketing.step1Body',
     },
     {
       n: '02',
-      title: 'Link dependencies',
-      body: 'Wire predecessors and successors. Cycle detection blocks impossible plans.',
+      titleKey: 'marketing.step2Title',
+      bodyKey: 'marketing.step2Body',
     },
     {
       n: '03',
-      title: 'Compute Critical Path',
-      body: 'CPM runs on every change. See ES/EF, LS/LF and slack across the project.',
+      titleKey: 'marketing.step3Title',
+      bodyKey: 'marketing.step3Body',
     },
     {
       n: '04',
-      title: 'Ship with confidence',
-      body: 'Gantt, dashboards and resource histograms keep everyone aligned through delivery.',
+      titleKey: 'marketing.step4Title',
+      bodyKey: 'marketing.step4Body',
     },
   ];
 
@@ -247,13 +274,12 @@ function HowItWorks() {
       />
       <div className="container">
         <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow">How it works</span>
+          <span className="eyebrow">{t('marketing.howEyebrow')}</span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
-            From empty workspace to shipping plan in an afternoon.
+            {t('marketing.howTitle')}
           </h2>
           <p className="mt-4 text-ink-600">
-            A short, opinionated path from idea to delivery — designed by PMs who've shipped real
-            things.
+            {t('marketing.howBody')}
           </p>
         </div>
 
@@ -273,11 +299,11 @@ function HowItWorks() {
                   {s.n}
                 </span>
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">
-                  Step {i + 1}/4
+                  {t('marketing.step')} {i + 1}/4
                 </span>
               </div>
-              <h3 className="mt-5 text-lg font-semibold tracking-tight">{s.title}</h3>
-              <p className="mt-1.5 text-sm text-ink-600">{s.body}</p>
+              <h3 className="mt-5 text-lg font-semibold tracking-tight">{t(s.titleKey)}</h3>
+              <p className="mt-1.5 text-sm text-ink-600">{t(s.bodyKey)}</p>
             </li>
           ))}
         </ol>
@@ -288,29 +314,30 @@ function HowItWorks() {
 
 /* ---------- DEEP FEATURE ROW ---------- */
 function DeepFeatures() {
+  const t = useT();
   return (
     <section className="section">
       <div className="container space-y-24">
         <DeepRow
-          eyebrow="Critical Path Method"
-          title="See the path that decides your deadline."
-          body="PlanForge runs CPM on every dependency change. Tasks with zero slack glow red on the Gantt. Compress the path with confidence — we surface where each day saved actually comes from."
+          eyebrow={t('marketing.deep1Eyebrow')}
+          title={t('marketing.deep1Title')}
+          body={t('marketing.deep1Body')}
           bullets={[
-            'Cycle detection on dependency creation',
-            'Forward & backward pass with lag/lead',
-            'Per-task ES, EF, LS, LF and slack',
+            t('marketing.deep1Bullet1'),
+            t('marketing.deep1Bullet2'),
+            t('marketing.deep1Bullet3'),
           ]}
           visual={<CpmVisual />}
         />
         <DeepRow
           reverse
-          eyebrow="Resource planning"
-          title="Stop discovering over-allocation in week three."
-          body="A resource histogram shows daily utilization per teammate. Add allocations from the task panel; we draw conflicts before they bite."
+          eyebrow={t('marketing.deep2Eyebrow')}
+          title={t('marketing.deep2Title')}
+          body={t('marketing.deep2Body')}
           bullets={[
-            'Daily utilization buckets',
-            'Capacity warnings inline',
-            'Drill-down from any task',
+            t('marketing.deep2Bullet1'),
+            t('marketing.deep2Bullet2'),
+            t('marketing.deep2Bullet3'),
           ]}
           visual={<HistogramVisual />}
         />
@@ -365,6 +392,7 @@ function DeepRow({
 }
 
 function CpmVisual() {
+  const t = useT();
   // simplified ES/EF chip board
   const tasks = [
     { name: 'Excavation', es: 0, ef: 4, slack: 0, critical: true },
@@ -376,9 +404,9 @@ function CpmVisual() {
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between text-xs text-ink-500">
-        <span>Critical path</span>
+        <span>{t('marketing.criticalPath')}</span>
         <span className="badge bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-100">
-          5 tasks · 25d
+          5 {t('marketing.tasksShort')} · 25d
         </span>
       </div>
       {tasks.map((t) => (
@@ -412,19 +440,20 @@ function CpmVisual() {
 }
 
 function HistogramVisual() {
+  const t = useT();
   const bars = [40, 60, 80, 110, 95, 70, 55, 90, 105, 75];
   return (
     <div>
       <div className="flex items-center justify-between text-xs text-ink-500">
-        <span>Daily utilization · last 10 days</span>
+        <span>{t('marketing.dailyUtilization')}</span>
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-brand-500" />
-            Booked
+            {t('marketing.booked')}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-rose-500" />
-            Over
+            {t('marketing.over')}
           </span>
         </div>
       </div>
@@ -549,6 +578,7 @@ function Testimonial({
 
 /* ---------- FINAL CTA ---------- */
 function FinalCta() {
+  const t = useT();
   return (
     <section className="section">
       <div className="container">
@@ -569,14 +599,13 @@ function FinalCta() {
             <div className="md:col-span-2">
               <span className="eyebrow border-white/15 bg-white/5 text-white/80">
                 <IconLayers className="h-3.5 w-3.5" />
-                Built for the next 1,000 deliveries
+                {t('marketing.finalEyebrow')}
               </span>
               <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
-                Ship the plan you actually believe in.
+                {t('marketing.finalTitle')}
               </h2>
               <p className="mt-4 max-w-xl text-pretty text-white/70">
-                Free forever for small teams. 14-day Pro trial when you're ready. No card up
-                front, no migration drama.
+                {t('marketing.finalBody')}
               </p>
             </div>
             <div className="flex flex-col gap-3 md:items-end">
@@ -584,16 +613,16 @@ function FinalCta() {
                 to="/register"
                 className="btn btn-lg w-full justify-center bg-white text-ink-900 hover:bg-ink-100 md:w-auto"
               >
-                Start free
+                {t('marketing.startFree')}
                 <IconArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 to="/#pricing"
                 className="btn btn-lg w-full justify-center border border-white/15 text-white hover:bg-white/10 md:w-auto"
               >
-                Compare plans
+                {t('marketing.comparePlans')}
               </Link>
-              <span className="text-xs text-white/50">Trusted by ambitious teams worldwide</span>
+              <span className="text-xs text-white/50">{t('marketing.trustedWorldwide')}</span>
             </div>
           </div>
         </div>
