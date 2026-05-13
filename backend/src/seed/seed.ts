@@ -27,7 +27,11 @@ import { EnterpriseContract } from '../billing/schemas/enterprise-contract.schem
 const DAY_MS = 86_400_000;
 
 /** Demo workspaces recreated on each `npm run seed` (matched by exact name). */
-const DEMO_WORKSPACE_NAMES = ['Demo Construction Co.', 'Demo Software Studio'] as const;
+const DEMO_WORKSPACE_NAMES = [
+  'Demo Construction Co.',
+  'Demo Software Studio',
+  'Örnek Yazılım Stüdyosu',
+] as const;
 
 dotenv.config();
 
@@ -120,7 +124,7 @@ async function run() {
 
   log.log('Creating software / web workspace + memberships...');
   const wsDev = await Workspaces.create({
-    name: 'Demo Software Studio',
+    name: 'Örnek Yazılım Stüdyosu',
     ownerId: owner._id,
     plan: 'pro',
     subscriptionPlanId: proSnap ? new Types.ObjectId(proSnap.id) : undefined,
@@ -345,9 +349,9 @@ async function run() {
   await Projects.deleteMany({ workspaceId: wsDev._id });
   const webProject = await Projects.create({
     workspaceId: wsDev._id,
-    name: 'Corporate website — MVP launch',
+    name: 'Kurumsal web sitesi — MVP yayını',
     description:
-      'Kurumsal web sitesi: keşif, tasarım, frontend, headless CMS, kalite ve canlıya alma.',
+      'Keşif ve kullanıcı deneyimi, görsel tasarım, ön yüz geliştirme, headless içerik yönetimi, kalite güvencesi ve canlıya alma süreçleri.',
     code: 'WEB-MVP',
     status: 'active',
     leadId: owner._id,
@@ -386,7 +390,7 @@ async function run() {
     });
 
   const disc = await mkDevTask({
-    title: '1. Discovery',
+    title: '1. Keşif',
     wbs: '1',
     start: '2026-06-02',
     end: '2026-06-12',
@@ -394,7 +398,7 @@ async function run() {
     sortOrder: 1,
   });
   const req = await mkDevTask({
-    title: '1.1 Requirements & information architecture',
+    title: '1.1 Gereksinimler ve bilgi mimarisi',
     parent: disc._id,
     wbs: '1.1',
     start: '2026-06-02',
@@ -404,7 +408,7 @@ async function run() {
     sortOrder: 1,
   });
   const wire = await mkDevTask({
-    title: '1.2 UX wireframes & content outline',
+    title: '1.2 UX taslağı ve içerik planı',
     parent: disc._id,
     wbs: '1.2',
     start: '2026-06-07',
@@ -414,7 +418,7 @@ async function run() {
     sortOrder: 2,
   });
   const design = await mkDevTask({
-    title: '2. UI design',
+    title: '2. Görsel arayüz tasarımı',
     wbs: '2',
     start: '2026-06-13',
     end: '2026-06-24',
@@ -423,7 +427,7 @@ async function run() {
     sortOrder: 2,
   });
   const feShell = await mkDevTask({
-    title: '3.1 Frontend scaffold & routing',
+    title: '3.1 Ön yüz iskeleti ve yönlendirme',
     wbs: '3.1',
     start: '2026-06-22',
     end: '2026-06-28',
@@ -432,7 +436,7 @@ async function run() {
     sortOrder: 3,
   });
   const fePages = await mkDevTask({
-    title: '3.2 Responsive pages & components',
+    title: '3.2 Duyarlı sayfalar ve bileşenler',
     wbs: '3.2',
     start: '2026-06-29',
     end: '2026-07-18',
@@ -441,7 +445,7 @@ async function run() {
     sortOrder: 4,
   });
   const cms = await mkDevTask({
-    title: '4. Headless CMS & API integration',
+    title: '4. Headless içerik yönetimi ve API bağlantıları',
     wbs: '4',
     start: '2026-07-14',
     end: '2026-07-31',
@@ -450,7 +454,7 @@ async function run() {
     sortOrder: 5,
   });
   const qa = await mkDevTask({
-    title: '5. QA, accessibility & SEO',
+    title: '5. Test, erişilebilirlik ve SEO',
     wbs: '5',
     start: '2026-07-28',
     end: '2026-08-12',
@@ -459,7 +463,7 @@ async function run() {
     sortOrder: 6,
   });
   const goLive = await mkDevTask({
-    title: '6. Production deploy & handoff',
+    title: '6. Canlı yayın ve teslim',
     wbs: '6',
     start: '2026-08-11',
     end: '2026-08-22',
