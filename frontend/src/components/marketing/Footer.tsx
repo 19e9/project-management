@@ -3,7 +3,6 @@ import { Logo } from '../ui/Logo';
 import { usePublicSiteFooter } from '../../features/cms/hooks';
 import { MarketingLink } from './MarketingLink';
 import { cn } from '../../lib/cn';
-import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 import { useI18n, useT } from '../../i18n/I18nProvider';
 import { pickLocalized } from '../../i18n/pickLocalized';
 import type { LocalizedString } from '../../i18n/pickLocalized';
@@ -38,9 +37,6 @@ export function Footer({ className }: { className?: string }) {
                 <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink-400">
                   {pickLocalized(locale, q.data?.footerTagline as LocalizedString)}
                 </p>
-                <div className="mt-4">
-                  <LanguageSwitcher dark />
-                </div>
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <Link to="/register" className="btn-brand">
                     {t('marketing.startFree')}
