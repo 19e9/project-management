@@ -9,27 +9,21 @@ import {
 } from 'react';
 import en from './locales/en.json';
 import tr from './locales/tr.json';
-import es from './locales/es';
-import it from './locales/it';
 import { hasUiPhrase, translateUiPhrase } from './uiPhrases';
 
 /** Nested message tree */
 type Msg = string | { [k: string]: Msg };
 
-export type Locale = 'en' | 'tr' | 'es' | 'it';
+export type Locale = 'en' | 'tr';
 
 export const localeOptions: Array<{ code: Locale; label: string; shortLabel: string }> = [
-  { code: 'en', label: 'English', shortLabel: 'EN' },
-  { code: 'tr', label: 'Turkish', shortLabel: 'TR' },
-  { code: 'es', label: 'Spanish', shortLabel: 'SP' },
-  { code: 'it', label: 'Italian', shortLabel: 'IT' },
+  { code: 'tr', label: 'Türkçe', shortLabel: 'TR' },
+  { code: 'en', label: 'İngilizce', shortLabel: 'EN' },
 ];
 
 const dicts: Record<Locale, Msg> = {
   en: en as Msg,
   tr: tr as Msg,
-  es: es as Msg,
-  it: it as Msg,
 };
 
 function lookup(dict: Msg, key: string): string | undefined {
