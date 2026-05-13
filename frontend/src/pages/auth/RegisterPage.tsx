@@ -1,8 +1,9 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { APP_HOME_PATH } from '../../features/auth/authPaths';
 import { useForm } from 'react-hook-form';
 import { useMemo, useState } from 'react';
 import { useAuth } from '../../features/auth/AuthProvider';
-import { googleLoginUrl } from '../../lib/api-client';
+import { googleLoginUrl, tokens } from '../../lib/api-client';
 import { AuthBrandPanel } from '../../components/auth/AuthBrandPanel';
 import { Logo } from '../../components/ui/Logo';
 import { IconCheck, IconEye, IconEyeOff, IconGoogle } from '../../components/ui/Icons';
@@ -20,7 +21,7 @@ const STRENGTH_KEYS = ['auth.pwTooShort', 'auth.pwWeak', 'auth.pwFair', 'auth.pw
 
 export default function RegisterPage() {
   const t = useT();
-  const { signUp } = useAuth();
+  const { signUp, user, loading } = useAuth();
   const nav = useNavigate();
   const {
     register,
@@ -37,17 +38,33 @@ export default function RegisterPage() {
 
   const strengthScore = useMemo(() => scorePassword(password ?? ''), [password]);
 
+  const bulletKeys = ['auth.bulletNoCard', 'auth.bulletInvite', 'auth.bulletRole'] as const;
+
   async function onSubmit(values: FormValues) {
     setServerError(null);
     try {
       await signUp(values.email, values.password, values.displayName);
-      nav('/dashboard');
+      nav(APP_HOME_PATH);
     } catch (e: any) {
       setServerError(e?.response?.data?.message ?? t('auth.signUpFailed'));
     }
   }
 
-  const bulletKeys = ['auth.bulletNoCard', 'auth.bulletInvite', 'auth.bulletRole'] as const;
+  if (user) return <Navigate to={APP_HOME_PATH} replace />;
+
+  if (loading && tokens.getAccess()) {
+    return (
+      <div className="grid min-h-screen place-items-center text-ink-500">
+        <span className="inline-flex items-center gap-2 text-sm">
+          <svg viewBox="0 0 24 24" className="h-4 w-4 animate-spin" fill="none" aria-hidden>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity=".3" strokeWidth="2.5" />
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
+          {t('common.loading')}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">

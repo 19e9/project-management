@@ -10,12 +10,16 @@ import { useI18n, useT } from '../../i18n/I18nProvider';
 import { landingAnchorTranslationKey } from '../../i18n/marketingLandingAnchors';
 import { pickLocalized } from '../../i18n/pickLocalized';
 import type { LocalizedString } from '../../i18n/pickLocalized';
+import { useAuth } from '../../features/auth/AuthProvider';
+import { APP_HOME_PATH, showMarketingAsAuthenticated } from '../../features/auth/authPaths';
 
 type NavItem = { label: string; href: string; key: string };
 
 export function Navbar() {
   const t = useT();
   const { locale } = useI18n();
+  const { user, loading: authLoading } = useAuth();
+  const signedInMarketing = showMarketingAsAuthenticated(user, authLoading);
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const footerQ = usePublicSiteFooter();
@@ -95,13 +99,22 @@ export function Navbar() {
 
         <div className="hidden items-center gap-3 lg:flex">
           <LanguageSwitcher compact />
-          <Link to="/login" className="btn-ghost">
-            {t('marketing.signIn')}
-          </Link>
-          <Link to="/register" className="btn-brand">
-            {t('marketing.startFree')}
-            <IconArrowRight className="h-4 w-4" />
-          </Link>
+          {signedInMarketing ? (
+            <Link to={APP_HOME_PATH} className="btn-brand">
+              {t('marketing.goToDashboard')}
+              <IconArrowRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <>
+              <Link to="/login" className="btn-ghost">
+                {t('marketing.signIn')}
+              </Link>
+              <Link to="/register" className="btn-brand">
+                {t('marketing.startFree')}
+                <IconArrowRight className="h-4 w-4" />
+              </Link>
+            </>
+          )}
         </div>
 
         <button
@@ -128,12 +141,25 @@ export function Navbar() {
             <div className="flex w-full justify-center sm:w-auto">
               <LanguageSwitcher />
             </div>
-              <Link to="/login" onClick={() => setOpen(false)} className="btn-secondary w-full">
-                {t('marketing.signIn')}
-              </Link>
-              <Link to="/register" onClick={() => setOpen(false)} className="btn-brand w-full">
-                {t('marketing.startFree')}
-              </Link>
+              {signedInMarketing ? (
+                <Link
+                  to={APP_HOME_PATH}
+                  onClick={() => setOpen(false)}
+                  className="btn-brand w-full sm:flex-1 min-w-[200px]"
+                >
+                  {t('marketing.goToDashboard')}
+                  <IconArrowRight className="h-4 w-4" />
+                </Link>
+              ) : (
+                <>
+                  <Link to="/login" onClick={() => setOpen(false)} className="btn-secondary w-full">
+                    {t('marketing.signIn')}
+                  </Link>
+                  <Link to="/register" onClick={() => setOpen(false)} className="btn-brand w-full">
+                    {t('marketing.startFree')}
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

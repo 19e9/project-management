@@ -16,6 +16,8 @@ import {
   IconTree,
   IconUsers,
 } from '../components/ui/Icons';
+import { useAuth } from '../features/auth/AuthProvider';
+import { APP_HOME_PATH, showMarketingAsAuthenticated } from '../features/auth/authPaths';
 import { useT } from '../i18n/I18nProvider';
 
 export default function LandingPage() {
@@ -35,6 +37,8 @@ export default function LandingPage() {
 
 function Hero() {
   const t = useT();
+  const { user, loading } = useAuth();
+  const authedMarketing = showMarketingAsAuthenticated(user, loading);
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-radial-fade" aria-hidden />
@@ -63,10 +67,17 @@ function Hero() {
           </p>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3 animate-fade-in-up [animation-delay:240ms]">
-            <Link to="/register" className="btn-brand btn-lg">
-              {t('marketing.startFree')}
-              <IconArrowRight className="h-4 w-4" />
-            </Link>
+            {authedMarketing ? (
+              <Link to={APP_HOME_PATH} className="btn-brand btn-lg">
+                {t('marketing.goToDashboard')}
+                <IconArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <Link to="/register" className="btn-brand btn-lg">
+                {t('marketing.startFree')}
+                <IconArrowRight className="h-4 w-4" />
+              </Link>
+            )}
             <Link to={marketingNavTo('/#pricing')} className="btn-secondary btn-lg">
               {t('marketing.seePricing')}
             </Link>
@@ -443,6 +454,8 @@ function Testimonial({ quote, name, role }: { quote: string; name: string; role:
 
 function FinalCta() {
   const t = useT();
+  const { user, loading } = useAuth();
+  const authedMarketing = showMarketingAsAuthenticated(user, loading);
   return (
     <section className="section">
       <div className="container">
@@ -467,10 +480,10 @@ function FinalCta() {
             </div>
             <div className="flex flex-col gap-3 md:items-end">
               <Link
-                to="/register"
+                to={authedMarketing ? APP_HOME_PATH : '/register'}
                 className="btn btn-lg w-full justify-center bg-white text-ink-900 hover:bg-ink-100 md:w-auto"
               >
-                {t('marketing.startFree')}
+                {authedMarketing ? t('marketing.goToDashboard') : t('marketing.startFree')}
                 <IconArrowRight className="h-4 w-4" />
               </Link>
               <Link

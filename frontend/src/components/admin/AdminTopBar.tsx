@@ -105,7 +105,7 @@ export function AdminTopBar({ onMenu, onRefresh, refreshing, generatedAt }: Prop
             type="button"
             onClick={async () => {
               await signOut();
-              nav('/login');
+              nav('/', { replace: true });
             }}
             className="btn-secondary h-9 px-3 text-xs"
           >

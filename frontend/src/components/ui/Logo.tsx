@@ -1,5 +1,7 @@
 import type { MouseEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../features/auth/AuthProvider';
+import { resolveMarketingHomePath } from '../../features/auth/authPaths';
 
 export function Logo({
   className = '',
@@ -8,11 +10,13 @@ export function Logo({
 }: {
   className?: string;
   dark?: boolean;
-  /** Navigate to `/` with hash cleared when needed, scroll to document top */
+  /** Navigate home (landing vs dashboard) and scroll to top on primary click */
   scrollToTopOnClick?: boolean;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, loading } = useAuth();
+  const homePath = resolveMarketingHomePath(user, loading);
 
   function handleClick(e: MouseEvent<HTMLAnchorElement>) {
     if (!scrollToTopOnClick) return;
@@ -20,8 +24,9 @@ export function Logo({
     if (e.button !== 0) return;
     e.preventDefault();
 
-    const onHome = location.pathname === '/';
-    void navigate('/', { replace: onHome });
+    const target = resolveMarketingHomePath(user, loading);
+    const onTarget = location.pathname === target;
+    void navigate(target, { replace: onTarget });
 
     const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     requestAnimationFrame(() => {
@@ -30,7 +35,7 @@ export function Logo({
   }
 
   return (
-    <Link to="/" className={`group inline-flex items-center gap-2 ${className}`} onClick={handleClick}>
+    <Link to={homePath} className={`group inline-flex items-center gap-2 ${className}`} onClick={handleClick}>
       <span className="relative grid h-8 w-8 place-items-center overflow-hidden rounded-xl bg-brand-gradient text-white shadow-lift">
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
           <path
